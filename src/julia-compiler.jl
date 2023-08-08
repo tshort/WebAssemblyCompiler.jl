@@ -8,13 +8,13 @@ struct CompilerContext
 end
 CompilerContext() = CompilerContext(BinaryenModuleCreate(), Any[])
 
-compile(fun, tt) = compile(CompilerContext(), fun, tt)
+compile(fun, tt; filepath = "foo.wasm") = compile(CompilerContext(), fun, tt; filepath)
 
-function compile(ctx::CompilerContext, fun, tt)
+function compile(ctx::CompilerContext, fun, tt; filepath = "foo.wasm")
     tt = Base.to_tuple_type(tt)
     isconcretetype(tt) || error("input type signature $tt is not concrete")
     ci = code_typed(fun, tt)[1].first
-    compile(ctx, ci)
+    compile(ctx, ci; filepath)
 end
 
 import Core.Compiler: block_for_inst, compute_basic_blocks
@@ -63,7 +63,7 @@ import Core.Compiler: block_for_inst, compute_basic_blocks
 #     return ctx.mod
 # end
 
-function compile(ctx::CompilerContext, ci::Core.CodeInfo)
+function compile(ctx::CompilerContext, ci::Core.CodeInfo; filepath = "foo.wasm")
     code = ci.code
     jparams = binaryen_type.([ci.parent.specTypes.parameters...][2:end])
     bparams = BinaryenTypeCreate(jparams, length(jparams))
@@ -71,7 +71,13 @@ function compile(ctx::CompilerContext, ci::Core.CodeInfo)
     funname = string(ci.parent.def.name)
     body, localtypes = _compile(ctx, ci, jparams)
     BinaryenAddFunction(ctx.mod, funname, bparams, results, localtypes, length(localtypes), body)
-    return ctx.mod
+    BinaryenAddFunctionExport(ctx.mod, funname, funname)
+    BinaryenModulePrint(ctx.mod)
+    out = BinaryenModuleAllocateAndWrite(ctx.mod, C_NULL)
+    write(filepath, unsafe_wrap(Vector{UInt8}, Ptr{UInt8}(out.binary), (out.binaryBytes,)))
+    Libc.free(out.binary)  
+    BinaryenModuleDispose(ctx.mod)
+    return nothing
 end
 
 for T in (:Int32, :Int64, :Float32, :Float64)
@@ -117,7 +123,8 @@ function _compile(ctx::CompilerContext, ci::Core.CodeInfo, params, idxs = eachin
             update!(res, x, rettype)
         end
         if stmt isa Core.ReturnNode
-            x = BinaryenReturn(ctx.mod, BinaryenLocalGet(ctx.mod, res.localidx, res.locals[end]))
+            @show res.locals
+            x = BinaryenReturn(ctx.mod, _compile(ctx, ci, stmt.val))
             update!(res, x)
         end
     end    
@@ -127,11 +134,13 @@ end
 
 
 function _compile(ctx::CompilerContext, ci::Core.CodeInfo, x::Core.Argument)
+    @show x.n
     BinaryenLocalGet(ctx.mod, x.n - 2, 
                      binaryen_type(ci.parent.specTypes.parameters[x.n]))
 end
 function _compile(ctx::CompilerContext, ci::Core.CodeInfo, x::Core.SSAValue)   # These come after the function arguments.
-    BinaryenLocalGet(ctx.mod, x.id + length(ci.parent.specTypes.parameters), 
+    @show x.id
+    BinaryenLocalGet(ctx.mod, x.id + length(ci.parent.specTypes.parameters) - 2, 
                      binaryen_type(ci.ssavaluetypes[x.id]))
 end
 _compile(ctx::CompilerContext, ci::Core.CodeInfo, x::Float64) = BinaryenConst(ctx.mod, BinaryenLiteralFloat64(x))
