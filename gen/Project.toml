@@ -1,0 +1,6 @@
+[deps]
+Binaryen_jll = "a54ac8ab-712d-5a0e-8e11-9296c0d3c20e"
+Clang = "40e3b903-d033-50b4-a0cc-940c62c95e31"
+
+[compat]
+Clang = "0.17.0"
