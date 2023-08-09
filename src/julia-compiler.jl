@@ -66,10 +66,55 @@ import Core.Compiler: block_for_inst, compute_basic_blocks
 function compile(ctx::CompilerContext, ci::Core.CodeInfo; filepath = "foo.wasm")
     code = ci.code
     jparams = binaryen_type.([ci.parent.specTypes.parameters...][2:end])
+    nparams = length(jparams)
     bparams = BinaryenTypeCreate(jparams, length(jparams))
     results = binaryen_type(ci.rettype)
     funname = string(ci.parent.def.name)
-    body, localtypes = _compile(ctx, ci, jparams)
+    localtypes = BinaryenType[]
+    rblocks = RelooperBlockRef[]
+    cfg = Core.Compiler.compute_basic_blocks(code)
+    relooper = RelooperCreate(ctx.mod)
+
+    # Find and collect phis
+    phis = Dict{Int32, Any}()
+    for (idx, block) in enumerate(cfg.blocks)
+        for stmt in block.stmts
+            node = code[stmt]
+            !isa(stmt, Core.PhiNode) && break
+            for (i, edge) in enumerate(stmt.edges)
+                if !haskey(phis, edge)
+                    phis[edge] = Vector{Core.SSAValue}[]
+                end
+                push!(phis[edge], stmt => stmt.values[i])
+            end
+        end
+    end
+    @show phis
+    # Create blocks
+    for block in cfg.blocks
+        rbody, locals = _compile(ctx, ci, nparams, block.stmts)
+        append!(localtypes, locals)
+        push!(rblocks, RelooperAddBlock(relooper, rbody))
+    end
+    # Create branches
+    for (idx, block) in enumerate(cfg.blocks)
+        terminator = code[last(block.stmts)]
+        phicodes = haskey(phis, idx) ? phiinstructions(ctx, phis[idx]) : 0
+        if isa(terminator, Core.ReturnNode)
+            # return never has any successors, so no branches needed
+        elseif isa(terminator, Core.GotoNode)
+            toblock = block_for_inst(basic_block_index, terminator.label)
+            RelooperAddBranch(rblocks[idx], rblocks[toblock], 0, phicodes)
+        elseif isa(terminator, Core.GotoIfNot)
+            toblock = block_for_inst(basic_block_index, terminator.label)
+            cond = compile_exprs(ctx, terminator.cond)
+            RelooperAddBranch(rblocks[idx], rblocks[toblock], cond, phicodes)
+            RelooperAddBranch(rblocks[idx], rblocks[idx + 1], 0, phicodes)
+        elseif idx < length(cfg.blocks)
+            RelooperAddBranch(rblocks[idx], rblocks[idx + 1], 0, phicodes)
+        end
+    end
+    body = RelooperRenderAndDispose(relooper, rblocks[1], 0)
     BinaryenAddFunction(ctx.mod, funname, bparams, results, localtypes, length(localtypes), body)
     BinaryenAddFunctionExport(ctx.mod, funname, funname)
     BinaryenModulePrint(ctx.mod)
@@ -101,8 +146,8 @@ function update!(res::CompileResult, x, localtype = nothing)
     return nothing
 end
 
-function _compile(ctx::CompilerContext, ci::Core.CodeInfo, params, idxs = eachindex(ci.code))
-    res = CompileResult(length(params))
+function _compile(ctx::CompilerContext, ci::Core.CodeInfo, nparams, idxs = eachindex(ci.code))
+    res = CompileResult(nparams)
     for idx in idxs
         stmt = ci.code[idx]
         if @capture(stmt, $(GlobalRef(Base, :add_float))(a_, b_))
@@ -121,11 +166,11 @@ function _compile(ctx::CompilerContext, ci::Core.CodeInfo, params, idxs = eachin
                                                 _compile(ctx, ci, a), 
                                                 _compile(ctx, ci, b)))
             update!(res, x, rettype)
-        end
-        if stmt isa Core.ReturnNode
-            @show res.locals
+        elseif stmt isa Core.ReturnNode
             x = BinaryenReturn(ctx.mod, _compile(ctx, ci, stmt.val))
             update!(res, x)
+        else
+            error("Unsupported Julia construct $stmt")
         end
     end    
     body = BinaryenBlock(ctx.mod, "body", res.body, length(res.body), BinaryenTypeAuto())
@@ -134,12 +179,10 @@ end
 
 
 function _compile(ctx::CompilerContext, ci::Core.CodeInfo, x::Core.Argument)
-    @show x.n
     BinaryenLocalGet(ctx.mod, x.n - 2, 
                      binaryen_type(ci.parent.specTypes.parameters[x.n]))
 end
 function _compile(ctx::CompilerContext, ci::Core.CodeInfo, x::Core.SSAValue)   # These come after the function arguments.
-    @show x.id
     BinaryenLocalGet(ctx.mod, x.id + length(ci.parent.specTypes.parameters) - 2, 
                      binaryen_type(ci.ssavaluetypes[x.id]))
 end

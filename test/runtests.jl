@@ -4,14 +4,44 @@ using Test
 using NodeCall
 NodeCall.initialize();
 
+function jsfunction(fun, tt)
+    wpath = tempname() * ".wasm"
+    compile(fun, tt, filepath = wpath)
+    funname = string(fun)
+    @show js = """
+    var funs = {};
+    (async () => {
+        const fs = require('fs');
+        const wasmBuffer = fs.readFileSync('$wpath');
+        const {instance} = await WebAssembly.instantiate(wasmBuffer);
+        funs.$fun = instance.exports.$fun;
+    })();
+    """
+
+    p = node_eval(js)
+    @await p
+    return node"funs"
+end
+
+
 @testset "Julia compiler" begin
 
     function f(x,y)
         a = x + y
         a + 1.0
     end
-
     compile(f, (Float64,Float64); filepath = "j.wasm")
+    jsfun = jsfunction(f, (Float64,Float64))
+    @show jsfun.f(3.0, 4.0)
+    @test f(3.0, 4.0) == jsfun.f(3.0, 4.0)
+
+    function g(x,y)
+        a = x + y
+        a > 2.0 ? a + 1.0 : a
+    end
+    @show code_typed(g, Tuple{Float64,Float64})
+
+
 
 end
 
