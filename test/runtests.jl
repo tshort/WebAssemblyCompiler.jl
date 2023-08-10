@@ -8,7 +8,7 @@ function jsfunction(fun, tt)
     wpath = tempname() * ".wasm"
     compile(fun, tt, filepath = wpath)
     funname = string(fun)
-    @show js = """
+    js = """
     var funs = {};
     (async () => {
         const fs = require('fs');
@@ -17,7 +17,6 @@ function jsfunction(fun, tt)
         funs.$fun = instance.exports.$fun;
     })();
     """
-
     p = node_eval(js)
     @await p
     return node"funs"
@@ -26,22 +25,63 @@ end
 
 @testset "Julia compiler" begin
 
-    function f(x,y)
+    function f1(x,y)
         a = x + y
-        a + 1.0
+        a + 1
     end
-    compile(f, (Float64,Float64); filepath = "j.wasm")
-    jsfun = jsfunction(f, (Float64,Float64))
-    @show jsfun.f(3.0, 4.0)
-    @test f(3.0, 4.0) == jsfun.f(3.0, 4.0)
+    # compile(f1, (Float64,Float64); filepath = "j.wasm")
+    jsfun = jsfunction(f1, (Float64,Float64))
+    @test f1(3.0, 4.0) == jsfun.f1(3.0, 4.0)
+    # jsfun = jsfunction(f1, (Int32,Int32))
+    # @test f1(3, 4) == jsfun.f1(3, 4)
 
-    function g(x,y)
+    function f2(x,y)
         a = x + y
-        a > 2.0 ? a + 1.0 : a
+        a > 2 ? a + 1 : a
     end
-    @show code_typed(g, Tuple{Float64,Float64})
+    jsfun = jsfunction(f2, (Float64,Float64))
+    @test f2(3.0, 4.0) == jsfun.f2(3.0, 4.0)
+    @test f2(-3.0, 4.0) == jsfun.f2(-3.0, 4.0)
+    @test f2(3, 4) == jsfun.f2(3, 4)
+    @test f2(-3, 4) == jsfun.f2(-3, 4)
 
+    function f3(x,y)
+        if x > 1.0
+            a = x + y
+        else
+            a = x + y + 3.0
+        end
+        a
+    end
+    jsfun = jsfunction(f3, (Float64,Float64))
+    @test f3(0.0, 4.0) == jsfun.f3(0.0, 4.0)
+    @test f3(2.0, 4.0) == jsfun.f3(2.0, 4.0)
 
+    function f4(x,y)
+        if x > 1.0
+            a = x + 1.0
+            b = 3.0
+        else
+            a = y + 2.0
+            b = 4.0
+        end
+        a + b
+    end
+    jsfun = jsfunction(f4, (Float64,Float64))
+    @test f4(0.0, 4.0) == jsfun.f4(0.0, 4.0)
+    @test f4(2.0, 4.0) == jsfun.f4(2.0, 4.0)
+
+    function f5(x,y)
+        a = 0.0
+        while a < 4.0
+            a = a + x
+        end
+        a + y
+    end
+    @show code_typed(f5, Tuple{Float64, Float64})
+    jsfun = jsfunction(f5, (Float64,Float64))
+    @test f5(1.0, 4.0) == jsfun.f5(1.0, 4.0)
+    @test f5(5.0, 4.0) == jsfun.f5(5.0, 4.0)
 
 end
 
@@ -67,7 +107,7 @@ end
     adder = BinaryenAddFunction(mod, "adder", params, results, C_NULL, 0, add)
     BinaryenAddFunctionExport(mod, "adder", "adder")
     # Print it out
-    BinaryenModulePrint(mod)
+    # BinaryenModulePrint(mod)
     out = BinaryenModuleAllocateAndWrite(mod, C_NULL)
     
     write("t.wasm", unsafe_wrap(Vector{UInt8}, Ptr{UInt8}(out.binary), (out.binaryBytes,)))
