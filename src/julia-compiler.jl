@@ -494,6 +494,9 @@ function _compile(ctx::CompilerContext, cfg::Core.Compiler.CFG, phis, idx)
 
         ## Other ##
 
+        elseif node isa Expr
+            # ignore other expressions for now
+            
         else
             error("Unsupported Julia construct $node")
         end
