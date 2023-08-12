@@ -18,7 +18,7 @@
 
 ### Important
 
-* [ ] Recursively compile calls to `invoke`
+* [x] Recursively compile calls to `invoke`
 * [x] foreigncall
 * [ ] Global variables
 * [x] Multiple functions

@@ -26,7 +26,6 @@ end
 
 @testset "Julia compiler" begin
 
-
     function f1(x,y)
         a = x + y
         a + 1
@@ -101,8 +100,16 @@ end
     compile(f6, (Float64,Float64); filepath = "j.wasm")
     run(`$(Binaryen.Bin.wasmdis()) j.wasm -o j.wat`)
     jsfun = jsfunctions(f6, (Float64,Float64))
-    @show jsfun.f6(3.0, 4.0)
     @test  jsfun.f6(3.0, 4.0) ≈ sin(7.0) + 1
+
+    @noinline twox(x) = 2x
+    function f7(x,y)
+        x + twox(y)
+    end
+    compile(f7, (Float64,Float64); filepath = "j.wasm")
+    run(`$(Binaryen.Bin.wasmdis()) j.wasm -o j.wat`)
+    jsfun = jsfunctions(f7, (Float64,Float64))
+    @test f7(3.0, 4.0) == jsfun.f7(3.0, 4.0)
 
 end
 

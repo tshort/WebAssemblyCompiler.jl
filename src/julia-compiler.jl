@@ -452,6 +452,28 @@ function _compile(ctx::CompilerContext, cfg::Core.Compiler.CFG, phis, idx)
             x = BinaryenLocalSet(ctx.mod, ctx.localidx, BinaryenCall(ctx.mod, name, args, nargs, rettype))
             update!(ctx, x, ctx.ci.ssavaluetypes[idx])
 
+        elseif node isa Expr && node.head == :invoke
+            nargs = length(node.args) - 2
+            sig = node.args[1].specTypes
+            jparams = binaryen_type.([sig.parameters...][2:end])
+            bparams = BinaryenTypeCreate(jparams, length(jparams))
+            rettype = binaryen_type(ctx.ci.ssavaluetypes[idx])
+            args = [_compile(ctx, x) for x in node.args[3:end]]
+            if haskey(ctx.names, sig)
+                name = ctx.names[sig]
+            else
+                MI = node.args[1]
+                newci = Base.code_typed_by_type(sig)[1][1]
+                name = string("julia_", node.args[1].def.name)
+                ctx.sigs[name] = sig
+                ctx.names[sig] = name
+                _compile(CompilerContext(ctx, newci))
+            end
+            ctx.varmap[idx] = ctx.localidx
+            x = BinaryenLocalSet(ctx.mod, ctx.localidx, BinaryenCall(ctx.mod, name, args, nargs, rettype))
+            update!(ctx, x, ctx.ci.ssavaluetypes[idx])
+
+
 
         # DECLARE_BUILTIN(applicable);
         # DECLARE_BUILTIN(_apply_iterate);
@@ -555,3 +577,15 @@ function matchforeigncall(fun, node, sym)
     end
     return match
 end
+
+# Other utilities
+
+getfun(x::Core.MethodInstance) = getfun(x.def)
+getfun(x::Method) = getfield(x.module, basename(x))
+basename(f::Function) = Base.function_name(f)
+basename(f::Core.IntrinsicFunction) = Symbol(unsafe_string(ccall(:jl_intrinsic_name, Cstring, (Core.IntrinsicFunction,), f)))
+basename(x::GlobalRef) = x.name
+basename(m::Core.MethodInstance) = basename(m.def)
+basename(m::Method) = m.name == :Type ? m.sig.parameters[1].parameters[1].name.name : m.name
+
+
