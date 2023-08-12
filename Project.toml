@@ -6,11 +6,13 @@ version = "1.0.0-DEV"
 [deps]
 Binaryen_jll = "a54ac8ab-712d-5a0e-8e11-9296c0d3c20e"
 CEnum = "fa961155-64e5-5f13-b03f-caf6b980ea82"
-MacroTools = "1914dd2f-81c6-5fcd-8719-6d5c9610ff09"
 Reexport = "189a3867-3050-52da-a836-e630ba90ab69"
 
 [compat]
 julia = "1"
+Binaryen_jll = "0.114"
+CEnum = "0.4"
+Reexport = "1.2"
 
 [extras]
 NodeCall = "84d67a5e-1aa2-4817-a501-81e0ebf70bff"

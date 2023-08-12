@@ -4,17 +4,18 @@ using Test
 using NodeCall
 NodeCall.initialize();
 
-function jsfunction(fun, tt)
+jsfunctions(fun, tt) = jsfunctions(((fun, tt...),))
+
+function jsfunctions(funs)
     wpath = tempname() * ".wasm"
-    compile(fun, tt, filepath = wpath)
-    funname = string(fun)
+    compile(funs, filepath = wpath)
     js = """
     var funs = {};
     (async () => {
         const fs = require('fs');
         const wasmBuffer = fs.readFileSync('$wpath');
         const {instance} = await WebAssembly.instantiate(wasmBuffer);
-        funs.$fun = instance.exports.$fun;
+        funs = instance.exports;
     })();
     """
     p = node_eval(js)
@@ -30,30 +31,39 @@ end
         a + 1
     end
     # compile(f1, (Float64,Float64); filepath = "j.wasm")
-    jsfun = jsfunction(f1, (Float64,Float64))
+    jsfun = jsfunctions(f1, (Float64,Float64))
     @test f1(3.0, 4.0) == jsfun.f1(3.0, 4.0)
-    # jsfun = jsfunction(f1, (Int32,Int32))
-    # @test f1(3, 4) == jsfun.f1(3, 4)
+    jsfun = jsfunctions(f1, (Int32,Int32))
+    @test f1(3, 4) == jsfun.f1(3, 4)
+    jsfun = jsfunctions(f1, (Float64,Int32))
+    @test f1(3, 4) == jsfun.f1(3, 4)
 
     function f2(x,y)
         a = x + y
-        a > 2 ? a + 1 : a
+        a > 2 ? a + 1 : 2a
     end
-    jsfun = jsfunction(f2, (Float64,Float64))
+    jsfun = jsfunctions(f2, (Float64,Float64))
     @test f2(3.0, 4.0) == jsfun.f2(3.0, 4.0)
     @test f2(-3.0, 4.0) == jsfun.f2(-3.0, 4.0)
+    jsfun = jsfunctions(f2, (Int32,Int32))
     @test f2(3, 4) == jsfun.f2(3, 4)
     @test f2(-3, 4) == jsfun.f2(-3, 4)
+
+    jsfun = jsfunctions(((f1, Float64, Float64),
+                        (f2, Float64, Float64)))
+    @test f1(3.0, 4.0) == jsfun.f1(3.0, 4.0)
+    @test f2(3.0, 4.0) == jsfun.f2(3.0, 4.0)
+    
 
     function f3(x,y)
         if x > 1.0
             a = x + y
         else
-            a = x + y + 3.0
+            a = x + y + 3
         end
         a
     end
-    jsfun = jsfunction(f3, (Float64,Float64))
+    jsfun = jsfunctions(f3, (Float64,Float64))
     @test f3(0.0, 4.0) == jsfun.f3(0.0, 4.0)
     @test f3(2.0, 4.0) == jsfun.f3(2.0, 4.0)
 
@@ -67,7 +77,7 @@ end
         end
         a + b
     end
-    jsfun = jsfunction(f4, (Float64,Float64))
+    jsfun = jsfunctions(f4, (Float64,Float64))
     @test f4(0.0, 4.0) == jsfun.f4(0.0, 4.0)
     @test f4(2.0, 4.0) == jsfun.f4(2.0, 4.0)
 
@@ -78,8 +88,7 @@ end
         end
         a + y
     end
-    @show code_typed(f5, Tuple{Float64, Float64})
-    jsfun = jsfunction(f5, (Float64,Float64))
+    jsfun = jsfunctions(f5, (Float64,Float64))
     @test f5(1.0, 4.0) == jsfun.f5(1.0, 4.0)
     @test f5(5.0, 4.0) == jsfun.f5(5.0, 4.0)
 
