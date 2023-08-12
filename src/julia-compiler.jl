@@ -6,7 +6,7 @@ mutable struct CompilerContext
     mod::BinaryenModuleRef
     names::Dict{DataType, String}  # function signature to name
     sigs::Dict{String, DataType}   # name to function signature
-    imports::Dict{String, DataType}
+    imports::Dict{String, Any}
     ## function-level context
     ci::Core.CodeInfo
     body::Vector{BinaryenExpressionRef}
@@ -21,8 +21,6 @@ CompilerContext(ci::Core.CodeInfo) =
 CompilerContext(ctx::CompilerContext, ci::Core.CodeInfo) = 
     CompilerContext(ctx.mod, ctx.names, ctx.sigs, ctx.imports, 
                     ci, BinaryenExpressionRef[], BinaryenType[], 0, Dict{Int,Int}())
-
-importedfun() = nothing
 
 compile(fun, tt; filepath = "foo.wasm") = compile(((fun, tt...),); filepath)
 
@@ -58,7 +56,6 @@ import Core.Compiler: block_for_inst, compute_basic_blocks
 function _compile(ctx::CompilerContext; exported = false)
     ci = ctx.ci
     code = ci.code
-    
     sig = ci.parent.specTypes
     jparams = binaryen_type.([sig.parameters...][2:end])
     ctx.localidx = length(jparams)
@@ -437,19 +434,23 @@ function _compile(ctx::CompilerContext, cfg::Core.Compiler.CFG, phis, idx)
 
         elseif node isa Expr && node.head == :foreigncall    # general foreigncalls that need to be imported
             modname = "ext"
-            extname = args[1].value
-            name = modname * "." * extname
-            nargs = length(args[3]) - 1
-            sig = args[7:(7 + nargs - 1)]
-            args = _compile.(ctx, sig)
-            rettype = _compile(ctx, args[2])
-            BinaryenCall(ctx.mod, name, args, nargs, rettype)
+            extname = node.args[1].value
+            name = string(modname, extname)
+            nargs = length(node.args[3])
+            rettype = binaryen_type(node.args[2])
+            sig = node.args[7:(7 + nargs - 1)]
+            jparams = binaryen_type.(node.args[3])
+            bparams = BinaryenTypeCreate(jparams, length(jparams))
+            args = [_compile(ctx, x) for x in sig]
             if !haskey(ctx.imports, name)
-                BinaryenAddFunctionImport(ctx.mod, name, modname, extname, args, rettype)
+                BinaryenAddFunctionImport(ctx.mod, name, modname, extname, bparams, rettype)
                 ctx.imports[name] = sig
             elseif ctx.imports[name] != sig
                 error("Mismatch in foreigncall import for $name: $sig vs. $(ctx.imports[name]).")
             end
+            ctx.varmap[idx] = ctx.localidx
+            x = BinaryenLocalSet(ctx.mod, ctx.localidx, BinaryenCall(ctx.mod, name, args, nargs, rettype))
+            update!(ctx, x, ctx.ci.ssavaluetypes[idx])
 
 
         # DECLARE_BUILTIN(applicable);
@@ -496,7 +497,7 @@ function _compile(ctx::CompilerContext, cfg::Core.Compiler.CFG, phis, idx)
 
         elseif node isa Expr
             # ignore other expressions for now
-            
+
         else
             error("Unsupported Julia construct $node")
         end

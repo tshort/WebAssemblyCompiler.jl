@@ -14,7 +14,7 @@ function jsfunctions(funs)
     (async () => {
         const fs = require('fs');
         const wasmBuffer = fs.readFileSync('$wpath');
-        const {instance} = await WebAssembly.instantiate(wasmBuffer);
+        const {instance} = await WebAssembly.instantiate(wasmBuffer, {ext: {sin: x => Math.sin(x), twox: x => 2*x}});
         funs = instance.exports;
     })();
     """
@@ -25,6 +25,7 @@ end
 
 
 @testset "Julia compiler" begin
+
 
     function f1(x,y)
         a = x + y
@@ -91,6 +92,17 @@ end
     jsfun = jsfunctions(f5, (Float64,Float64))
     @test f5(1.0, 4.0) == jsfun.f5(1.0, 4.0)
     @test f5(5.0, 4.0) == jsfun.f5(5.0, 4.0)
+
+    function f6(x,y)
+        a = x + y
+        b = ccall(:sin, Float64, (Float64,), a)
+        b + 1
+    end
+    compile(f6, (Float64,Float64); filepath = "j.wasm")
+    run(`$(Binaryen.Bin.wasmdis()) j.wasm -o j.wat`)
+    jsfun = jsfunctions(f6, (Float64,Float64))
+    @show jsfun.f6(3.0, 4.0)
+    @test  jsfun.f6(3.0, 4.0) ≈ sin(7.0) + 1
 
 end
 
