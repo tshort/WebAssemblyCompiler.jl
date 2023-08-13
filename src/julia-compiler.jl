@@ -1,12 +1,24 @@
 
 export compile
 
+const wtypes = Dict{DataType, BinaryenType}(
+    Int64 => BinaryenTypeInt64(),
+    Int32 => BinaryenTypeInt32(),
+    UInt64 => BinaryenTypeInt64(),
+    UInt32 => BinaryenTypeInt32(),
+    Bool  => BinaryenTypeInt32(),
+    Float64 => BinaryenTypeFloat64(),
+    Float32 => BinaryenTypeFloat32(),
+    Float32 => BinaryenTypeFloat32(),
+)
+
 mutable struct CompilerContext
     ## module-level context
     mod::BinaryenModuleRef
     names::Dict{DataType, String}  # function signature to name
     sigs::Dict{String, DataType}   # name to function signature
     imports::Dict{String, Any}
+    wtypes::Dict{DataType, BinaryenType}
     ## function-level context
     ci::Core.CodeInfo
     body::Vector{BinaryenExpressionRef}
@@ -16,10 +28,10 @@ mutable struct CompilerContext
 end
 
 CompilerContext(ci::Core.CodeInfo) = 
-    CompilerContext(BinaryenModuleCreate(), Dict{DataType, String}(), Dict{String, DataType}(), Dict{String, DataType}(), 
+    CompilerContext(BinaryenModuleCreate(), Dict{DataType, String}(), Dict{String, DataType}(), Dict{String, DataType}(), copy(wtypes),
                     ci, BinaryenExpressionRef[], BinaryenType[], 0, Dict{Int,Int}())
 CompilerContext(ctx::CompilerContext, ci::Core.CodeInfo) = 
-    CompilerContext(ctx.mod, ctx.names, ctx.sigs, ctx.imports, 
+    CompilerContext(ctx.mod, ctx.names, ctx.sigs, ctx.imports, ctx.wtypes,
                     ci, BinaryenExpressionRef[], BinaryenType[], 0, Dict{Int,Int}())
 
 compile(fun, tt; filepath = "foo.wasm") = compile(((fun, tt...),); filepath)
@@ -28,6 +40,7 @@ function compile(funs; filepath = "foo.wasm")
     cis = Core.CodeInfo[]
     dummyci = code_typed(() -> nothing, Tuple{})[1].first
     ctx = CompilerContext(dummyci)
+    BinaryenModuleSetFeatures(ctx.mod, BinaryenFeatureReferenceTypes() | BinaryenFeatureGC())
     # Create CodeInfo's, and fill in names first
     for funtpl in funs
         tt = length(funtpl) > 1 ? Base.to_tuple_type(funtpl[2:end]) : Tuple{}
@@ -57,10 +70,10 @@ function _compile(ctx::CompilerContext; exported = false)
     ci = ctx.ci
     code = ci.code
     sig = ci.parent.specTypes
-    jparams = binaryen_type.([sig.parameters...][2:end])
+    jparams = [ctx.wtypes[T] for T in [sig.parameters...][2:end]]
     ctx.localidx = length(jparams)
     bparams = BinaryenTypeCreate(jparams, length(jparams))
-    results = binaryen_type(ci.rettype)
+    results = ctx.wtypes[ci.rettype]
     funname = ctx.names[sig]
     cfg = Core.Compiler.compute_basic_blocks(code)
     relooper = RelooperCreate(ctx.mod)
@@ -79,7 +92,7 @@ function _compile(ctx::CompilerContext; exported = false)
                 push!(phis[blocknum], stmt => node.values[i])
             end
             ctx.varmap[stmt] = ctx.localidx
-            push!(ctx.locals, binaryen_type(ctx.ci.ssavaluetypes[stmt]))
+            push!(ctx.locals, ctx.wtypes[ctx.ci.ssavaluetypes[stmt]])
             ctx.localidx += 1
         end
     end
@@ -109,16 +122,11 @@ function _compile(ctx::CompilerContext; exported = false)
     return nothing
 end
 
-for T in (:Int32, :Int64, :Float32, :Float64)
-    BT = Symbol(:BinaryenType, T)
-    @eval binaryen_type(::Type{$T}) = $BT()
-end
-binaryen_type(::Type{Bool}) = BinaryenTypeInt32()
 
 function update!(ctx::CompilerContext, x, localtype = nothing)
     push!(ctx.body, x)
     if localtype != nothing
-        push!(ctx.locals, binaryen_type(localtype))
+        push!(ctx.locals, ctx.wtypes[localtype])
         ctx.localidx += 1
     end
     return nothing
@@ -147,7 +155,8 @@ function _compile(ctx::CompilerContext, cfg::Core.Compiler.CFG, phis, idx)
     end
     function _fun(ctx, idx, bfun, args...)
         ctx.varmap[idx] = ctx.localidx
-        x = bfun(ctx.mod, (_compile(ctx, a) for a in args)...)
+        x = BinaryenLocalSet(ctx.mod, ctx.localidx,
+                             bfun(ctx.mod, (_compile(ctx, a) for a in args)...))
         update!(ctx, x, ctx.ci.ssavaluetypes[idx])
     end
     for idx in idxs
@@ -409,37 +418,53 @@ function _compile(ctx::CompilerContext, cfg::Core.Compiler.CFG, phis, idx)
         ## Builtins / key functions ##
 
         elseif matchgr(node, :arrayref) do bool, arr, i
-                T = roottype(arr)
+                T = eltype(roottype(ctx, arr))
                 unsigned = T <: Unsigned
-                _fun(BinaryenArrayGet, idx, arr, i, _compile(ctx, T), !unsigned)
+                ## subtract one from i for zero-based indexing in WASM
+                i = BinaryenBinary(ctx.mod, BinaryenAddInt32(), 
+                                   _compile(ctx, I32(i)), 
+                                   _compile(ctx, Int32(-1)))
+                _fun(ctx, idx, BinaryenArrayGet, arr, i, ctx.wtypes[T], Pass(!unsigned))
             end
 
         elseif matchgr(node, :arrayset) do bool, arr, val, i
-                _fun(BinaryenArraySet, idx, arr, i, val)
+                i = BinaryenBinary(ctx.mod, BinaryenAddInt32(), 
+                                   _compile(ctx, I32(i)), 
+                                   _compile(ctx, Int32(-1)))
+                # _fun(ctx, idx, BinaryenArraySet, arr, i, val)
+                x = BinaryenArraySet(ctx.mod, _compile(ctx, arr), i, _compile(ctx, val))
+                push!(ctx.body, x)
             end
 
         elseif matchgr(node, :arraylen) do arr
-                _fun(BinaryenArrayLen, idx, arr)
+                _fun(ctx, idx, BinaryenArrayLen, arr)
             end
 
         # elseif  matchgr(node, :arraysize) do arr
         #             end
 
         elseif matchforeigncall(node, :jl_alloc_array_1d) do args
-                type = eltype(args[2])
-                size = args[7]
-                init = C_NULL
-                _fun(BinaryenArrayNew, type, size, init)
+                type = eltype(args[1])
+                size = args[6]
+                tb = TypeBuilderCreate(1)
+                TypeBuilderSetArrayType(tb, 0, ctx.wtypes[type], BinaryenPackedTypeNotPacked(), true)
+                builtHeapTypes = Array{BinaryenHeapType}(undef, 1)
+                TypeBuilderBuildAndDispose(tb, builtHeapTypes, C_NULL, C_NULL)
+                arraytype = BinaryenTypeFromHeapType(builtHeapTypes[1], true)
+                ctx.wtypes[args[1]] = arraytype
+                arraytype = BinaryenTypeGetHeapType(arraytype)
+                _fun(ctx, idx, BinaryenArrayNew, Pass(arraytype), I32(size), 0.0)
             end
+
 
         elseif node isa Expr && node.head == :foreigncall    # general foreigncalls that need to be imported
             modname = "ext"
             extname = node.args[1].value
             name = string(modname, extname)
             nargs = length(node.args[3])
-            rettype = binaryen_type(node.args[2])
+            rettype = ctx.wtypes[node.args[2]]
             sig = node.args[7:(7 + nargs - 1)]
-            jparams = binaryen_type.(node.args[3])
+            jparams = [ctx.wtypes[T] for T in node.args[3]]
             bparams = BinaryenTypeCreate(jparams, length(jparams))
             args = [_compile(ctx, x) for x in sig]
             if !haskey(ctx.imports, name)
@@ -455,9 +480,9 @@ function _compile(ctx::CompilerContext, cfg::Core.Compiler.CFG, phis, idx)
         elseif node isa Expr && node.head == :invoke
             nargs = length(node.args) - 2
             sig = node.args[1].specTypes
-            jparams = binaryen_type.([sig.parameters...][2:end])
+            jparams = [ctx.wtypes[T] for T in[sig.parameters...][2:end]]
             bparams = BinaryenTypeCreate(jparams, length(jparams))
-            rettype = binaryen_type(ctx.ci.ssavaluetypes[idx])
+            rettype = ctx.wtypes[ctx.ci.ssavaluetypes[idx]]
             args = [_compile(ctx, x) for x in node.args[3:end]]
             if haskey(ctx.names, sig)
                 name = ctx.names[sig]
@@ -536,17 +561,32 @@ end
 
 function _compile(ctx::CompilerContext, x::Core.Argument)
     BinaryenLocalGet(ctx.mod, x.n - 2,
-                     binaryen_type(ctx.ci.parent.specTypes.parameters[x.n]))
+                     ctx.wtypes[ctx.ci.parent.specTypes.parameters[x.n]])
 end
 function _compile(ctx::CompilerContext, x::Core.SSAValue)   # These come after the function arguments.
     BinaryenLocalGet(ctx.mod, ctx.varmap[x.id],
-                     binaryen_type(ctx.ci.ssavaluetypes[x.id]))
+                     ctx.wtypes[ctx.ci.ssavaluetypes[x.id]])
 end
 _compile(ctx::CompilerContext, x::Float64) = BinaryenConst(ctx.mod, BinaryenLiteralFloat64(x))
 _compile(ctx::CompilerContext, x::Float32) = BinaryenConst(ctx.mod, BinaryenLiteralFloat32(x))
-_compile(ctx::CompilerContext, x::Int64) = BinaryenConst(ctx.mod, BinaryenLiteralInt64(x))
-_compile(ctx::CompilerContext, x::Int32) = BinaryenConst(ctx.mod, BinaryenLiteralInt32(x))
+_compile(ctx::CompilerContext, x::Union{Int64, UInt64}) = BinaryenConst(ctx.mod, BinaryenLiteralInt64(x))
+_compile(ctx::CompilerContext, x::Union{Int32, UInt32}) = BinaryenConst(ctx.mod, BinaryenLiteralInt32(x))
 _compile(ctx::CompilerContext, x::Bool) = BinaryenConst(ctx.mod, BinaryenLiteralInt32(x))
+_compile(ctx::CompilerContext, x::Ptr{BinaryenExpression}) = x
+struct Pass{T}
+    val::T
+end
+_compile(ctx::CompilerContext, x::Pass) = x.val
+struct I32{T}
+    val::T
+end
+function _compile(ctx::CompilerContext, x::I32)
+    res = _compile(ctx, x.val)
+    if sizeof(Int) == 8 # wrap in an 
+        res = BinaryenUnary(ctx.mod, BinaryenWrapInt64(), res)
+    end
+    return res
+end
 
 roottype(ctx::CompilerContext, x) = typeof(x)
 roottype(ctx::CompilerContext, x::Type{T}) where T = T

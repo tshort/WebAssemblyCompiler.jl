@@ -2,7 +2,7 @@ using Binaryen
 using Binaryen.LibBinaryen
 using Test
 using NodeCall
-NodeCall.initialize();
+NodeCall.initialize(node_args = ["--experimental-wasm-gc"]);
 
 jsfunctions(fun, tt) = jsfunctions(((fun, tt...),))
 
@@ -25,6 +25,31 @@ end
 
 
 @testset "Julia compiler" begin
+
+    function f8(i)
+        a = Array{Float64,1}(undef, Int32(3))
+        @inbounds a[i] = 3.0
+        @inbounds a[i]
+    end
+    compile(f8, (Int32,); filepath = "j.wasm")
+    run(`$(Binaryen.Bin.wasmdis()) j.wasm -o j.wat`)
+    jsfun = jsfunctions(f8, (Int32,))
+    @test f8(Int32(3)) == jsfun.f8(Int32(3))
+
+    # mutable struct X{A,B,C}
+    #     a::A
+    #     b::B
+    #     c::C
+    # end
+    # function f9(x::X)
+    #     x.c + 1
+    # end
+    # x = X(1.,2.,3.)
+    # compile(f9, (typeof(x),); filepath = "j.wasm")
+    # run(`$(Binaryen.Bin.wasmdis()) j.wasm -o j.wat`)
+    # jsfun = jsfunctions(f9, (typeof(x),))
+    # @test f8(x) == jsfun.f8(x)
+
 
     function f1(x,y)
         a = x + y
@@ -98,7 +123,7 @@ end
         b + 1
     end
     compile(f6, (Float64,Float64); filepath = "j.wasm")
-    run(`$(Binaryen.Bin.wasmdis()) j.wasm -o j.wat`)
+    # run(`$(Binaryen.Bin.wasmdis()) j.wasm -o j.wat`)
     jsfun = jsfunctions(f6, (Float64,Float64))
     @test  jsfun.f6(3.0, 4.0) ≈ sin(7.0) + 1
 
@@ -107,7 +132,7 @@ end
         x + twox(y)
     end
     compile(f7, (Float64,Float64); filepath = "j.wasm")
-    run(`$(Binaryen.Bin.wasmdis()) j.wasm -o j.wat`)
+    # run(`$(Binaryen.Bin.wasmdis()) j.wasm -o j.wat`)
     jsfun = jsfunctions(f7, (Float64,Float64))
     @test f7(3.0, 4.0) == jsfun.f7(3.0, 4.0)
 
