@@ -25,7 +25,7 @@
 
 ### Types
 
-* [ ] Arrays
+* [x] Arrays
 * [ ] Structs
 * [ ] Tuples
 * [ ] Strings

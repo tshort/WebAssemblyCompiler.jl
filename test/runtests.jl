@@ -26,29 +26,32 @@ end
 
 @testset "Julia compiler" begin
 
-    function f8(i)
-        a = Array{Float64,1}(undef, Int32(3))
-        @inbounds a[i] = 3.0
-        @inbounds a[i]
+    @noinline function fxa(x)
+        @inbounds x[2]
     end
-    compile(f8, (Int32,); filepath = "j.wasm")
+    function fx(x)
+        a = [1.,2.,3.]
+        fxa(a) + x
+    end
+    compile(fx, (Float64,); filepath = "j.wasm")
     run(`$(Binaryen.Bin.wasmdis()) j.wasm -o j.wat`)
-    jsfun = jsfunctions(f8, (Int32,))
-    @test f8(Int32(3)) == jsfun.f8(Int32(3))
+    jsfun = jsfunctions(fx, (Float64,))
+    x = 3.0
+    @test fx(x) == jsfun.fx(x)
 
-    # mutable struct X{A,B,C}
-    #     a::A
-    #     b::B
-    #     c::C
-    # end
-    # function f9(x::X)
-    #     x.c + 1
-    # end
-    # x = X(1.,2.,3.)
-    # compile(f9, (typeof(x),); filepath = "j.wasm")
-    # run(`$(Binaryen.Bin.wasmdis()) j.wasm -o j.wat`)
-    # jsfun = jsfunctions(f9, (typeof(x),))
-    # @test f8(x) == jsfun.f8(x)
+    mutable struct X{A,B,C}
+        a::A
+        b::B
+        c::C
+    end
+    function f10(x::X)
+        x.c + 1
+    end
+    x = X(1., 2., 3.)
+    compile(f10, (typeof(x),); filepath = "j.wasm")
+    run(`$(Binaryen.Bin.wasmdis()) j.wasm -o j.wat`)
+    jsfun = jsfunctions(f10, (typeof(x),))
+    @test f10(x) == jsfun.f10(x)
 
 
     function f1(x,y)
@@ -135,6 +138,26 @@ end
     # run(`$(Binaryen.Bin.wasmdis()) j.wasm -o j.wat`)
     jsfun = jsfunctions(f7, (Float64,Float64))
     @test f7(3.0, 4.0) == jsfun.f7(3.0, 4.0)
+
+    function f8(i)
+        a = Array{Float64,1}(undef, Int32(3))
+        @inbounds a[i] = 3.0
+        @inbounds a[i]
+    end
+    compile(f8, (Int32,); filepath = "j.wasm")
+    run(`$(Binaryen.Bin.wasmdis()) j.wasm -o j.wat`)
+    jsfun = jsfunctions(f8, (Int32,))
+    @test f8(Int32(3)) == jsfun.f8(Int32(3))
+
+    function f9(i)
+        a = Array{Float64,1}(undef, Int32(i))
+        unsafe_trunc(Int32, length(a))
+    end
+    compile(f9, (Int32,); filepath = "j.wasm")
+    run(`$(Binaryen.Bin.wasmdis()) j.wasm -o j.wat`)
+    ## BROKEN
+    # jsfun = jsfunctions(f9, (Int32,))
+    # @test f9(Int32(3)) == jsfun.f9(Int32(3))
 
 end
 

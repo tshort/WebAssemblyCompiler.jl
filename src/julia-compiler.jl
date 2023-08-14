@@ -70,10 +70,10 @@ function _compile(ctx::CompilerContext; exported = false)
     ci = ctx.ci
     code = ci.code
     sig = ci.parent.specTypes
-    jparams = [ctx.wtypes[T] for T in [sig.parameters...][2:end]]
+    jparams = [gettype(ctx, T) for T in [sig.parameters...][2:end]]
     ctx.localidx = length(jparams)
     bparams = BinaryenTypeCreate(jparams, length(jparams))
-    results = ctx.wtypes[ci.rettype]
+    results = gettype(ctx, ci.rettype)
     funname = ctx.names[sig]
     cfg = Core.Compiler.compute_basic_blocks(code)
     relooper = RelooperCreate(ctx.mod)
@@ -92,7 +92,7 @@ function _compile(ctx::CompilerContext; exported = false)
                 push!(phis[blocknum], stmt => node.values[i])
             end
             ctx.varmap[stmt] = ctx.localidx
-            push!(ctx.locals, ctx.wtypes[ctx.ci.ssavaluetypes[stmt]])
+            push!(ctx.locals, gettype(ctx, ctx.ci.ssavaluetypes[stmt]))
             ctx.localidx += 1
         end
     end
@@ -126,7 +126,7 @@ end
 function update!(ctx::CompilerContext, x, localtype = nothing)
     push!(ctx.body, x)
     if localtype != nothing
-        push!(ctx.locals, ctx.wtypes[localtype])
+        push!(ctx.locals, gettype(ctx, localtype))
         ctx.localidx += 1
     end
     return nothing
@@ -327,6 +327,12 @@ function _compile(ctx::CompilerContext, cfg::Core.Compiler.CFG, phis, idx)
                 error("Unsupported `zext_int` types")
             end
 
+        elseif matchgr(node, :trunc_int) do a, b
+                t = (roottype(ctx, a), roottype(ctx, b))
+                t == (Int32, Int64) ? _unaryfun(ctx, idx, (BinaryenWrapInt64,), b) :
+                error("Unsupported `trunc_int` types")
+            end
+
         elseif matchgr(node, :fptoui) do a, b
                 t = (roottype(ctx, a), roottype(ctx, b))
                 t == (UInt64, Float32) ? _unaryfun(ctx, idx, (BinaryenTruncSatUFloat32ToInt64,), b) :
@@ -424,14 +430,13 @@ function _compile(ctx::CompilerContext, cfg::Core.Compiler.CFG, phis, idx)
                 i = BinaryenBinary(ctx.mod, BinaryenAddInt32(), 
                                    _compile(ctx, I32(i)), 
                                    _compile(ctx, Int32(-1)))
-                _fun(ctx, idx, BinaryenArrayGet, arr, i, ctx.wtypes[T], Pass(!unsigned))
+                _fun(ctx, idx, BinaryenArrayGet, arr, i, gettype(ctx, T), Pass(!unsigned))
             end
 
         elseif matchgr(node, :arrayset) do bool, arr, val, i
                 i = BinaryenBinary(ctx.mod, BinaryenAddInt32(), 
                                    _compile(ctx, I32(i)), 
                                    _compile(ctx, Int32(-1)))
-                # _fun(ctx, idx, BinaryenArraySet, arr, i, val)
                 x = BinaryenArraySet(ctx.mod, _compile(ctx, arr), i, _compile(ctx, val))
                 push!(ctx.body, x)
             end
@@ -444,27 +449,33 @@ function _compile(ctx::CompilerContext, cfg::Core.Compiler.CFG, phis, idx)
         #             end
 
         elseif matchforeigncall(node, :jl_alloc_array_1d) do args
-                type = eltype(args[1])
                 size = args[6]
-                tb = TypeBuilderCreate(1)
-                TypeBuilderSetArrayType(tb, 0, ctx.wtypes[type], BinaryenPackedTypeNotPacked(), true)
-                builtHeapTypes = Array{BinaryenHeapType}(undef, 1)
-                TypeBuilderBuildAndDispose(tb, builtHeapTypes, C_NULL, C_NULL)
-                arraytype = BinaryenTypeFromHeapType(builtHeapTypes[1], true)
-                ctx.wtypes[args[1]] = arraytype
-                arraytype = BinaryenTypeGetHeapType(arraytype)
+                arraytype = BinaryenTypeGetHeapType(gettype(ctx, args[1]))
                 _fun(ctx, idx, BinaryenArrayNew, Pass(arraytype), I32(size), 0.0)
             end
 
+        elseif matchgr(node, :getfield) do x, field
+                @show ctx.body
+                T = roottype(ctx, x)
+                index = Int32(findfirst(x -> x == field.value, fieldnames(T)) - 1)
+                eT = Base.datatype_fieldtypes(T)[index + 1]
+                unsigned = eT <: Unsigned
+                @show index
+                @show gettype(ctx, eT)
+                x = BinaryenStructGet(ctx.mod, Int32(2), _compile(ctx, x), BinaryenTypeFloat64(), false)
+                @show x
+                _fun(ctx, idx, BinaryenStructGet, index, _compile(ctx, x), gettype(ctx, eT), Pass(!unsigned))
+            end
+        
 
         elseif node isa Expr && node.head == :foreigncall    # general foreigncalls that need to be imported
             modname = "ext"
             extname = node.args[1].value
             name = string(modname, extname)
             nargs = length(node.args[3])
-            rettype = ctx.wtypes[node.args[2]]
+            rettype = gettype(ctx, node.args[2])
             sig = node.args[7:(7 + nargs - 1)]
-            jparams = [ctx.wtypes[T] for T in node.args[3]]
+            jparams = [gettype(ctx, T) for T in node.args[3]]
             bparams = BinaryenTypeCreate(jparams, length(jparams))
             args = [_compile(ctx, x) for x in sig]
             if !haskey(ctx.imports, name)
@@ -480,9 +491,9 @@ function _compile(ctx::CompilerContext, cfg::Core.Compiler.CFG, phis, idx)
         elseif node isa Expr && node.head == :invoke
             nargs = length(node.args) - 2
             sig = node.args[1].specTypes
-            jparams = [ctx.wtypes[T] for T in[sig.parameters...][2:end]]
+            jparams = [gettype(ctx, T) for T in[sig.parameters...][2:end]]
             bparams = BinaryenTypeCreate(jparams, length(jparams))
-            rettype = ctx.wtypes[ctx.ci.ssavaluetypes[idx]]
+            rettype = gettype(ctx, ctx.ci.ssavaluetypes[idx])
             args = [_compile(ctx, x) for x in node.args[3:end]]
             if haskey(ctx.names, sig)
                 name = ctx.names[sig]
@@ -561,11 +572,11 @@ end
 
 function _compile(ctx::CompilerContext, x::Core.Argument)
     BinaryenLocalGet(ctx.mod, x.n - 2,
-                     ctx.wtypes[ctx.ci.parent.specTypes.parameters[x.n]])
+                     gettype(ctx, ctx.ci.parent.specTypes.parameters[x.n]))
 end
 function _compile(ctx::CompilerContext, x::Core.SSAValue)   # These come after the function arguments.
     BinaryenLocalGet(ctx.mod, ctx.varmap[x.id],
-                     ctx.wtypes[ctx.ci.ssavaluetypes[x.id]])
+                     gettype(ctx, ctx.ci.ssavaluetypes[x.id]))
 end
 _compile(ctx::CompilerContext, x::Float64) = BinaryenConst(ctx.mod, BinaryenLiteralFloat64(x))
 _compile(ctx::CompilerContext, x::Float32) = BinaryenConst(ctx.mod, BinaryenLiteralFloat32(x))
@@ -601,6 +612,9 @@ roottype(ctx::CompilerContext, x::Core.SSAValue) = ctx.ci.ssavaluetypes[x.id]
 function matchgr(fun, node, sym)
     match = node isa Expr && length(node.args) > 0 && node.args[1] isa GlobalRef && node.args[1].name == sym
     if match
+        if length(methods(fun)[1].sig.parameters) != length(node.args)
+            return false
+        end
         fargs = length(node.args) > 1 ? node.args[2:end] : []
         fun(fargs...)
     end
@@ -628,4 +642,24 @@ basename(x::GlobalRef) = x.name
 basename(m::Core.MethodInstance) = basename(m.def)
 basename(m::Method) = m.name == :Type ? m.sig.parameters[1].parameters[1].name.name : m.name
 
-
+function gettype(ctx, type)
+    if haskey(ctx.wtypes, type)
+        return ctx.wtypes[type]
+    end
+    tb = TypeBuilderCreate(1)
+    builtheaptypes = Array{BinaryenHeapType}(undef, 1)
+    if type <: Array
+        elt = eltype(type)
+        TypeBuilderSetArrayType(tb, 0, gettype(ctx, elt), sizeof(elt) == 1 ? BinaryenPackedTypeInt8() : BinaryenPackedTypeNotPacked(), true)
+    else  # Tuples and Structs
+        fieldtypes = [gettype(ctx, T) for T in Base.datatype_fieldtypes(type)]
+        n = length(fieldtypes)
+        fieldpackedtypes = fill(BinaryenPackedTypeNotPacked(), n)
+        fieldmutables = fill(ismutabletype(type), n)
+        TypeBuilderSetStructType(tb, 0, fieldtypes, fieldpackedtypes, fieldmutables, n)
+    end
+    TypeBuilderBuildAndDispose(tb, builtheaptypes, C_NULL, C_NULL)
+    newtype = BinaryenTypeFromHeapType(builtheaptypes[1], true)
+    ctx.wtypes[type] = newtype
+    return newtype
+end
