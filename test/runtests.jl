@@ -23,37 +23,66 @@ function jsfunctions(funs)
     return node"funs"
 end
 
-
-@testset "Julia compiler" begin
-
-    @noinline function fxa(x)
-        @inbounds x[2]
-    end
-    function fx(x)
-        a = [1.,2.,3.]
-        fxa(a) + x
-    end
-    compile(fx, (Float64,); filepath = "j.wasm")
-    run(`$(Binaryen.Bin.wasmdis()) j.wasm -o j.wat`)
-    jsfun = jsfunctions(fx, (Float64,))
-    x = 3.0
-    @test fx(x) == jsfun.fx(x)
-
+# works outside of a testset for some reason
     mutable struct X{A,B,C}
         a::A
         b::B
         c::C
     end
-    function f10(x::X)
-        x.c + 1
+    @noinline function f12a(y)
+        x = X(y, 2y, 3y)
+        x.b = x.c
+        x
     end
-    x = X(1., 2., 3.)
-    compile(f10, (typeof(x),); filepath = "j.wasm")
-    run(`$(Binaryen.Bin.wasmdis()) j.wasm -o j.wat`)
-    jsfun = jsfunctions(f10, (typeof(x),))
-    @test f10(x) == jsfun.f10(x)
+    function f12(x)
+        y = f12a(x)
+        y.c + 1
+    end
+    compile(((f12, Float64,),); filepath = "j.wasm")
+    # run(`$(Binaryen.Bin.wasmdis()) j.wasm -o j.wat`)
+    jsfun = jsfunctions(f12, (Float64,))
+    x = 3.0
+    @test f12(x) == jsfun.f12(x)
+    @show f12(x)
+    @show jsfun.f12(x)
+ 
+@testset "Julia compiler" begin
 
+    # mutable struct X{A,B,C}
+    #     a::A
+    #     b::B
+    #     c::C
+    # end
+    # @noinline function f11a(y)
+    #     X(y, 2y, 3y)
+    # end
+    # function f11(x)
+    #     x = f11a(x)
+    #     x.c + 1
+    # end
+    # # x = X(1., 2., 3.)
+    # compile(f11, (Float64,); filepath = "j.wasm")
+    # run(`$(Binaryen.Bin.wasmdis()) j.wasm -o j.wat`)
+    # jsfun = jsfunctions(f11, (Float64,))
+    # x = 3.0
+    # @test f11(x) == jsfun.f11(x)
+    # @noinline function f12a(y)
+    #     x = X(y, 2y, 3y)
+    #     x.b = x.c
+    #     x
+    # end
+    # function f12(x)
+    #     x = f12a(x)
+    #     x.c + 1
+    # end
+    # # x = X(1., 2., 3.)
+    # compile(f12, (Float64,); filepath = "j.wasm")
+    # run(`$(Binaryen.Bin.wasmdis()) j.wasm -o j.wat`)
+    # jsfun = jsfunctions(f12, (Float64,))
+    # x = 3.0
+    # @test f12(x) == jsfun.f12(x)
 
+    
     function f1(x,y)
         a = x + y
         a + 1
@@ -159,6 +188,50 @@ end
     # jsfun = jsfunctions(f9, (Int32,))
     # @test f9(Int32(3)) == jsfun.f9(Int32(3))
 
+    @noinline function f10a(x)
+        @inbounds x[2]
+    end
+    function f10(x)
+        # a = [1.,2.,3.]
+        a = Array{Float64, 1}(undef, 3)
+        f10a(a) + x
+    end
+    compile(f10, (Float64,); filepath = "j.wasm")
+    run(`$(Binaryen.Bin.wasmdis()) j.wasm -o j.wat`)
+    jsfun = jsfunctions(f10, (Float64,))
+    x = 3.0
+    @test f10(x) == jsfun.f10(x)
+
+    @noinline function f11a(y)
+        X(y, 2y, 3y)
+    end
+    function f11(x)
+        x = f11a(x)
+        x.c + 1
+    end
+    # x = X(1., 2., 3.)
+    compile(f11, (Float64,); filepath = "j.wasm")
+    run(`$(Binaryen.Bin.wasmdis()) j.wasm -o j.wat`)
+    jsfun = jsfunctions(f11, (Float64,))
+    x = 3.0
+    @test f11(x) == jsfun.f11(x)
+
+    # @noinline function f12a(y)
+    #     x = X(y, 2y, 3y)
+    #     x.b = x.c
+    #     x
+    # end
+    # function f12(x)
+    #     y = f12a(x)
+    #     y.c + 1
+    # end
+    # f12(1.)
+    # # x = X(1., 2., 3.)
+    # compile(((f12, Float64,),); filepath = "j.wasm")
+    # run(`$(Binaryen.Bin.wasmdis()) j.wasm -o j.wat`)
+    # jsfun = jsfunctions(f12, (Float64,))
+    # x = 3.0
+    # @test f12(x) == jsfun.f12(x)
 end
 
 @testset "LibBinaryen" begin

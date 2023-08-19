@@ -153,10 +153,10 @@ function _compile(ctx::CompilerContext, cfg::Core.Compiler.CFG, phis, idx)
                                            _compile(ctx, a)))
         update!(ctx, x, ctx.ci.ssavaluetypes[idx])
     end
-    function _fun(ctx, idx, bfun, args...)
+    function _fun(ctx, idx, bfun, args...; passall = false)
         ctx.varmap[idx] = ctx.localidx
         x = BinaryenLocalSet(ctx.mod, ctx.localidx,
-                             bfun(ctx.mod, (_compile(ctx, a) for a in args)...))
+                             bfun(ctx.mod, (passall ? a : _compile(ctx, a) for a in args)...))
         update!(ctx, x, ctx.ci.ssavaluetypes[idx])
     end
     for idx in idxs
@@ -252,6 +252,10 @@ function _compile(ctx::CompilerContext, cfg::Core.Compiler.CFG, phis, idx)
                 _binaryfun(ctx, idx, (BinaryenEqFloat64, BinaryenEqFloat32), a, b)
             end
 
+        elseif matchgr(node, :fpiseq) do a, b
+                _binaryfun(ctx, idx, (BinaryenEqFloat64, BinaryenEqFloat32), a, b)
+            end
+
         elseif matchgr(node, :ne_float) do a, b
                 _binaryfun(ctx, idx, (BinaryenNeFloat64, BinaryenNeFloat32), a, b)
             end
@@ -298,6 +302,10 @@ function _compile(ctx::CompilerContext, cfg::Core.Compiler.CFG, phis, idx)
 
         elseif matchgr(node, :ctpop_int) do a, b
                 _binaryfun(ctx, idx, (BinaryenPopcntInt64, BinaryenPopcntInt32), a, b)
+            end
+
+        elseif matchgr(node, :copysign_float) do a, b
+                _binaryfun(ctx, idx, (BinaryenCopySignInt64, BinaryenCopySignInt32), a, b)
             end
 
         # elseif matchgr(f node:ctlz_int) do a, b
@@ -385,24 +393,41 @@ function _compile(ctx::CompilerContext, cfg::Core.Compiler.CFG, phis, idx)
                 _fun(BinaryenIf, idx, cond, a, b)
             end
 
+        elseif matchgr(node, :abs_float) do a
+                _unaryfun(ctx, idx, (BinaryenAbsFloat64, BinaryenAbsFloat32), a)
+            end
+
+        elseif matchgr(node, :ceil_llvm) do a
+                _unaryfun(ctx, idx, (BinaryenCeilFloat64, BinaryenCeilFloat32), a)
+            end
+
+        elseif matchgr(node, :floor_llvm) do a
+                _unaryfun(ctx, idx, (BinaryenFloorFloat64, BinaryenFloorFloat32), a)
+            end
+
+        elseif matchgr(node, :trunc_llvm) do a
+                _unaryfun(ctx, idx, (BinaryenTruncFloat64, BinaryenTruncFloat32), a)
+            end
+
+        elseif matchgr(node, :rint_llvm) do a
+                _unaryfun(ctx, idx, (BinaryenNearestFloat64, BinaryenNearestFloat32), a)
+            end
+
+        elseif matchgr(node, :sqrt_llvm) do a
+                _unaryfun(ctx, idx, (BinaryenSqrtFloat64, BinaryenSqrtFloat32), a)
+            end
+
+        elseif matchgr(node, :sqrt_llvm_fast) do a
+                _unaryfun(ctx, idx, (BinaryenSqrtFloat64, BinaryenSqrtFloat32), a)
+            end
 
 
         ## TODO
-        # ADD_I(trunc_int, 2) \
         # ADD_I(add_ptr, 2) \
         # ADD_I(sub_ptr, 2) \
-        # ADD_I(fpiseq, 2) \
         # ADD_I(bswap_int, 1) \
         # /*  functions */ \
-        # ADD_I(abs_float, 1) \
-        # ADD_I(copysign_float, 2) \
         # ADD_I(flipsign_int, 2) \
-        # ADD_I(ceil_llvm, 1) \
-        # ADD_I(floor_llvm, 1) \
-        # ADD_I(trunc_llvm, 1) \
-        # ADD_I(rint_llvm, 1) \
-        # ADD_I(sqrt_llvm, 1) \
-        # ADD_I(sqrt_llvm_fast, 1) \
         # /*  pointer access */ \
         # ADD_I(pointerref, 3) \
         # ADD_I(pointerset, 4) \
@@ -416,9 +441,6 @@ function _compile(ctx::CompilerContext, cfg::Core.Compiler.CFG, phis, idx)
         # /*  c interface */ \
         # ADD_I(cglobal, 2) \
         # ALIAS(llvmcall, llvmcall) \
-        # /*  object access */ \
-        # ADD_I(arraylen, 1) \
-        # /*  cpu feature tests */ \
         # ADD_I(have_fma, 1) \
 
         ## Builtins / key functions ##
@@ -455,18 +477,50 @@ function _compile(ctx::CompilerContext, cfg::Core.Compiler.CFG, phis, idx)
             end
 
         elseif matchgr(node, :getfield) do x, field
-                @show ctx.body
                 T = roottype(ctx, x)
-                index = Int32(findfirst(x -> x == field.value, fieldnames(T)) - 1)
+                index = UInt32(findfirst(x -> x == field.value, fieldnames(T)) - 1)
                 eT = Base.datatype_fieldtypes(T)[index + 1]
                 unsigned = eT <: Unsigned
-                @show index
-                @show gettype(ctx, eT)
-                x = BinaryenStructGet(ctx.mod, Int32(2), _compile(ctx, x), BinaryenTypeFloat64(), false)
-                @show x
-                _fun(ctx, idx, BinaryenStructGet, index, _compile(ctx, x), gettype(ctx, eT), Pass(!unsigned))
+                _fun(ctx, idx, BinaryenStructGet, index, _compile(ctx, x), gettype(ctx, eT), !unsigned, passall = true)
             end
         
+        ## 3-arg version of getfield for integer field access
+        elseif matchgr(node, :getfield) do x, index, bool
+                T = roottype(ctx, x)
+                eT = Base.datatype_fieldtypes(T)[index]
+                unsigned = eT <: Unsigned
+                _fun(ctx, idx, BinaryenStructGet, UInt32(index - 1), _compile(ctx, x), gettype(ctx, eT), !unsigned, passall = true)
+            end
+
+        elseif matchgr(node, :setfield!) do x, field, value
+                if field isa QuoteNode && field.value isa Symbol
+                    T = roottype(ctx, x)
+                    index = UInt32(findfirst(x -> x == field.value, fieldnames(T)) - 1)
+                elseif field isa Integer
+                    index = UInt32(field)
+                else
+                    error("setfield! indexing with $field is not supported in $node.")
+                end
+                BinaryenStructSet(ctx.mod, index, _compile(ctx, x), _compile(ctx, value))
+            end
+        
+
+        elseif node isa Expr && node.head == :new || (node.head == :call && node.args[1] isa GlobalRef && node.args[1].name == :tuple)
+            nargs = UInt32(length(node.args) - 1)
+            args = [_compile(ctx, x) for x in node.args[2:end]]
+            jtype = node.args[1]
+            type = BinaryenTypeGetHeapType(gettype(ctx, jtype))
+            x = BinaryenStructNew(ctx.mod, args, nargs, type)
+            _fun(ctx, idx, BinaryenStructNew, args, nargs, type; passall = true)
+
+        elseif node.head == :call && node.args[1] isa GlobalRef && node.args[1].name == :tuple
+            ## need to cover NTuple case -> fixed array
+            nargs = UInt32(length(node.args) - 1)
+            args = [_compile(ctx, x) for x in node.args[2:end]]
+            jtype = node.args[1]
+            type = BinaryenTypeGetHeapType(gettype(ctx, jtype))
+            x = BinaryenStructNew(ctx.mod, args, nargs, type)
+            _fun(ctx, idx, BinaryenStructNew, args, nargs, type; passall = true)
 
         elseif node isa Expr && node.head == :foreigncall    # general foreigncalls that need to be imported
             modname = "ext"
@@ -515,9 +569,6 @@ function _compile(ctx::CompilerContext, cfg::Core.Compiler.CFG, phis, idx)
         # DECLARE_BUILTIN(_apply_iterate);
         # DECLARE_BUILTIN(_apply_pure);
         # DECLARE_BUILTIN(apply_type);
-        # DECLARE_BUILTIN(arrayref);
-        # DECLARE_BUILTIN(arrayset);
-        # DECLARE_BUILTIN(arraysize);
         # DECLARE_BUILTIN(_call_in_world);
         # DECLARE_BUILTIN(_call_in_world_total);
         # DECLARE_BUILTIN(_call_latest);
@@ -525,8 +576,6 @@ function _compile(ctx::CompilerContext, cfg::Core.Compiler.CFG, phis, idx)
         # DECLARE_BUILTIN(const_arrayref);
         # DECLARE_BUILTIN(_expr);
         # DECLARE_BUILTIN(fieldtype);
-        # DECLARE_BUILTIN(getfield);
-        # DECLARE_BUILTIN(invoke);
         # DECLARE_BUILTIN(is);
         # DECLARE_BUILTIN(isa);
         # DECLARE_BUILTIN(isdefined);
@@ -609,14 +658,18 @@ roottype(ctx::CompilerContext, x::Core.SSAValue) = ctx.ci.ssavaluetypes[x.id]
 
 ## Matches an expression starting with a GlobalRef given by `sym`.
 ## This is common for intrinsics.
-function matchgr(fun, node, sym)
+function matchgr(fun, node, sym; combinedargs = false)
     match = node isa Expr && length(node.args) > 0 && node.args[1] isa GlobalRef && node.args[1].name == sym
     if match
-        if length(methods(fun)[1].sig.parameters) != length(node.args)
+        if !combinedargs && length(methods(fun)[1].sig.parameters) != length(node.args)
             return false
         end
         fargs = length(node.args) > 1 ? node.args[2:end] : []
-        fun(fargs...)
+        if combinedargs
+            fun(fargs)
+        else
+            fun(fargs...)
+        end
     end
     return match
 end
@@ -631,6 +684,7 @@ function matchforeigncall(fun, node, sym)
     end
     return match
 end
+
 
 # Other utilities
 
