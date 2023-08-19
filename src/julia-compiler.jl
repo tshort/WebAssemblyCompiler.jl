@@ -125,7 +125,7 @@ end
 
 function update!(ctx::CompilerContext, x, localtype = nothing)
     push!(ctx.body, x)
-    if localtype != nothing
+    if localtype !== nothing
         push!(ctx.locals, gettype(ctx, localtype))
         ctx.localidx += 1
     end
