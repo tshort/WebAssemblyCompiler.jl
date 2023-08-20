@@ -3,6 +3,8 @@ using Test
 using Binaryen
     include("setup.jl")   
 
+    compile(((sin, Float64,),); filepath = "j.wasm")
+    
     function f13(x)
         y = Core.bitcast(UInt64, x)
         return Core.bitcast(Float64, y)

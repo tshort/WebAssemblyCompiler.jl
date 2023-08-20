@@ -1,7 +1,7 @@
 
 export compile
 
-const wtypes = Dict{DataType, BinaryenType}(
+const wtypes = Dict{Any, BinaryenType}(
     Int64 => BinaryenTypeInt64(),
     Int32 => BinaryenTypeInt32(),
     UInt64 => BinaryenTypeInt64(),
@@ -10,6 +10,8 @@ const wtypes = Dict{DataType, BinaryenType}(
     Float64 => BinaryenTypeFloat64(),
     Float32 => BinaryenTypeFloat32(),
     Float32 => BinaryenTypeFloat32(),
+    Core.TypeofBottom => BinaryenTypeNone(),
+    Union{} => BinaryenTypeNone(),
 )
 
 mutable struct CompilerContext
@@ -18,7 +20,7 @@ mutable struct CompilerContext
     names::Dict{DataType, String}  # function signature to name
     sigs::Dict{String, DataType}   # name to function signature
     imports::Dict{String, Any}
-    wtypes::Dict{DataType, BinaryenType}
+    wtypes::Dict{Any, BinaryenType}
     globals::Dict{String, Any}    
     ## function-level context
     ci::Core.CodeInfo
@@ -162,6 +164,7 @@ function _compile(ctx::CompilerContext, cfg::Core.Compiler.CFG, phis, idx)
     end
     for idx in idxs
         node = ci.code[idx]
+        @show idx, node
         # if idx == 17
         #     dump(node)
         # end
@@ -186,7 +189,7 @@ function _compile(ctx::CompilerContext, cfg::Core.Compiler.CFG, phis, idx)
             end
 
         elseif matchgr(node, :neg_float) do a
-                _unaryfun(ctx, idx, (BinaryenNegInt64, BinaryenNegInt32), a)
+                _unaryfun(ctx, idx, (BinaryenNegFloat64, BinaryenNegFloat32), a)
             end
 
         elseif matchgr(node, :add_int) do a, b
@@ -325,6 +328,10 @@ function _compile(ctx::CompilerContext, cfg::Core.Compiler.CFG, phis, idx)
                 _binaryfun(ctx, idx, (BinaryenCopySignInt64, BinaryenCopySignInt32), a, b)
             end
 
+        elseif matchgr(node, :not_int) do a
+                _binaryfun(ctx, idx, (BinaryenXorInt64, BinaryenXorInt32), a, -1)
+            end
+
         # elseif matchgr(f node:ctlz_int) do a, b
         #         _binaryfun(ctx, idx, (BinaryenClzInt64, BinaryenClzInt32), a, b)
         # end
@@ -345,16 +352,17 @@ function _compile(ctx::CompilerContext, cfg::Core.Compiler.CFG, phis, idx)
 
         elseif matchgr(node, :zext_int) do a, b
                 t = (roottype(ctx, a), roottype(ctx, b))
-                t == (Int64, Int16) ? _unaryfun(ctx, idx, (BinaryenExtendU16Int64,), b) :
-                t == (Int64, Int32) ? _unaryfun(ctx, idx, (BinaryenExtendUInt64,), b) :
-                t == (Int32, Int8)  ? _unaryfun(ctx, idx, (BinaryenExtendU8Int32,), b) :
-                t == (Int32, Int16) ? _unaryfun(ctx, idx, (BinaryenExtendU16Int32,), b) :
+                t == (UInt64, UInt16) ? _unaryfun(ctx, idx, (BinaryenExtendU16Int64,), b) :
+                t == (UInt64, UInt32) ? _unaryfun(ctx, idx, (BinaryenExtendUInt32,), b) :
+                t == (UInt32, UInt8)  ? _unaryfun(ctx, idx, (BinaryenExtendU8Int32,), b) :
+                t == (UInt32, UInt16) ? _unaryfun(ctx, idx, (BinaryenExtendU16Int32,), b) :
                 error("Unsupported `zext_int` types")
             end
 
         elseif matchgr(node, :trunc_int) do a, b
                 t = (roottype(ctx, a), roottype(ctx, b))
                 t == (Int32, Int64) ? _unaryfun(ctx, idx, (BinaryenWrapInt64,), b) :
+                t == (UInt32, UInt64) ? _unaryfun(ctx, idx, (BinaryenWrapInt64,), b) :
                 error("Unsupported `trunc_int` types")
             end
 
@@ -407,7 +415,7 @@ function _compile(ctx::CompilerContext, cfg::Core.Compiler.CFG, phis, idx)
             end
 
         elseif matchgr(node, :ifelse) do cond, a, b
-                _fun(BinaryenIf, idx, cond, a, b)
+                _fun(ctx, idx, BinaryenIf, cond, a, b)
             end
 
         elseif matchgr(node, :abs_float) do a
@@ -569,6 +577,9 @@ function _compile(ctx::CompilerContext, cfg::Core.Compiler.CFG, phis, idx)
             update!(ctx, x, ctx.ci.ssavaluetypes[idx])
 
         elseif node isa Expr && node.head == :invoke
+            if DomainError isa node.args[1].specTypes.parameters[1]
+                continue
+            end
             nargs = length(node.args) - 2
             sig = node.args[1].specTypes
             jparams = [gettype(ctx, T) for T in[sig.parameters...][2:end]]
@@ -580,6 +591,8 @@ function _compile(ctx::CompilerContext, cfg::Core.Compiler.CFG, phis, idx)
             else
                 MI = node.args[1]
                 newci = Base.code_typed_by_type(sig)[1][1]
+                @show newci
+                @show sig
                 name = string("julia_", node.args[1].def.name)
                 ctx.sigs[name] = sig
                 ctx.names[sig] = name
@@ -662,10 +675,13 @@ function _compile(ctx::CompilerContext, x::Core.SSAValue)   # These come after t
 end
 _compile(ctx::CompilerContext, x::Float64) = BinaryenConst(ctx.mod, BinaryenLiteralFloat64(x))
 _compile(ctx::CompilerContext, x::Float32) = BinaryenConst(ctx.mod, BinaryenLiteralFloat32(x))
-_compile(ctx::CompilerContext, x::Union{Int64, UInt64}) = BinaryenConst(ctx.mod, BinaryenLiteralInt64(x))
-_compile(ctx::CompilerContext, x::Union{Int32, UInt32}) = BinaryenConst(ctx.mod, BinaryenLiteralInt32(x))
+_compile(ctx::CompilerContext, x::Int64) = BinaryenConst(ctx.mod, BinaryenLiteralInt64(x))
+_compile(ctx::CompilerContext, x::Int32) = BinaryenConst(ctx.mod, BinaryenLiteralInt32(x))
+_compile(ctx::CompilerContext, x::UInt64) = BinaryenConst(ctx.mod, BinaryenLiteralInt64(reinterpret(Int64, x)))
+_compile(ctx::CompilerContext, x::UInt32) = BinaryenConst(ctx.mod, BinaryenLiteralInt32(reinterpret(Int32, x)))
 _compile(ctx::CompilerContext, x::Bool) = BinaryenConst(ctx.mod, BinaryenLiteralInt32(x))
 _compile(ctx::CompilerContext, x::Ptr{BinaryenExpression}) = x
+_compile(ctx::CompilerContext, x::String) = BinaryenStringConst(ctx.mod, x)
 struct Pass{T}
     val::T
 end
@@ -735,6 +751,7 @@ function gettype(ctx, type)
     if haskey(ctx.wtypes, type)
         return ctx.wtypes[type]
     end
+    @show type
     tb = TypeBuilderCreate(1)
     builtheaptypes = Array{BinaryenHeapType}(undef, 1)
     if type <: Array

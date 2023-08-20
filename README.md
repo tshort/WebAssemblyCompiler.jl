@@ -62,7 +62,10 @@
   - [x] bitcast
   - [ ] ntuples as array and getfield with an index
   - [?] globals
-  - [ ] not_int
+  - [x] not_int
+  - [x] invoke problem
+  - [x] errors/throw
+  - [ ] `new` issue
 
 
 ## Approaches to Generating WebAssembly
