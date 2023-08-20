@@ -46,7 +46,7 @@
 ### Tests
 
 * [ ] Integrate some of Julia's tests
-* [ ] Get `@test` to work
+* [x] Get `@test` to work
 
 ### Other
 
@@ -56,6 +56,14 @@
 
 * [ ] Pick a DiffEq example to try
 * [ ] sin
+  - [x] muladd_float
+  - [x] pi nodes
+  - [x] Core.tuple
+  - [x] bitcast
+  - [ ] ntuples as array and getfield with an index
+  - [?] globals
+  - [ ] not_int
+
 
 ## Approaches to Generating WebAssembly
 

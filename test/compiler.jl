@@ -1,3 +1,18 @@
+@testitem "Misc" begin
+    include("setup.jl")   
+
+    function f13(x)
+        y = Core.bitcast(UInt64, x)
+        return Core.bitcast(Float64, y)
+    end
+    compile(((f13, Float64,),); filepath = "j.wasm")
+    x = 3.0
+    @show f13(x)
+    jsfun = jsfunctions(f13, (Float64,))
+    @test f13(x) == jsfun.f13(x)
+
+end
+
 @testitem "Basics" begin
     include("setup.jl")   
     
@@ -165,3 +180,28 @@ end
     @test f12(x) == jsfun.f12(x)
 
 end
+
+# @testitem "Strings" begin
+#     include("setup.jl")   
+
+#     f1(x) = string("hello ", x)
+
+# end
+
+@testitem "Math" begin
+    include("setup.jl")   
+
+    compile(muladd, (Float64, Float64, Float64,); filepath = "j.wasm")
+    run(`$(Binaryen.Bin.wasmdis()) j.wasm -o j.wat`)
+    jsfun = jsfunctions(muladd, (Float64, Float64, Float64,))
+    x, y, z = 3.0, 2.0, 1.0
+    @test muladd(x, y, z) == jsfun.muladd(x, y, z)
+
+    compile(((sin, Float64,),); filepath = "j.wasm")
+    # run(`$(Binaryen.Bin.wasmdis()) j.wasm -o j.wat`)
+    jsfun = jsfunctions(sin, (Float64,))
+    x = 3.0
+    @test sin(x) == jsfun.sin(x)
+
+end
+

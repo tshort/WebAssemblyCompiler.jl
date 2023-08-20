@@ -19,6 +19,7 @@ mutable struct CompilerContext
     sigs::Dict{String, DataType}   # name to function signature
     imports::Dict{String, Any}
     wtypes::Dict{DataType, BinaryenType}
+    globals::Dict{String, Any}    
     ## function-level context
     ci::Core.CodeInfo
     body::Vector{BinaryenExpressionRef}
@@ -28,10 +29,10 @@ mutable struct CompilerContext
 end
 
 CompilerContext(ci::Core.CodeInfo) = 
-    CompilerContext(BinaryenModuleCreate(), Dict{DataType, String}(), Dict{String, DataType}(), Dict{String, DataType}(), copy(wtypes),
+    CompilerContext(BinaryenModuleCreate(), Dict{DataType, String}(), Dict{String, DataType}(), Dict{String, DataType}(), copy(wtypes), Dict{String, Any}(),
                     ci, BinaryenExpressionRef[], BinaryenType[], 0, Dict{Int,Int}())
 CompilerContext(ctx::CompilerContext, ci::Core.CodeInfo) = 
-    CompilerContext(ctx.mod, ctx.names, ctx.sigs, ctx.imports, ctx.wtypes,
+    CompilerContext(ctx.mod, ctx.names, ctx.sigs, ctx.imports, ctx.wtypes, ctx.globals,
                     ci, BinaryenExpressionRef[], BinaryenType[], 0, Dict{Int,Int}())
 
 compile(fun, tt; filepath = "foo.wasm") = compile(((fun, tt...),); filepath)
@@ -161,6 +162,9 @@ function _compile(ctx::CompilerContext, cfg::Core.Compiler.CFG, phis, idx)
     end
     for idx in idxs
         node = ci.code[idx]
+        # if idx == 17
+        #     dump(node)
+        # end
         if node isa Union{Core.GotoNode, Core.GotoIfNot, Core.PhiNode, Nothing}
             # do nothing
 
@@ -169,6 +173,11 @@ function _compile(ctx::CompilerContext, cfg::Core.Compiler.CFG, phis, idx)
 
         elseif node isa Core.ReturnNode
             update!(ctx, BinaryenReturn(ctx.mod, _compile(ctx, node.val)))
+
+        elseif node isa Core.PiNode
+            ctx.varmap[idx] = ctx.localidx
+            x = BinaryenLocalSet(ctx.mod, ctx.localidx, _compile(ctx, node.val))
+            update!(ctx, x, ctx.ci.ssavaluetypes[idx])
 
         ## Intrinsics ##
 
@@ -218,6 +227,14 @@ function _compile(ctx::CompilerContext, cfg::Core.Compiler.CFG, phis, idx)
 
         elseif matchgr(node, :mul_float) do a, b
                 _binaryfun(ctx, idx, (BinaryenMulFloat64, BinaryenMulFloat32), a, b)
+            end
+
+        elseif matchgr(node, :muladd_float) do a, b, c
+                ab = BinaryenBinary(ctx.mod,
+                                    sizeof(roottype(ctx, a)) < 8 ? BinaryenMulFloat32() : BinaryenMulFloat64(),
+                                    _compile(ctx, a),
+                                    _compile(ctx, b))
+                _binaryfun(ctx, idx, (BinaryenAddFloat64, BinaryenAddFloat32), Pass(ab), c)
             end
 
         elseif matchgr(node, :div_float) do a, b
@@ -421,8 +438,17 @@ function _compile(ctx::CompilerContext, cfg::Core.Compiler.CFG, phis, idx)
                 _unaryfun(ctx, idx, (BinaryenSqrtFloat64, BinaryenSqrtFloat32), a)
             end
 
+        elseif matchgr(node, :bitcast) do t, val
+                T = roottype(ctx, t)
+                T == Float64 ? _unaryfun(ctx, idx, (BinaryenReinterpretInt64,), val) :
+                T == Float32 ? _unaryfun(ctx, idx, (BinaryenReinterpretInt32,), val) :
+                T == Int64 || T == UInt64 ? _unaryfun(ctx, idx, (BinaryenReinterpretFloat64,), val) :
+                T == Int32 || T == UInt32 ? _unaryfun(ctx, idx, (BinaryenReinterpretFloat32,), val) :
+                error("Unsupported `bitcast` types")
+            end
 
         ## TODO
+        # bitcast
         # ADD_I(add_ptr, 2) \
         # ADD_I(sub_ptr, 2) \
         # ADD_I(bswap_int, 1) \
@@ -505,7 +531,7 @@ function _compile(ctx::CompilerContext, cfg::Core.Compiler.CFG, phis, idx)
             end
         
 
-        elseif node isa Expr && node.head == :new || (node.head == :call && node.args[1] isa GlobalRef && node.args[1].name == :tuple)
+        elseif node isa Expr && (node.head == :new || (node.head == :call && node.args[1] isa GlobalRef && node.args[1].name == :tuple))
             nargs = UInt32(length(node.args) - 1)
             args = [_compile(ctx, x) for x in node.args[2:end]]
             jtype = node.args[1]
@@ -513,7 +539,7 @@ function _compile(ctx::CompilerContext, cfg::Core.Compiler.CFG, phis, idx)
             x = BinaryenStructNew(ctx.mod, args, nargs, type)
             _fun(ctx, idx, BinaryenStructNew, args, nargs, type; passall = true)
 
-        elseif node.head == :call && node.args[1] isa GlobalRef && node.args[1].name == :tuple
+        elseif node isa Expr && node.head == :call && node.args[1] isa GlobalRef && node.args[1].name == :tuple
             ## need to cover NTuple case -> fixed array
             nargs = UInt32(length(node.args) - 1)
             args = [_compile(ctx, x) for x in node.args[2:end]]
@@ -602,8 +628,15 @@ function _compile(ctx::CompilerContext, cfg::Core.Compiler.CFG, phis, idx)
 
         ## Other ##
 
+        elseif node isa GlobalRef
+            ctx.varmap[idx] = ctx.localidx
+            x = BinaryenLocalSet(ctx.mod, ctx.localidx,
+                                 getglobal(ctx, node.mod, node.name))
+            update!(ctx, x, ctx.ci.ssavaluetypes[idx])
+            
         elseif node isa Expr
             # ignore other expressions for now
+            @show idx node
 
         else
             error("Unsupported Julia construct $node")
@@ -659,7 +692,9 @@ roottype(ctx::CompilerContext, x::Core.SSAValue) = ctx.ci.ssavaluetypes[x.id]
 ## Matches an expression starting with a GlobalRef given by `sym`.
 ## This is common for intrinsics.
 function matchgr(fun, node, sym; combinedargs = false)
-    match = node isa Expr && length(node.args) > 0 && node.args[1] isa GlobalRef && node.args[1].name == sym
+    match = node isa Expr && length(node.args) > 0 && 
+            ((node.args[1] isa GlobalRef && node.args[1].name == sym) ||
+             (node.args[1] isa Core.IntrinsicFunction && nameof(node.args[1]) == sym))
     if match
         if !combinedargs && length(methods(fun)[1].sig.parameters) != length(node.args)
             return false
@@ -717,3 +752,24 @@ function gettype(ctx, type)
     ctx.wtypes[type] = newtype
     return newtype
 end
+
+function getglobal(ctx, mod, name)
+    longname = string(mod, ".", name)
+    if haskey(ctx.globals, longname)
+        return ctx.globals[longname]
+    end
+    gval = mod.eval(name)
+    T = typeof(gval)
+    wtype = gettype(ctx, T)
+    if T <: Union{Float32, Float64, Bool, UInt32, UInt64, Int32, Int64}
+        BinaryenGlobalSet(ctx.mod, longname, _compile(ctx, gval))
+        gv = BinaryenGlobalGet(ctx.mod, longname, wtype)
+    else
+        BinaryenAddGlobal(ctx.mod, longname, wtype, ismutable(gval), _compile(ctx, gval))
+        gv = BinaryenGetGlobal(ctx.mod, longname)
+    end
+    ctx.globals[longname] = gv
+    return gv
+end
+
+
