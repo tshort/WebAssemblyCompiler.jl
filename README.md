@@ -8,7 +8,6 @@
 
 ### SSA IR
 
-* [ ] P nodes
 * [ ] PhiC nodes
 * [ ] Upsilon nodes
 
