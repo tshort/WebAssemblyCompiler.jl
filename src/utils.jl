@@ -53,7 +53,7 @@ function gettype(ctx, type)
     if haskey(ctx.wtypes, type)
         return ctx.wtypes[type]
     end
-    @show type
+    # @show type
     tb = TypeBuilderCreate(1)
     builtheaptypes = Array{BinaryenHeapType}(undef, 1)
     if type <: Array || type <: NTuple
@@ -82,7 +82,7 @@ function getglobal(ctx, mod, name)
     wtype = gettype(ctx, T)
     BinaryenAddGlobal(ctx.mod, longname, wtype, ismutable(gval), _compile(ctx, gval))
     gv = BinaryenGlobalGet(ctx.mod, longname, wtype)
-    BinaryenExpressionPrint(gv)
+    # BinaryenExpressionPrint(gv)
     ctx.globals[longname] = gv
     return gv
 end
