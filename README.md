@@ -59,12 +59,13 @@
   - [x] pi nodes
   - [x] Core.tuple
   - [x] bitcast
-  - [ ] ntuples as array and getfield with an index
+  - [x] ntuples as array and getfield with an index
   - [?] globals
   - [x] not_int
   - [x] invoke problem
   - [x] errors/throw
   - [ ] `new` issue
+  - [ ] UInt128
 
 
 ## Approaches to Generating WebAssembly

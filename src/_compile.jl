@@ -7,16 +7,24 @@ function update!(ctx::CompilerContext, x, localtype = nothing)
     # BinaryenExpressionPrint(x)
     return nothing
 end
-
+       
 function _compile(ctx::CompilerContext, cfg::Core.Compiler.CFG, phis, idx)
     idxs = cfg.blocks[idx].stmts
     ci = ctx.ci
     ctx.body = BinaryenExpressionRef[]
     function _binaryfun(ctx, idx, bfuns, a, b)
         ctx.varmap[idx] = ctx.localidx
+        Ta = roottype(ctx, a)
+        Tb = roottype(ctx, b)
+        if sizeof(Ta) == sizeof(Tb)
+        elseif sizeof(Ta) == 4
+            b = Int32(reinterpret(Int64, b))
+        elseif sizeof(Ta) == 8
+            b = Int64(reinterpret(Int32, b))
+        end
         x = BinaryenLocalSet(ctx.mod, ctx.localidx,
                              BinaryenBinary(ctx.mod,
-                                            sizeof(roottype(ctx, a)) < 8 && length(bfuns) > 1 ? bfuns[2]() : bfuns[1](),
+                                            sizeof(Ta) < 8 && length(bfuns) > 1 ? bfuns[2]() : bfuns[1](),
                                             _compile(ctx, a),
                                             _compile(ctx, b)))
         update!(ctx, x, ctx.ci.ssavaluetypes[idx])
@@ -37,7 +45,7 @@ function _compile(ctx::CompilerContext, cfg::Core.Compiler.CFG, phis, idx)
     end
     for idx in idxs
         node = ci.code[idx]
-        @show idx, node
+        # @show idx, node
         # if idx == 17
         #     dump(node)
         # end
@@ -173,10 +181,6 @@ function _compile(ctx::CompilerContext, cfg::Core.Compiler.CFG, phis, idx)
                 _binaryfun(ctx, idx, (BinaryenXorInt64, BinaryenXorInt32), a, b)
             end
 
-        elseif matchgr(node, :not_int) do a, b
-                _binaryfun(ctx, idx, (BinaryenNotInt64, BinaryenNotInt32), a, b)
-            end
-
         elseif matchgr(node, :shl_int) do a, b
                 _binaryfun(ctx, idx, (BinaryenShlInt64, BinaryenShlInt32), a, b)
             end
@@ -202,7 +206,8 @@ function _compile(ctx::CompilerContext, cfg::Core.Compiler.CFG, phis, idx)
             end
 
         elseif matchgr(node, :not_int) do a
-                _binaryfun(ctx, idx, (BinaryenXorInt64, BinaryenXorInt32), a, -1)
+                minusone = sizeof(roottype(ctx, a)) == 8 ? Int64(-1) : Int32(-1)
+                _binaryfun(ctx, idx, (BinaryenXorInt64, BinaryenXorInt32), a, minusone)
             end
 
         # elseif matchgr(f node:ctlz_int) do a, b
@@ -216,11 +221,11 @@ function _compile(ctx::CompilerContext, cfg::Core.Compiler.CFG, phis, idx)
         ## I'm not sure these are right
         elseif matchgr(node, :sext_int) do a, b
                 t = (roottype(ctx, a), roottype(ctx, b))
-                t == (Int64, Int16) ? _unaryfun(ctx, idx, (BinaryenExtendS16Int64,), b) :
-                t == (Int64, Int32) ? _unaryfun(ctx, idx, (BinaryenExtendSInt32,), b) :
-                t == (Int32, Int8)  ? _unaryfun(ctx, idx, (BinaryenExtendS8Int32,), b) :
-                t == (Int32, Int16) ? _unaryfun(ctx, idx, (BinaryenExtendS16Int32,), b) :
-                error("Unsupported `sext_int` types")
+                sizeof(t[1]) == 8 && sizeof(t[2]) == 2 ? _unaryfun(ctx, idx, (BinaryenExtendS16Int64,), b) :
+                sizeof(t[1]) == 8 && sizeof(t[2]) == 4 ? _unaryfun(ctx, idx, (BinaryenExtendSInt32,), b) :
+                sizeof(t[1]) == 4 && sizeof(t[2]) == 1 ? _unaryfun(ctx, idx, (BinaryenExtendS8Int32,), b) :
+                sizeof(t[1]) == 4 && sizeof(t[2]) == 2 ? _unaryfun(ctx, idx, (BinaryenExtendS16Int32,), b) :
+                error("Unsupported `sext_int` types $t")
             end
 
         elseif matchgr(node, :zext_int) do a, b
@@ -229,14 +234,16 @@ function _compile(ctx::CompilerContext, cfg::Core.Compiler.CFG, phis, idx)
                 t == (UInt64, UInt32) ? _unaryfun(ctx, idx, (BinaryenExtendUInt32,), b) :
                 t == (UInt32, UInt8)  ? _unaryfun(ctx, idx, (BinaryenExtendU8Int32,), b) :
                 t == (UInt32, UInt16) ? _unaryfun(ctx, idx, (BinaryenExtendU16Int32,), b) :
-                error("Unsupported `zext_int` types")
+                error("Unsupported `zext_int` types $t")
             end
 
         elseif matchgr(node, :trunc_int) do a, b
                 t = (roottype(ctx, a), roottype(ctx, b))
                 t == (Int32, Int64) ? _unaryfun(ctx, idx, (BinaryenWrapInt64,), b) :
+                t == (Int32, UInt64) ? _unaryfun(ctx, idx, (BinaryenWrapInt64,), b) :
                 t == (UInt32, UInt64) ? _unaryfun(ctx, idx, (BinaryenWrapInt64,), b) :
-                error("Unsupported `trunc_int` types")
+                t == (UInt32, Int64) ? _unaryfun(ctx, idx, (BinaryenWrapInt64,), b) :
+                error("Unsupported `trunc_int` types $t")
             end
 
         elseif matchgr(node, :fptoui) do a, b
@@ -321,10 +328,16 @@ function _compile(ctx::CompilerContext, cfg::Core.Compiler.CFG, phis, idx)
 
         elseif matchgr(node, :bitcast) do t, val
                 T = roottype(ctx, t)
-                T == Float64 ? _unaryfun(ctx, idx, (BinaryenReinterpretInt64,), val) :
-                T == Float32 ? _unaryfun(ctx, idx, (BinaryenReinterpretInt32,), val) :
-                T == Int64 || T == UInt64 ? _unaryfun(ctx, idx, (BinaryenReinterpretFloat64,), val) :
-                T == Int32 || T == UInt32 ? _unaryfun(ctx, idx, (BinaryenReinterpretFloat32,), val) :
+                Tval =  roottype(ctx, val)
+                T == Float64 && Tval <: Integer ? _unaryfun(ctx, idx, (BinaryenReinterpretInt64,), val) :
+                T == Float32 && Tval <: Integer ? _unaryfun(ctx, idx, (BinaryenReinterpretInt32,), val) :
+                T <: Integer && sizeof(T) == 8 && Tval <: AbstractFloat ? _unaryfun(ctx, idx, (BinaryenReinterpretFloat64,), val) :
+                T <: Integer && sizeof(T) == 4 && Tval <: AbstractFloat ? _unaryfun(ctx, idx, (BinaryenReinterpretFloat32,), val) :
+                T <: Integer && Tval <: Integer ? begin
+                        ctx.varmap[idx] = ctx.localidx
+                        x = BinaryenLocalSet(ctx.mod, ctx.localidx, _compile(ctx, val))
+                        update!(ctx, x, ctx.ci.ssavaluetypes[idx])
+                    end :
                 error("Unsupported `bitcast` types")
             end
 
@@ -383,29 +396,39 @@ function _compile(ctx::CompilerContext, cfg::Core.Compiler.CFG, phis, idx)
                 _fun(ctx, idx, BinaryenArrayNew, Pass(arraytype), I32(size), 0.0)
             end
 
-        elseif matchgr(node, :getfield) do x, field
+        elseif matchgr(node, :getfield) do x, index
                 T = roottype(ctx, x)
-                index = UInt32(findfirst(x -> x == field.value, fieldnames(T)) - 1)
-                eT = Base.datatype_fieldtypes(T)[index + 1]
-                unsigned = eT <: Unsigned
-                _fun(ctx, idx, BinaryenStructGet, index, _compile(ctx, x), gettype(ctx, eT), !unsigned, passall = true)
+                if T <: NTuple
+                    unsigned = eltype(T) <: Unsigned
+                    ## subtract one from i for zero-based indexing in WASM
+                    i = BinaryenBinary(ctx.mod, BinaryenAddInt32(), 
+                                       _compile(ctx, I32(index)), 
+                                       _compile(ctx, Int32(-1)))
+                    # BinaryenExpressionPrint(i)
+                    # BinaryenExpressionPrint(_compile(ctx, x))
+
+                    _fun(ctx, idx, BinaryenArrayGet, _compile(ctx, x), Pass(i), gettype(ctx, eltype(T)), Pass(!unsigned))
+                else
+                    field = index
+                    index = UInt32(findfirst(x -> x == field.value, fieldnames(T)) - 1)
+                    eT = Base.datatype_fieldtypes(T)[index + 1]
+                    unsigned = eT <: Unsigned
+                    _fun(ctx, idx, BinaryenStructGet, index, _compile(ctx, x), gettype(ctx, eT), !unsigned, passall = true)
+                end
             end
         
         ## 3-arg version of getfield for integer field access
         elseif matchgr(node, :getfield) do x, index, bool
                 T = roottype(ctx, x)
-                @show T
-                @show x
-                @show _compile(ctx, x)
                 if T <: NTuple
                     # BinaryenModulePrint(ctx.mod)
-                    unsigned = T <: Unsigned
+                    unsigned = eltype(T) <: Unsigned
                     ## subtract one from i for zero-based indexing in WASM
                     i = BinaryenBinary(ctx.mod, BinaryenAddInt32(), 
                                        _compile(ctx, I32(index)), 
                                        _compile(ctx, Int32(-1)))
-                    BinaryenExpressionPrint(i)
-                    BinaryenExpressionPrint(_compile(ctx, x))
+                    # BinaryenExpressionPrint(i)
+                    # BinaryenExpressionPrint(_compile(ctx, x))
 
                     _fun(ctx, idx, BinaryenArrayGet, _compile(ctx, x), Pass(i), gettype(ctx, eltype(T)), Pass(!unsigned))
                 else
@@ -432,13 +455,9 @@ function _compile(ctx::CompilerContext, cfg::Core.Compiler.CFG, phis, idx)
             nargs = UInt32(length(node.args) - 1)
             args = [_compile(ctx, x) for x in node.args[2:end]]
             jtype = ctx.ci.ssavaluetypes[idx]
-            dump(node)
-            @show jtype
-            dump(jtype)
             if jtype isa GlobalRef
                 jtype = jtype.mod.eval(jtype.name)
             end
-            @show jtype
             type = BinaryenTypeGetHeapType(gettype(ctx, jtype))
             x = BinaryenStructNew(ctx.mod, args, nargs, type)
             _fun(ctx, idx, BinaryenStructNew, args, nargs, type; passall = true)
@@ -487,8 +506,6 @@ function _compile(ctx::CompilerContext, cfg::Core.Compiler.CFG, phis, idx)
             else
                 MI = node.args[1]
                 newci = Base.code_typed_by_type(sig)[1][1]
-                @show newci
-                @show sig
                 name = string("julia_", node.args[1].def.name)
                 ctx.sigs[name] = sig
                 ctx.names[sig] = name
@@ -579,9 +596,14 @@ _compile(ctx::CompilerContext, x::Bool) = BinaryenConst(ctx.mod, BinaryenLiteral
 _compile(ctx::CompilerContext, x::Ptr{BinaryenExpression}) = x
 _compile(ctx::CompilerContext, x::String) = BinaryenStringConst(ctx.mod, x)
 function _compile(ctx::CompilerContext, x::NTuple{N,T}) where {N,T}
-    type = gettype(ctx, T)
+    arraytype = BinaryenTypeGetHeapType(gettype(ctx, typeof(x)))
     values = [_compile(ctx, v) for v in x]
-    return BinaryenArrayNewFixed(ctx.mod, type, values, N)
+    return BinaryenArrayNewFixed(ctx.mod, arraytype, values, N)
+end
+function _compile(ctx::CompilerContext, x::GlobalRef)
+    return getglobal(ctx, x.mod, x.name)
+    # val = x.mod.eval(x.name)
+    # return _compile(ctx, val)
 end
 struct Pass{T}
     val::T

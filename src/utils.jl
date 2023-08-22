@@ -56,10 +56,10 @@ function gettype(ctx, type)
     @show type
     tb = TypeBuilderCreate(1)
     builtheaptypes = Array{BinaryenHeapType}(undef, 1)
-    if type <: Array
+    if type <: Array || type <: NTuple
         elt = eltype(type)
-        TypeBuilderSetArrayType(tb, 0, gettype(ctx, elt), sizeof(elt) == 1 ? BinaryenPackedTypeInt8() : BinaryenPackedTypeNotPacked(), true)
-    else  # Tuples and Structs
+        TypeBuilderSetArrayType(tb, 0, gettype(ctx, elt), sizeof(elt) == 1 ? BinaryenPackedTypeInt8() : BinaryenPackedTypeNotPacked(), type <: Array)
+    else  # Structs
         fieldtypes = [gettype(ctx, T) for T in Base.datatype_fieldtypes(type)]
         n = length(fieldtypes)
         fieldpackedtypes = fill(BinaryenPackedTypeNotPacked(), n)
@@ -80,14 +80,9 @@ function getglobal(ctx, mod, name)
     gval = mod.eval(name)
     T = typeof(gval)
     wtype = gettype(ctx, T)
-    if T <: Union{Float32, Float64, Bool, UInt32, UInt64, Int32, Int64}
-        BinaryenGlobalSet(ctx.mod, longname, _compile(ctx, gval))
-        gv = BinaryenGlobalGet(ctx.mod, longname, wtype)
-    else
-        BinaryenAddGlobal(ctx.mod, longname, wtype, ismutable(gval), _compile(ctx, gval))
-        gv = BinaryenGetGlobal(ctx.mod, longname)
-        # BinaryenExpressionPrint(gv)
-    end
+    BinaryenAddGlobal(ctx.mod, longname, wtype, ismutable(gval), _compile(ctx, gval))
+    gv = BinaryenGlobalGet(ctx.mod, longname, wtype)
+    BinaryenExpressionPrint(gv)
     ctx.globals[longname] = gv
     return gv
 end

@@ -197,11 +197,32 @@ end
     x, y, z = 3.0, 2.0, 1.0
     @test muladd(x, y, z) == jsfun.muladd(x, y, z)
 
-    compile(((sin, Float64,),); filepath = "j.wasm")
+    compile(((exp, Float64,),); filepath = "j.wasm")
     # run(`$(Binaryen.Bin.wasmdis()) j.wasm -o j.wat`)
-    jsfun = jsfunctions(sin, (Float64,))
+    jsfun = jsfunctions(exp, (Float64,))
     x = 3.0
-    @test sin(x) == jsfun.sin(x)
+    @test exp(x) == jsfun.exp(x)
+
+    # compile(((log, Float64,),); filepath = "j.wasm")
+    # # run(`$(Binaryen.Bin.wasmdis()) j.wasm -o j.wat`)
+    # jsfun = jsfunctions(log, (Float64,))
+    # x = 3.0
+    # @test log(x) == jsfun.log(x)
+
+end
+
+@testitem "Tuples / globals" begin
+    include("setup.jl")   
+
+    const tpl = (1.,2.,3.)
+    function f1(x)
+        @inbounds tpl[x]
+    end
+    compile(f1, (Int32,); filepath = "j.wasm")
+    run(`$(Binaryen.Bin.wasmdis()) j.wasm -o j.wat`)
+    jsfun = jsfunctions(f1, (Int32,))
+    x = Int32(1)
+    @test f1(x) == jsfun.f1(x)
 
 end
 
