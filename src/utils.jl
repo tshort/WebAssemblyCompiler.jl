@@ -53,6 +53,9 @@ function gettype(ctx, type)
     if haskey(ctx.wtypes, type)
         return ctx.wtypes[type]
     end
+    if specialtype(type) !== nothing
+        return specialtype(type)
+    end
     # @show type
     tb = TypeBuilderCreate(1)
     builtheaptypes = Array{BinaryenHeapType}(undef, 1)

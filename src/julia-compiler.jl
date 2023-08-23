@@ -6,13 +6,16 @@ const wtypes = Dict{Any, BinaryenType}(
     Int32 => BinaryenTypeInt32(),
     UInt64 => BinaryenTypeInt64(),
     UInt32 => BinaryenTypeInt32(),
+    UInt8 => BinaryenTypeInt32(),
     Bool  => BinaryenTypeInt32(),
     Float64 => BinaryenTypeFloat64(),
     Float32 => BinaryenTypeFloat32(),
-    Float32 => BinaryenTypeFloat32(),
+    Symbol => BinaryenTypeInt64(),
     Core.TypeofBottom => BinaryenTypeNone(),
     Union{} => BinaryenTypeNone(),
 )
+specialtype(x) = nothing
+specialtype(::Type{T}) where T <: Val = BinaryenTypeInt64()
 
 mutable struct CompilerContext
     ## module-level context
@@ -61,6 +64,7 @@ function compile(funs; filepath = "foo.wasm")
     end
     # BinaryenModulePrint(ctx.mod)
     @debug BinaryenModulePrint(ctx.mod)
+    # BinaryenModuleValidate(ctx.mod)
     out = BinaryenModuleAllocateAndWrite(ctx.mod, C_NULL)
     write(filepath, unsafe_wrap(Vector{UInt8}, Ptr{UInt8}(out.binary), (out.binaryBytes,)))
     Libc.free(out.binary)

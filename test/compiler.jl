@@ -7,7 +7,7 @@
     end
     compile(((f13, Float64,),); filepath = "j.wasm")
     x = 3.0
-    @show f13(x)
+    # @show f13(x)
     jsfun = jsfunctions(f13, (Float64,))
     @test f13(x) == jsfun.f13(x)
 
@@ -191,6 +191,12 @@ end
 @testitem "Math" begin
     include("setup.jl")   
 
+    compile(((log, Float64,),); filepath = "j.wasm")
+    run(`$(Binaryen.Bin.wasmdis()) j.wasm -o j.wat`)
+    # jsfun = jsfunctions(log, (Float64,))
+    # x = 3.0
+    # @test log(x) == jsfun.log(x)
+
     compile(muladd, (Float64, Float64, Float64,); filepath = "j.wasm")
     run(`$(Binaryen.Bin.wasmdis()) j.wasm -o j.wat`)
     jsfun = jsfunctions(muladd, (Float64, Float64, Float64,))
@@ -202,12 +208,6 @@ end
     jsfun = jsfunctions(exp, (Float64,))
     x = 3.0
     @test exp(x) == jsfun.exp(x)
-
-    # compile(((log, Float64,),); filepath = "j.wasm")
-    # # run(`$(Binaryen.Bin.wasmdis()) j.wasm -o j.wat`)
-    # jsfun = jsfunctions(log, (Float64,))
-    # x = 3.0
-    # @test log(x) == jsfun.log(x)
 
 end
 
