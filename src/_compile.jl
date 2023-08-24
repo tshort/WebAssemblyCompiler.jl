@@ -12,6 +12,16 @@ function _compile(ctx::CompilerContext, cfg::Core.Compiler.CFG, phis, idx)
     idxs = cfg.blocks[idx].stmts
     ci = ctx.ci
     ctx.body = BinaryenExpressionRef[]
+    function _setlocal!(ctx, idx, x)
+        T = ssatype(ctx, idx)
+        if T != Union{}
+            ctx.varmap[idx] = ctx.localidx
+            x = BinaryenLocalSet(ctx.mod, ctx.localidx, x)
+            update!(ctx, x, ssatype(ctx, idx))
+        else
+            push!(ctx.body, x)
+        end
+    end
     function _binaryfun(ctx, idx, bfuns, a, b)
         ctx.varmap[idx] = ctx.localidx
         Ta = roottype(ctx, a)
@@ -22,26 +32,21 @@ function _compile(ctx::CompilerContext, cfg::Core.Compiler.CFG, phis, idx)
         elseif sizeof(Ta) == 8
             b = Int64(reinterpret(Int32, b))
         end
-        x = BinaryenLocalSet(ctx.mod, ctx.localidx,
-                             BinaryenBinary(ctx.mod,
-                                            sizeof(Ta) < 8 && length(bfuns) > 1 ? bfuns[2]() : bfuns[1](),
-                                            _compile(ctx, a),
-                                            _compile(ctx, b)))
-        update!(ctx, x, ctx.ci.ssavaluetypes[idx])
+        x = BinaryenBinary(ctx.mod,
+                           sizeof(Ta) < 8 && length(bfuns) > 1 ? bfuns[2]() : bfuns[1](),
+                           _compile(ctx, a),
+                           _compile(ctx, b))
+        _setlocal!(ctx, idx, x)
     end
     function _unaryfun(ctx, idx, bfuns, a)
-        ctx.varmap[idx] = ctx.localidx
-        x = BinaryenLocalSet(ctx.mod, ctx.localidx,
-                             BinaryenUnary(ctx.mod,
-                                           sizeof(roottype(ctx, a)) < 8 && length(bfuns) > 1 ? bfuns[2]() : bfuns[1](),
-                                           _compile(ctx, a)))
-        update!(ctx, x, ctx.ci.ssavaluetypes[idx])
+        x = BinaryenUnary(ctx.mod,
+                          sizeof(roottype(ctx, a)) < 8 && length(bfuns) > 1 ? bfuns[2]() : bfuns[1](),
+                          _compile(ctx, a))
+        _setlocal!(ctx, idx, x)
     end
     function _fun(ctx, idx, bfun, args...; passall = false)
-        ctx.varmap[idx] = ctx.localidx
-        x = BinaryenLocalSet(ctx.mod, ctx.localidx,
-                             bfun(ctx.mod, (passall ? a : _compile(ctx, a) for a in args)...))
-        update!(ctx, x, ctx.ci.ssavaluetypes[idx])
+        x = bfun(ctx.mod, (passall ? a : _compile(ctx, a) for a in args)...)
+        _setlocal!(ctx, idx, x)
     end
     for idx in idxs
         node = ci.code[idx]
@@ -61,7 +66,7 @@ function _compile(ctx::CompilerContext, cfg::Core.Compiler.CFG, phis, idx)
         elseif node isa Core.PiNode
             ctx.varmap[idx] = ctx.localidx
             x = BinaryenLocalSet(ctx.mod, ctx.localidx, _compile(ctx, node.val))
-            update!(ctx, x, ctx.ci.ssavaluetypes[idx])
+            update!(ctx, x, ssatype(ctx, idx))
 
         ## Intrinsics ##
 
@@ -218,8 +223,19 @@ function _compile(ctx::CompilerContext, cfg::Core.Compiler.CFG, phis, idx)
             end
 
         elseif matchgr(node, :not_int) do a
-                minusone = sizeof(roottype(ctx, a)) == 8 ? Int64(-1) : Int32(-1)
-                _binaryfun(ctx, idx, (BinaryenXorInt64, BinaryenXorInt32), a, minusone)
+                Ta = roottype(ctx, a)
+                if sizeof(Ta) == 8
+                    x = BinaryenBinary(ctx.mod, BinaryenXorInt64(), _compile(ctx, a), _compile(ctx, Int64(-1)))
+                    if ssatype(ctx, idx) <: Bool
+                        x = BinaryenBinary(ctx.mod, BinaryenAndInt64(), x, _compile(ctx, UInt64(1)))
+                    end
+                else
+                    x = BinaryenBinary(ctx.mod, BinaryenXorInt32(), _compile(ctx, a), _compile(ctx, Int32(-1)))
+                    if ssatype(ctx, idx) <: Bool
+                        x = BinaryenBinary(ctx.mod, BinaryenAndInt32(), x, _compile(ctx, UInt32(1)))
+                    end
+                end
+                _setlocal!(ctx, idx, x)
             end
 
         elseif matchgr(node, :ctlz_int) do a
@@ -275,9 +291,7 @@ function _compile(ctx::CompilerContext, cfg::Core.Compiler.CFG, phis, idx)
                                    BinaryenBinary(ctx.mod, BinaryenMulInt32(), _compile(ctx, a), _compile(ctx, Int32(-1))), 
                                    _compile(ctx, a))                                
                 end
-                ctx.varmap[idx] = ctx.localidx
-                x = BinaryenLocalSet(ctx.mod, ctx.localidx, x)
-                update!(ctx, x, ctx.ci.ssavaluetypes[idx])
+                _setlocal!(ctx, idx, x)
             end
 
         elseif matchgr(node, :fptoui) do a, b
@@ -361,9 +375,7 @@ function _compile(ctx::CompilerContext, cfg::Core.Compiler.CFG, phis, idx)
             end
 
         elseif matchgr(node, :have_fma) do a
-                ctx.varmap[idx] = ctx.localidx
-                x = BinaryenLocalSet(ctx.mod, ctx.localidx, _compile(ctx, Int32(0)))
-                update!(ctx, x, ctx.ci.ssavaluetypes[idx])
+                _setlocal!(ctx, idx, _compile(ctx, Int32(0)))
             end
 
         elseif matchgr(node, :bitcast) do t, val
@@ -373,35 +385,12 @@ function _compile(ctx::CompilerContext, cfg::Core.Compiler.CFG, phis, idx)
                 T == Float32 && Tval <: Integer ? _unaryfun(ctx, idx, (BinaryenReinterpretInt32,), val) :
                 T <: Integer && sizeof(T) == 8 && Tval <: AbstractFloat ? _unaryfun(ctx, idx, (BinaryenReinterpretFloat64,), val) :
                 T <: Integer && sizeof(T) == 4 && Tval <: AbstractFloat ? _unaryfun(ctx, idx, (BinaryenReinterpretFloat32,), val) :
-                T <: Integer && Tval <: Integer ? begin
-                        ctx.varmap[idx] = ctx.localidx
-                        x = BinaryenLocalSet(ctx.mod, ctx.localidx, _compile(ctx, val))
-                        update!(ctx, x, ctx.ci.ssavaluetypes[idx])
-                    end :
+                T <: Integer && Tval <: Integer ? _setlocal!(ctx, idx, _compile(ctx, val)) :
                 error("Unsupported `bitcast` types")
             end
 
         ## TODO
-        # bitcast
-        # ADD_I(add_ptr, 2) \
-        # ADD_I(sub_ptr, 2) \
-        # ADD_I(bswap_int, 1) \
-        # /*  functions */ \
-        # ADD_I(flipsign_int, 2) \
-        # /*  pointer access */ \
-        # ADD_I(pointerref, 3) \
-        # ADD_I(pointerset, 4) \
-        # /*  pointer atomics */ \
-        # ADD_I(atomic_fence, 1) \
-        # ADD_I(atomic_pointerref, 2) \
-        # ADD_I(atomic_pointerset, 3) \
-        # ADD_I(atomic_pointerswap, 3) \
-        # ADD_I(atomic_pointermodify, 4) \
-        # ADD_I(atomic_pointerreplace, 5) \
-        # /*  c interface */ \
         # ADD_I(cglobal, 2) \
-        # ALIAS(llvmcall, llvmcall) \
-        # ADD_I(have_fma, 1) \
 
         ## Builtins / key functions ##
 
@@ -494,7 +483,7 @@ function _compile(ctx::CompilerContext, cfg::Core.Compiler.CFG, phis, idx)
         elseif node isa Expr && (node.head == :new || (node.head == :call && node.args[1] isa GlobalRef && node.args[1].name == :tuple))
             nargs = UInt32(length(node.args) - 1)
             args = [_compile(ctx, x) for x in node.args[2:end]]
-            jtype = ctx.ci.ssavaluetypes[idx]
+            jtype = ssatype(ctx, idx)
             if jtype isa GlobalRef
                 jtype = jtype.mod.eval(jtype.name)
             end
@@ -527,9 +516,7 @@ function _compile(ctx::CompilerContext, cfg::Core.Compiler.CFG, phis, idx)
             elseif ctx.imports[name] != sig
                 error("Mismatch in foreigncall import for $name: $sig vs. $(ctx.imports[name]).")
             end
-            ctx.varmap[idx] = ctx.localidx
-            x = BinaryenLocalSet(ctx.mod, ctx.localidx, BinaryenCall(ctx.mod, name, args, nargs, rettype))
-            update!(ctx, x, ctx.ci.ssavaluetypes[idx])
+            _setlocal!(ctx, idx, BinaryenCall(ctx.mod, name, args, nargs, rettype))
 
         elseif node isa Expr && node.head == :invoke
             if DomainError isa node.args[1].specTypes.parameters[1] ||
@@ -542,7 +529,7 @@ function _compile(ctx::CompilerContext, cfg::Core.Compiler.CFG, phis, idx)
             sig = node.args[1].specTypes
             jparams = [gettype(ctx, T) for T in[sig.parameters...][2:end]]
             bparams = BinaryenTypeCreate(jparams, length(jparams))
-            rettype = gettype(ctx, ctx.ci.ssavaluetypes[idx])
+            rettype = gettype(ctx, ssatype(ctx, idx))
             args = [_compile(ctx, x) for x in node.args[3:end]]
             if haskey(ctx.names, sig)
                 name = ctx.names[sig]
@@ -554,11 +541,7 @@ function _compile(ctx::CompilerContext, cfg::Core.Compiler.CFG, phis, idx)
                 ctx.names[sig] = name
                 _compile(CompilerContext(ctx, newci))
             end
-            ctx.varmap[idx] = ctx.localidx
-            x = BinaryenLocalSet(ctx.mod, ctx.localidx, BinaryenCall(ctx.mod, name, args, nargs, rettype))
-            update!(ctx, x, ctx.ci.ssavaluetypes[idx])
-
-
+            _setlocal!(ctx, idx, BinaryenCall(ctx.mod, name, args, nargs, rettype))
 
         # DECLARE_BUILTIN(applicable);
         # DECLARE_BUILTIN(_apply_iterate);
@@ -577,12 +560,10 @@ function _compile(ctx::CompilerContext, cfg::Core.Compiler.CFG, phis, idx)
         # DECLARE_BUILTIN(issubtype);
         # DECLARE_BUILTIN(modifyfield);
         # DECLARE_BUILTIN(nfields);
-        # DECLARE_BUILTIN(setfield);
         # DECLARE_BUILTIN(sizeof);
         # DECLARE_BUILTIN(svec);
         # DECLARE_BUILTIN(swapfield);
         # DECLARE_BUILTIN(throw);
-        # DECLARE_BUILTIN(tuple);
         # DECLARE_BUILTIN(typeassert);
         # DECLARE_BUILTIN(_typebody);
         # DECLARE_BUILTIN(typeof);
@@ -598,10 +579,7 @@ function _compile(ctx::CompilerContext, cfg::Core.Compiler.CFG, phis, idx)
         ## Other ##
 
         elseif node isa GlobalRef
-            ctx.varmap[idx] = ctx.localidx
-            x = BinaryenLocalSet(ctx.mod, ctx.localidx,
-                                 getglobal(ctx, node.mod, node.name))
-            update!(ctx, x, ctx.ci.ssavaluetypes[idx])
+            _setlocal!(ctx, idx, getglobal(ctx, node.mod, node.name))
             
         elseif node isa Expr
             # ignore other expressions for now
@@ -627,7 +605,7 @@ function _compile(ctx::CompilerContext, x::Core.Argument)
 end
 function _compile(ctx::CompilerContext, x::Core.SSAValue)   # These come after the function arguments.
     BinaryenLocalGet(ctx.mod, ctx.varmap[x.id],
-                     gettype(ctx, ctx.ci.ssavaluetypes[x.id]))
+                     gettype(ctx, ssatype(ctx, x.id)))
 end
 _compile(ctx::CompilerContext, x::Float64) = BinaryenConst(ctx.mod, BinaryenLiteralFloat64(x))
 _compile(ctx::CompilerContext, x::Float32) = BinaryenConst(ctx.mod, BinaryenLiteralFloat32(x))

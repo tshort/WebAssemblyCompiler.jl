@@ -1,3 +1,5 @@
+ssatype(ctx::CompilerContext, idx) = ctx.ci.ssavaluetypes[idx]
+
 
 roottype(ctx::CompilerContext, x) = typeof(x)
 roottype(ctx::CompilerContext, x::Type{T}) where T = T

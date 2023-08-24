@@ -51,21 +51,22 @@
 
 * [ ] Binaryen optimization
 
+### Things Working and Things Broken
+
+Working:
+
+* `exp`
+* `log` and siblings
+* `acos`
+
+Not working:
+
+* `sin`--Uses `Int128`
+* Strings
+
 ### Things to try
 
 * [ ] Pick a DiffEq example to try
-* [ ] sin
-  - [x] muladd_float
-  - [x] pi nodes
-  - [x] Core.tuple
-  - [x] bitcast
-  - [x] ntuples as array and getfield with an index
-  - [?] globals
-  - [x] not_int
-  - [x] invoke problem
-  - [x] errors/throw
-  - [ ] `new` issue
-  - [ ] UInt128
 
 
 ## Approaches to Generating WebAssembly

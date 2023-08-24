@@ -40,7 +40,7 @@ end
     @test f2(-3, 4) == jsfun.f2(-3, 4)
 
     jsfun = jsfunctions(((f1, Float64, Float64),
-                        (f2, Float64, Float64)))
+                         (f2, Float64, Float64)))
     @test f1(3.0, 4.0) == jsfun.f1(3.0, 4.0)
     @test f2(3.0, 4.0) == jsfun.f2(3.0, 4.0)
     
@@ -100,6 +100,15 @@ end
     # run(`$(Binaryen.Bin.wasmdis()) j.wasm -o j.wat`)
     jsfun = jsfunctions(f7, (Float64,Float64))
     @test f7(3.0, 4.0) == jsfun.f7(3.0, 4.0)
+
+    function f8(x)
+        2x + twox(x)
+    end
+    jsfun = jsfunctions(((f7, Float64,Float64),
+                         (f8, Float64)))
+    @test f7(3.0, 4.0) == jsfun.f7(3.0, 4.0)
+    @test f8(3.0) == jsfun.f8(3.0)
+
 
 end
 
@@ -191,23 +200,27 @@ end
 @testitem "Math" begin
     include("setup.jl")   
 
-    compile(((log, Float64,),); filepath = "j.wasm")
-    run(`$(Binaryen.Bin.wasmdis()) j.wasm -o j.wat`)
-    # jsfun = jsfunctions(log, (Float64,))
-    # x = 3.0
-    # @test log(x) == jsfun.log(x)
+    jsfun = jsfunctions(log, (Float64,))
+    for x in (0.5, 1.01, 3.0, 300.0)
+        @test log(x) == jsfun.log(x)
+    end
 
-    compile(muladd, (Float64, Float64, Float64,); filepath = "j.wasm")
-    run(`$(Binaryen.Bin.wasmdis()) j.wasm -o j.wat`)
+    jsfun = jsfunctions(log10, (Float64,))
+    for x in (0.5, 1.01, 3.0, 300.0)
+        @test log10(x) == jsfun.log10(x)
+    end
+
     jsfun = jsfunctions(muladd, (Float64, Float64, Float64,))
     x, y, z = 3.0, 2.0, 1.0
     @test muladd(x, y, z) == jsfun.muladd(x, y, z)
 
-    compile(((exp, Float64,),); filepath = "j.wasm")
-    # run(`$(Binaryen.Bin.wasmdis()) j.wasm -o j.wat`)
     jsfun = jsfunctions(exp, (Float64,))
     x = 3.0
     @test exp(x) == jsfun.exp(x)
+
+    jsfun = jsfunctions(acos, (Float64,))
+    x = 0.3
+    @test acos(x) == jsfun.acos(x)
 
 end
 
