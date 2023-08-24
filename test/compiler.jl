@@ -82,16 +82,6 @@ end
     @test f5(1.0, 4.0) == jsfun.f5(1.0, 4.0)
     @test f5(5.0, 4.0) == jsfun.f5(5.0, 4.0)
 
-    function f6(x,y)
-        a = x + y
-        b = ccall(:sin, Float64, (Float64,), a)
-        b + 1
-    end
-    compile(f6, (Float64,Float64); filepath = "j.wasm")
-    # run(`$(Binaryen.Bin.wasmdis()) j.wasm -o j.wat`)
-    jsfun = jsfunctions(f6, (Float64,Float64))
-    @test  jsfun.f6(3.0, 4.0) ≈ sin(7.0) + 1
-
     @noinline twox(x) = 2x
     function f7(x,y)
         x + twox(y)
@@ -197,8 +187,39 @@ end
 
 # end
 
+@testitem "ccall" begin
+    include("setup.jl")   
+
+    f(x) = @ccall twox(x::Float64)::Float64
+    jsfun = jsfunctions(f, (Float64,))
+    x = 0.5
+    @test jsfun.f(x) == 2x
+    
+    mysin(x) = @ccall Math.sin(x::Float64)::Float64
+    jsfun = jsfunctions(mysin, (Float64,))
+    x = 0.5
+    @test jsfun.mysin(x) == sin(x)
+
+end
+
+
+@testitem "JavaScript interop" begin
+    include("setup.jl")   
+   
+end
+
 @testitem "Math" begin
     include("setup.jl")   
+
+    f(x) = cos(x)
+    jsfun = jsfunctions(f, (Float64,))
+    x = 0.5
+    @test f(x) == jsfun.f(x)
+
+    jsfun = jsfunctions(sqrt, (Float64,))
+    for x in (0.5, 1.01, 3.0, 300.0)
+        @test sqrt(x) == jsfun.sqrt(x)
+    end
 
     jsfun = jsfunctions(log, (Float64,))
     for x in (0.5, 1.01, 3.0, 300.0)
@@ -239,3 +260,8 @@ end
 
 end
 
+@testitem "Test" begin
+    ccall((:set_verbose, :libccalltest), Cvoid, (Int32,), false)
+    x = false
+    @ccall :libccalltest.set_verbose(x::Int32)::Cvoid
+end

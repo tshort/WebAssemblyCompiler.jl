@@ -1,57 +1,24 @@
+include("types.jl")
+include("mixtape.jl")
+include("interpreter.jl")
+include("_compile.jl")
+include("utils.jl")
+include("quirks.jl")
 
 export compile
-
-const wtypes = Dict{Any, BinaryenType}(
-    Int64 => BinaryenTypeInt64(),
-    Int32 => BinaryenTypeInt32(),
-    UInt64 => BinaryenTypeInt64(),
-    UInt32 => BinaryenTypeInt32(),
-    UInt8 => BinaryenTypeInt32(),
-    Bool  => BinaryenTypeInt32(),
-    Float64 => BinaryenTypeFloat64(),
-    Float32 => BinaryenTypeFloat32(),
-    Symbol => BinaryenTypeInt64(),
-    Core.TypeofBottom => BinaryenTypeNone(),
-    Union{} => BinaryenTypeNone(),
-)
-specialtype(x) = nothing
-specialtype(::Type{T}) where T <: Val = BinaryenTypeInt64()
-
-mutable struct CompilerContext
-    ## module-level context
-    mod::BinaryenModuleRef
-    names::Dict{DataType, String}  # function signature to name
-    sigs::Dict{String, DataType}   # name to function signature
-    imports::Dict{String, Any}
-    wtypes::Dict{Any, BinaryenType}
-    globals::Dict{String, Any}    
-    ## function-level context
-    ci::Core.CodeInfo
-    body::Vector{BinaryenExpressionRef}
-    locals::Vector{BinaryenType}
-    localidx::Int
-    varmap::Dict{Int, Int}
-end
-
-CompilerContext(ci::Core.CodeInfo) = 
-    CompilerContext(BinaryenModuleCreate(), Dict{DataType, String}(), Dict{String, DataType}(), Dict{String, DataType}(), copy(wtypes), Dict{String, Any}(),
-                    ci, BinaryenExpressionRef[], BinaryenType[], 0, Dict{Int,Int}())
-CompilerContext(ctx::CompilerContext, ci::Core.CodeInfo) = 
-    CompilerContext(ctx.mod, ctx.names, ctx.sigs, ctx.imports, ctx.wtypes, ctx.globals,
-                    ci, BinaryenExpressionRef[], BinaryenType[], 0, Dict{Int,Int}())
-
 compile(fun, tt; filepath = "foo.wasm") = compile(((fun, tt...),); filepath)
 
-function compile(funs; filepath = "foo.wasm")
+function compile(funs; filepath = "foo.wasm", validate = false, optimize = false)
     cis = Core.CodeInfo[]
     dummyci = code_typed(() -> nothing, Tuple{})[1].first
     ctx = CompilerContext(dummyci)
-    BinaryenModuleSetFeatures(ctx.mod, BinaryenFeatureReferenceTypes() | BinaryenFeatureGC())
+    BinaryenModuleSetFeatures(ctx.mod, BinaryenFeatureReferenceTypes() | BinaryenFeatureGC() | BinaryenFeatureStrings())
     # Create CodeInfo's, and fill in names first
     for funtpl in funs
         tt = length(funtpl) > 1 ? Base.to_tuple_type(funtpl[2:end]) : Tuple{}
         isconcretetype(tt) || error("input type signature $tt for $(funtpl[1]) is not concrete")
-        ci = code_typed(funtpl[1], tt)[1].first
+        ci = code_typed(funtpl[1], tt, interp = StaticInterpreter())[1].first
+        # @show ci
         push!(cis, ci)
         name = string(funtpl[1])
         sig = ci.parent.specTypes
@@ -64,7 +31,8 @@ function compile(funs; filepath = "foo.wasm")
     end
     # BinaryenModulePrint(ctx.mod)
     @debug BinaryenModulePrint(ctx.mod)
-    # BinaryenModuleValidate(ctx.mod)
+    validate && BinaryenModuleValidate(ctx.mod)
+    optimize && BinaryenModuleOptimize(ctx.mod)
     out = BinaryenModuleAllocateAndWrite(ctx.mod, C_NULL)
     write(filepath, unsafe_wrap(Vector{UInt8}, Ptr{UInt8}(out.binary), (out.binaryBytes,)))
     Libc.free(out.binary)
@@ -129,5 +97,3 @@ function _compile(ctx::CompilerContext; exported = false)
     return nothing
 end
 
-include("_compile.jl")
-include("utils.jl")

@@ -501,8 +501,16 @@ function _compile(ctx::CompilerContext, cfg::Core.Compiler.CFG, phis, idx)
             _fun(ctx, idx, BinaryenStructNew, args, nargs, type; passall = true)
 
         elseif node isa Expr && node.head == :foreigncall    # general foreigncalls that need to be imported
-            modname = "ext"
-            extname = node.args[1].value
+            if node.args[1] isa QuoteNode
+                modname = "ext"
+                extname = node.args[1].value
+            elseif node.args[1] isa Tuple
+                modname = node.args[1][2]
+                extname = node.args[1][1]
+            else
+                modname = node.args[1].args[3].name
+                extname = node.args[1].args[2].value
+            end
             name = string(modname, extname)
             nargs = length(node.args[3])
             rettype = gettype(ctx, node.args[2])
@@ -516,7 +524,13 @@ function _compile(ctx::CompilerContext, cfg::Core.Compiler.CFG, phis, idx)
             elseif ctx.imports[name] != sig
                 error("Mismatch in foreigncall import for $name: $sig vs. $(ctx.imports[name]).")
             end
-            _setlocal!(ctx, idx, BinaryenCall(ctx.mod, name, args, nargs, rettype))
+            x = BinaryenCall(ctx.mod, name, args, nargs, rettype)
+            _setlocal!(ctx, idx, x)
+            # if node.args[2] == Nothing
+            #     push!(ctx.body, x)
+            # else
+            #     _setlocal!(ctx, idx, x)
+            # end
 
         elseif node isa Expr && node.head == :invoke
             if DomainError isa node.args[1].specTypes.parameters[1] ||
@@ -617,7 +631,7 @@ _compile(ctx::CompilerContext, x::UInt64) = BinaryenConst(ctx.mod, BinaryenLiter
 _compile(ctx::CompilerContext, x::UInt32) = BinaryenConst(ctx.mod, BinaryenLiteralInt32(reinterpret(Int32, x)))
 _compile(ctx::CompilerContext, x::Bool) = BinaryenConst(ctx.mod, BinaryenLiteralInt32(x))
 _compile(ctx::CompilerContext, x::Ptr{BinaryenExpression}) = x
-_compile(ctx::CompilerContext, x::String) = BinaryenStringConst(ctx.mod, x)
+_compile(ctx::CompilerContext, x::String) = getglobal(ctx, x, compiledval = BinaryenStringConst(ctx.mod, x))
 _compile(ctx::CompilerContext, x::GlobalRef) = getglobal(ctx, x.mod, x.name)
 _compile(ctx::CompilerContext, x::QuoteNode) = _compile(ctx, x.value)
 _compile(ctx::CompilerContext, x::Symbol) = _compile(ctx, hash(x))

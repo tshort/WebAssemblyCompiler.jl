@@ -1,3 +1,6 @@
+specialtype(x) = nothing
+specialtype(::Type{T}) where T <: Val = BinaryenTypeInt64()
+
 ssatype(ctx::CompilerContext, idx) = ctx.ci.ssavaluetypes[idx]
 
 
@@ -32,7 +35,7 @@ end
 ## Matches an expression starting with a foreigncall given by `sym`.
 ## This is common for intrinsics.
 function matchforeigncall(fun, node, sym)
-    match = node isa Expr && node.head == :foreigncall && node.args[1].value == sym
+    match = node isa Expr && node.head == :foreigncall && node.args[1] isa QuoteNode && node.args[1].value == sym
     if match
         fargs = length(node.args) > 1 ? node.args[2:end] : []
         fun(fargs)
@@ -77,18 +80,23 @@ function gettype(ctx, type)
     return newtype
 end
 
-function getglobal(ctx, mod, name)
-    longname = string(mod, ".", name)
-    if haskey(ctx.globals, longname)
-        return ctx.globals[longname]
+function getglobal(ctx, gval; compiledval = nothing)
+    id = objectid(gval)
+    if haskey(ctx.globals, id)
+        return ctx.globals[id]
     end
-    gval = mod.eval(name)
     T = typeof(gval)
     wtype = gettype(ctx, T)
-    BinaryenAddGlobal(ctx.mod, longname, wtype, ismutable(gval), _compile(ctx, gval))
-    gv = BinaryenGlobalGet(ctx.mod, longname, wtype)
+    name = string("g", id)
+    BinaryenAddGlobal(ctx.mod, name, wtype, ismutable(gval), 
+                      isnothing(compiledval) ? _compile(ctx, gval) : compiledval)
+    gv = BinaryenGlobalGet(ctx.mod, name, wtype)
     # BinaryenExpressionPrint(gv)
-    ctx.globals[longname] = gv
+    ctx.globals[id] = gv
     return gv
 end
+getglobal(ctx, mod, name; compiledval = nothing) = getglobal(ctx, mod.eval(name); compiledval)
+hasglobal(ctx, gval) = haskey(ctx.globals, objectid(gval))
+hasglobal(ctx, mod, name) = hasglobal(ctx, mod.eval(name))
+
 
