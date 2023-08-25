@@ -9,6 +9,7 @@ const wtypes = Dict{Any, BinaryenType}(
     Float64 => BinaryenTypeFloat64(),
     Float32 => BinaryenTypeFloat32(),
     Symbol => BinaryenTypeInt64(),
+    String => BinaryenTypeStringref(),
     Core.TypeofBottom => BinaryenTypeNone(),
     Union{} => BinaryenTypeNone(),
 )

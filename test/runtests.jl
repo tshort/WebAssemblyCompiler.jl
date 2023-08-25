@@ -7,8 +7,9 @@ include("setup.jl")
     function f(x)
         a = "hello"
         @ccall console.log(a::String)::Cvoid
+        return x
     end
-    # compile(f, (Int32,); filepath = "string.wasm")
+    # compile(f, (Float64,); filepath = "string.wasm")
     # run(`$(Binaryen.Bin.wasmdis()) string.wasm -o string.wat`)
     # jsfun = jsfunctions(f, (Float64,))
     # jsfun.f(1.0)
