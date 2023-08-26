@@ -50,6 +50,9 @@
 ### Other
 
 * [x] Binaryen optimization
+* [ ] Varargs
+* [ ] jl_array_copy
+* [ ] unsafe_copyto! - needs overlay
 
 ### Things Working and Things Broken
 
