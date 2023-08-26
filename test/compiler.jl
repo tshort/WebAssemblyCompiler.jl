@@ -138,6 +138,20 @@ end
     jsfun = jsfunctions(f10, (Float64,))
     x = 3.0
     @test f10(x) == jsfun.f10(x)
+
+    function f11(x)
+        a = ones(5)
+        b = copy(a)
+        b[2] * x
+    end
+    compile(f11, (Float64,); filepath = "arraycopy.wasm", validate = true)
+    run(`$(Binaryen.Bin.wasmdis()) arraycopy.wasm -o arraycopy.wat`)
+    # In NodeCall: Compiling function #0 failed: invalid array index.
+    # Works in the browser.
+    # jsfun = jsfunctions(f11, (Float64,))
+    # x = 2.0
+    # @test jsfun.f11(x) == f11(x)
+
 end
 
 @testitem "Structs" begin

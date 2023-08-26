@@ -396,12 +396,12 @@ function _compile(ctx::CompilerContext, cfg::Core.Compiler.CFG, phis, idx)
 
         elseif matchgr(node, :arrayref) do bool, arr, i
                 T = eltype(roottype(ctx, arr))
-                unsigned = T <: Unsigned
+                signed = T <: Signed && sizeof(T) < 4
                 ## subtract one from i for zero-based indexing in WASM
                 i = BinaryenBinary(ctx.mod, BinaryenAddInt32(), 
                                    _compile(ctx, I32(i)), 
                                    _compile(ctx, Int32(-1)))
-                _fun(ctx, idx, BinaryenArrayGet, arr, i, gettype(ctx, T), Pass(!unsigned))
+                _fun(ctx, idx, BinaryenArrayGet, arr, i, gettype(ctx, T), Pass(signed))
             end
 
         elseif matchgr(node, :arrayset) do bool, arr, val, i
@@ -409,10 +409,19 @@ function _compile(ctx::CompilerContext, cfg::Core.Compiler.CFG, phis, idx)
                                    _compile(ctx, I32(i)), 
                                    _compile(ctx, Int32(-1)))
                 x = BinaryenArraySet(ctx.mod, _compile(ctx, arr), i, _compile(ctx, val))
-                push!(ctx.body, x)
+                update!(ctx, x)
             end
 
         elseif matchgr(node, :arraylen) do arr
+                if sizeof(Int) == 8 # extend to Int64
+                    _unaryfun(ctx, idx, (BinaryenExtendUInt32,), BinaryenArrayLen(ctx.mod, _compile(ctx, arr)))
+                else
+                    _fun(ctx, idx, BinaryenArrayLen, arr)
+                end
+            end
+
+        elseif matchgr(node, :arraysize) do arr, n
+                n != 1 && @warn "arraysize(x, n) with n>1 isn't supported"
                 if sizeof(Int) == 8 # extend to Int64
                     _unaryfun(ctx, idx, (BinaryenExtendUInt32,), BinaryenArrayLen(ctx.mod, _compile(ctx, arr)))
                 else
@@ -427,6 +436,14 @@ function _compile(ctx::CompilerContext, cfg::Core.Compiler.CFG, phis, idx)
                 size = args[6]
                 arraytype = BinaryenTypeGetHeapType(gettype(ctx, args[1]))
                 _fun(ctx, idx, BinaryenArrayNew, Pass(arraytype), I32(size), 0.0)
+            end
+
+        elseif matchforeigncall(node, :_jl_array_copy) do args
+                src = args[5]
+                dest = args[6]
+                n = args[7]
+                x = BinaryenArrayCopy(ctx.mod, _compile(ctx, dest), _compile(ctx, I32(0)), _compile(ctx, src), _compile(ctx, I32(0)), _compile(ctx, n))
+                update!(ctx, x)
             end
 
         elseif matchgr(node, :getfield) do x, index
