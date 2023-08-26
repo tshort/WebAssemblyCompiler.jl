@@ -1,5 +1,5 @@
 
-const wtypes = Dict{Any, BinaryenType}(
+wtypes() = Dict{Any, BinaryenType}(
     Int64 => BinaryenTypeInt64(),
     Int32 => BinaryenTypeInt32(),
     UInt64 => BinaryenTypeInt64(),
@@ -12,7 +12,10 @@ const wtypes = Dict{Any, BinaryenType}(
     String => BinaryenTypeStringref(),
     Core.TypeofBottom => BinaryenTypeNone(),
     Union{} => BinaryenTypeNone(),
+    Nothing => BinaryenTypeNone(),
 )
+
+const basictypes = [Int64, Int32, UInt64, UInt32, UInt8, Bool , Float64, Float32]
 
 mutable struct CompilerContext
     ## module-level context
@@ -31,7 +34,7 @@ mutable struct CompilerContext
 end
 
 CompilerContext(ci::Core.CodeInfo) = 
-    CompilerContext(BinaryenModuleCreate(), Dict{DataType, String}(), Dict{String, DataType}(), Dict{String, DataType}(), copy(wtypes), Dict{String, Any}(),
+    CompilerContext(BinaryenModuleCreate(), Dict{DataType, String}(), Dict{String, DataType}(), Dict{String, DataType}(), wtypes(), Dict{String, Any}(),
                     ci, BinaryenExpressionRef[], BinaryenType[], 0, Dict{Int,Int}())
 CompilerContext(ctx::CompilerContext, ci::Core.CodeInfo) = 
     CompilerContext(ctx.mod, ctx.names, ctx.sigs, ctx.imports, ctx.wtypes, ctx.globals,

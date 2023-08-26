@@ -6,13 +6,14 @@ include("utils.jl")
 include("quirks.jl")
 
 export compile
-compile(fun, tt; filepath = "foo.wasm") = compile(((fun, tt...),); filepath)
+compile(fun, tt; filepath = "foo.wasm", validate = false, optimize = false) = compile(((fun, tt...),); filepath, validate, optimize)
 
 function compile(funs; filepath = "foo.wasm", validate = false, optimize = false)
     cis = Core.CodeInfo[]
     dummyci = code_typed(() -> nothing, Tuple{})[1].first
     ctx = CompilerContext(dummyci)
-    BinaryenModuleSetFeatures(ctx.mod, BinaryenFeatureReferenceTypes() | BinaryenFeatureGC() | BinaryenFeatureStrings())
+    # BinaryenModuleSetFeatures(ctx.mod, BinaryenFeatureReferenceTypes() | BinaryenFeatureGC() | BinaryenFeatureStrings())
+    BinaryenModuleSetFeatures(ctx.mod, BinaryenFeatureAll())
     # Create CodeInfo's, and fill in names first
     for funtpl in funs
         tt = length(funtpl) > 1 ? Base.to_tuple_type(funtpl[2:end]) : Tuple{}

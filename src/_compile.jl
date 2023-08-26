@@ -1,4 +1,6 @@
 function update!(ctx::CompilerContext, x, localtype = nothing)
+    # TODO: check the type of x, compare that with the wasm type of localtype, and if they differ,
+    #       convert one to the other. Hopefully, this is mainly Int32 -> Int64. 
     push!(ctx.body, x)
     if localtype !== nothing
         push!(ctx.locals, gettype(ctx, localtype))
@@ -64,9 +66,7 @@ function _compile(ctx::CompilerContext, cfg::Core.Compiler.CFG, phis, idx)
             update!(ctx, BinaryenReturn(ctx.mod, _compile(ctx, node.val)))
 
         elseif node isa Core.PiNode
-            ctx.varmap[idx] = ctx.localidx
-            x = BinaryenLocalSet(ctx.mod, ctx.localidx, _compile(ctx, node.val))
-            update!(ctx, x, ssatype(ctx, idx))
+            _setlocal!(ctx, idx, _compile(ctx, node.val))
 
         ## Intrinsics ##
 
@@ -413,7 +413,11 @@ function _compile(ctx::CompilerContext, cfg::Core.Compiler.CFG, phis, idx)
             end
 
         elseif matchgr(node, :arraylen) do arr
-                _fun(ctx, idx, BinaryenArrayLen, arr)
+                if sizeof(Int) == 8 # extend to Int64
+                    _unaryfun(ctx, idx, (BinaryenExtendUInt32,), BinaryenArrayLen(ctx.mod, _compile(ctx, arr)))
+                else
+                    _fun(ctx, idx, BinaryenArrayLen, arr)
+                end
             end
 
         # elseif  matchgr(node, :arraysize) do arr
@@ -525,12 +529,12 @@ function _compile(ctx::CompilerContext, cfg::Core.Compiler.CFG, phis, idx)
                 error("Mismatch in foreigncall import for $name: $sig vs. $(ctx.imports[name]).")
             end
             x = BinaryenCall(ctx.mod, name, args, nargs, rettype)
-            _setlocal!(ctx, idx, x)
-            # if node.args[2] == Nothing
-            #     push!(ctx.body, x)
-            # else
-            #     _setlocal!(ctx, idx, x)
-            # end
+            # _setlocal!(ctx, idx, x)
+            if node.args[2] == Nothing
+                push!(ctx.body, x)
+            else
+                _setlocal!(ctx, idx, x)
+            end
 
         elseif node isa Expr && node.head == :invoke
             if DomainError isa node.args[1].specTypes.parameters[1] ||
@@ -620,6 +624,8 @@ end
 function _compile(ctx::CompilerContext, x::Core.SSAValue)   # These come after the function arguments.
     BinaryenLocalGet(ctx.mod, ctx.varmap[x.id],
                      gettype(ctx, ssatype(ctx, x.id)))
+    # localid = ctx.varmap[x.id]
+    # BinaryenLocalGet(ctx.mod, localid, ctx.locals[localid])
 end
 _compile(ctx::CompilerContext, x::Float64) = BinaryenConst(ctx.mod, BinaryenLiteralFloat64(x))
 _compile(ctx::CompilerContext, x::Float32) = BinaryenConst(ctx.mod, BinaryenLiteralFloat32(x))
@@ -663,3 +669,30 @@ function _compile(ctx::CompilerContext, x::I32)
     end
     return res
 end
+
+const addglobal = Ref(false)
+
+function _compile(ctx::CompilerContext, x::T) where T <: Array 
+    arraytype = BinaryenTypeGetHeapType(gettype(ctx, T))
+    values = [_compile(ctx, v) for v in x]
+    return BinaryenArrayNewFixed(ctx.mod, arraytype, values, length(x))
+end
+
+function _compile(ctx::CompilerContext, x::T) where T # general version for structs
+    type = BinaryenTypeGetHeapType(gettype(ctx, T))
+    args = [_compile(ctx, getfield(x, field)) for field in fieldnames(T)]
+    return BinaryenStructNew(ctx.mod, args, length(args), type)
+end
+
+# function _compileglobal(ctx::CompilerContext, x::T) where T <: Array 
+#     _compile(ctx, x)
+# end
+
+# function _compileglobal(ctx::CompilerContext, x::T) where T
+#     type = BinaryenTypeGetHeapType(gettype(ctx, T))
+#     args = [fieldtype(T, field) in basictypes ? 
+#             _compile(ctx, getfield(x, field)) : 
+#             _compileglobal(ctx, getfield(x, field)) for field in fieldnames(T)]
+#     return BinaryenStructNew(ctx.mod, args, length(args), type)
+# end
+

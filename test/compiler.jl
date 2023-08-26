@@ -180,12 +180,21 @@ end
 
 end
 
-# @testitem "Strings" begin
-#     include("setup.jl")   
+@testitem "Strings" begin
+    include("setup.jl")   
 
-#     f1(x) = string("hello ", x)
+    function f(x)
+        a = "hello"
+        @ccall console.log(a::String)::Cvoid
+        return x
+    end
+    compile(f, (Float64,); filepath = "string.wasm")
+    run(`$(Binaryen.Bin.wasmdis()) string.wasm -o string.wat`)
+    ## NodeCall doesn't work because its version of Node doesn't support stringrefs.
+    # jsfun = jsfunctions(f, (Float64,))
+    # jsfun.f(1.0)
 
-# end
+end
 
 @testitem "ccall" begin
     include("setup.jl")   
@@ -259,6 +268,71 @@ end
     @test f1(x) == jsfun.f1(x)
 
 end
+
+@testitem "Globals" begin
+    include("setup.jl")   
+
+    const a = [1.,2.,3.,4.]
+    f1(i) = @inbounds length(a)
+    compile(f1, (Int32,); filepath = "globalarray.wasm", validate = true)
+    run(`$(Binaryen.Bin.wasmdis()) globalarray.wasm -o globalarray.wat`)
+    # works in browser!
+    # jsfun = jsfunctions(f1, (Int32,))
+    # @test jsfun.f1(1) == f1(1)
+
+    f(i) = @inbounds a[i]
+    compile(f, (Int32,); filepath = "globalarray.wasm")
+    run(`$(Binaryen.Bin.wasmdis()) globalarray.wasm -o globalarray.wat`)
+    jsfun = jsfunctions(f, (Int32,))
+    @test jsfun.f(1) == f(1)
+    
+    struct Y
+        a::Float64
+        b::Float64
+    end
+    mutable struct Z
+        a::Y
+        b::Float64
+    end
+    const x = Z(Y(1.,2.), 3.)
+    g1(i) = x.a.a
+    compile(g1, (Int32,); filepath = "globalcombo.wasm")
+    run(`$(Binaryen.Bin.wasmdis()) globalcombo.wasm -o globalcombo.wat`)
+    jsfun = jsfunctions(g1, (Int32,))
+    @test jsfun.g1(1) == g1(1)
+
+     
+    mutable struct X
+        a::Array{Float64,1}
+        b::Array{Float64,1}
+        c::Float64
+    end
+    const xx = X([1.,2.], [5., 6.], 3.)
+    g1(i) = xx.b[i]
+    compile(g1, (Int32,); filepath = "globalcombo2.wasm")
+    run(`$(Binaryen.Bin.wasmdis()) globalcombo2.wasm -o globalcombo2.wat`)
+    jsfun = jsfunctions(g1, (Int32,))
+    @test jsfun.g1(1) == g1(1)
+    # @show jsfun.g1(2)
+
+    g2(i) = xx.b[i] + length(xx.a)
+    compile(g2, (Int32,); filepath = "globalcombo3.wasm")
+    run(`$(Binaryen.Bin.wasmdis()) globalcombo3.wasm -o globalcombo3.wat`)
+    # jsfun = jsfunctions(g2, (Int32,))
+    # @test jsfun.g2(1) == g2(1)
+    # @show jsfun.g2(2)
+
+
+    const d = Dict{Int32,Int32}(1 => 10, 2 => 20, 3 => 30, 4 => 40)
+    f(i) = get(d, i, Int32(-1))
+    compile(f, (Int32,); filepath = "dict.wasm")
+    run(`$(Binaryen.Bin.wasmdis()) dict.wasm -o dict.wat`)
+    # works in browser!
+    # jsfun = jsfunctions(f, (Int32,))
+    # @show jsfun.f(1)
+
+end
+ 
 
 @testitem "Test" begin
     ccall((:set_verbose, :libccalltest), Cvoid, (Int32,), false)

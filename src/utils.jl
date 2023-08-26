@@ -1,7 +1,9 @@
 specialtype(x) = nothing
 specialtype(::Type{T}) where T <: Val = BinaryenTypeInt64()
 
-ssatype(ctx::CompilerContext, idx) = ctx.ci.ssavaluetypes[idx]
+function ssatype(ctx::CompilerContext, idx)
+    ctx.ci.ssavaluetypes[idx]
+end
 
 
 roottype(ctx::CompilerContext, x) = typeof(x)
@@ -61,7 +63,6 @@ function gettype(ctx, type)
     if specialtype(type) !== nothing
         return specialtype(type)
     end
-    # @show type
     tb = TypeBuilderCreate(1)
     builtheaptypes = Array{BinaryenHeapType}(undef, 1)
     if type <: Array || type <: NTuple
@@ -88,8 +89,13 @@ function getglobal(ctx, gval; compiledval = nothing)
     T = typeof(gval)
     wtype = gettype(ctx, T)
     name = string("g", id)
-    BinaryenAddGlobal(ctx.mod, name, wtype, ismutable(gval), 
+    BinaryenAddGlobal(ctx.mod, 
+                      name, 
+                      wtype, 
+                    #   ismutable(gval), 
+                      false, 
                       isnothing(compiledval) ? _compile(ctx, gval) : compiledval)
+                    #   isnothing(compiledval) ? _compileglobal(ctx, gval) : compiledval)
     gv = BinaryenGlobalGet(ctx.mod, name, wtype)
     # BinaryenExpressionPrint(gv)
     ctx.globals[id] = gv
