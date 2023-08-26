@@ -19,7 +19,7 @@
 
 * [x] Recursively compile calls to `invoke`
 * [x] foreigncall
-* [ ] Global variables
+* [x] Global variables
 * [x] Multiple functions
 
 ### Types
@@ -27,7 +27,7 @@
 * [x] WASM arrays (more like buffers)
 * [ ] Julia arrays
 * [x] Structs
-* [ ] Tuples
+* [x] Tuples
 * [ ] Strings
 * [ ] Unions
 * [ ] Symbols
@@ -49,7 +49,7 @@
 
 ### Other
 
-* [ ] Binaryen optimization
+* [x] Binaryen optimization
 
 ### Things Working and Things Broken
 
@@ -58,11 +58,22 @@ Working:
 * `exp`
 * `log` and siblings
 * `acos`
+* Global and dynamically allocated vectors
+* Global and dynamically allocated structs
+* Passing strings to/from JS
+* Import and use of JS functions, including Math.sin, etc.
 
-Not working:
+Broken but feasible:
 
-* `sin`--Uses `Int128`
-* Strings
+* Resizable arrays
+* Multidimensional arrays
+* String operations
+
+Broken and hard:
+
+* `sin`--Uses `Int128`.
+* Anything involving pointers--need to use overlays to intercept the code and replace with something else.
+
 
 ### Things to try
 
