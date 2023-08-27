@@ -88,6 +88,7 @@ Broken and hard:
 [StaticCompiler](https://github.com/tshort/StaticCompiler.jl) can also generate WebAssembly from Julia code. Some of the advantages of that approach include:
 * LLVM generates fast code.
 * The package is simple (GPUCompiler and Julia's compiler does all the work).
+
 The main disadvantages of StaticCompiler are:
 * No GC built in.
 * No clear path to include libjulia capability, so no GC, and everything must be manually allocated ([StaticTools](https://github.com/brenhinkeller/StaticTools.jl)).
@@ -95,15 +96,17 @@ The main disadvantages of StaticCompiler are:
 
 The compiler in this project is better in some ways, including:
 * Support for WebAssembly GC (structs, strings, arrays, ...).
-* Better interop with JavaScript (eventually).
+* Better interop with JavaScript.
 * Can tailor compilation to WebAssembly better.
 * Hacking the compiler is easier.
+
 The downsides of this approach are:
-* Code isn't as good as LLVM.
+* Code isn't as good as LLVM's. The biggest issue may be no autovectorization.
 * WebAssembly's type system is limited. This should improve in the future.
   * No nested structs or arrays of structs; nesting boxes everything; use [StructArrays](https://github.com/JuliaArrays/StructArrays.jl), [ComponentArrays](https://github.com/jonniedie/ComponentArrays.jl), [ValueShapes](https://github.com/oschulz/ValueShapes.jl), or other Julia packages to organize nested data using flat arrays.
   * All structs are boxed.
 * Browser support for WASM-GC is just beginning.
+* More bugs.
 
 ## Notes
 
