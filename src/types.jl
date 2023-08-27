@@ -31,12 +31,14 @@ mutable struct CompilerContext
     locals::Vector{BinaryenType}
     localidx::Int
     varmap::Dict{Int, Int}
+    ## special context
+    meta::Dict{Symbol, Any}
 end
 
 CompilerContext(ci::Core.CodeInfo) = 
     CompilerContext(BinaryenModuleCreate(), Dict{DataType, String}(), Dict{String, DataType}(), Dict{String, DataType}(), wtypes(), Dict{String, Any}(),
-                    ci, BinaryenExpressionRef[], BinaryenType[], 0, Dict{Int,Int}())
+                    ci, BinaryenExpressionRef[], BinaryenType[], 0, Dict{Int, Int}(), Dict{Symbol, Any}())
 CompilerContext(ctx::CompilerContext, ci::Core.CodeInfo) = 
     CompilerContext(ctx.mod, ctx.names, ctx.sigs, ctx.imports, ctx.wtypes, ctx.globals,
-                    ci, BinaryenExpressionRef[], BinaryenType[], 0, Dict{Int,Int}())
+                    ci, BinaryenExpressionRef[], BinaryenType[], 0, Dict{Int, Int}(), Dict{Symbol, Any}())
 

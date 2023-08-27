@@ -106,12 +106,12 @@ hasglobal(ctx, gval) = haskey(ctx.globals, objectid(gval))
 hasglobal(ctx, mod, name) = hasglobal(ctx, mod.eval(name))
 
 
-function compile_inline(ctx::CompilerContext, fun, tt, resultloc = nothing)
+function compile_inline(ctx::CompilerContext, fun, tt, meta = nothing)
     tt = Base.to_tuple_type(tt)
     ci = code_typed(fun, tt, interp = StaticInterpreter())[1].first
+    meta = meta !== Nothing ? Dict{Symbol, Any}(meta => 1) : Dict{Symbol, Any}()
     newctx = CompilerContext(ctx.mod, ctx.names, ctx.sigs, ctx.imports, ctx.wtypes, ctx.globals,
-                             ci, ctx.body, ctx.locals, ctx.localidx, ctx.varmap)
-    
+                             ci, ctx.body, ctx.locals, ctx.localidx, ctx.varmap, meta)
     return compile_method_body(newctx)
 end
 
