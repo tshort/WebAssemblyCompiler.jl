@@ -1,6 +1,7 @@
 include("types.jl")
 include("mixtape.jl")
 include("interpreter.jl")
+include("compile_block.jl")
 include("_compile.jl")
 include("utils.jl")
 include("quirks.jl")
@@ -28,7 +29,7 @@ function compile(funs; filepath = "foo.wasm", validate = false, optimize = false
     end
     # Compile funs
     for ci in cis
-        _compile(CompilerContext(ctx, ci), exported = true)
+        compile_method(CompilerContext(ctx, ci), exported = true)
     end
     # BinaryenModulePrint(ctx.mod)
     @debug BinaryenModulePrint(ctx.mod)
@@ -40,17 +41,26 @@ function compile(funs; filepath = "foo.wasm", validate = false, optimize = false
     BinaryenModuleDispose(ctx.mod)
 end
 
+function compile_method(ctx::CompilerContext; exported = false)
+    sig = ctx.ci.parent.specTypes
+    funname = ctx.names[sig]
+    jparams = [gettype(ctx, T) for T in [sig.parameters...][2:end]]
+    bparams = BinaryenTypeCreate(jparams, length(jparams))
+    results = gettype(ctx, ctx.ci.rettype)
+    body = compile_method_body(ctx)
+    BinaryenAddFunction(ctx.mod, funname, bparams, results, ctx.locals, length(ctx.locals), body)
+    if exported
+        BinaryenAddFunctionExport(ctx.mod, funname, funname)
+    end
+    return nothing
+end
+
 import Core.Compiler: block_for_inst, compute_basic_blocks
 
-function _compile(ctx::CompilerContext; exported = false)
+function compile_method_body(ctx::CompilerContext)
     ci = ctx.ci
     code = ci.code
-    sig = ci.parent.specTypes
-    jparams = [gettype(ctx, T) for T in [sig.parameters...][2:end]]
-    ctx.localidx = length(jparams)
-    bparams = BinaryenTypeCreate(jparams, length(jparams))
-    results = gettype(ctx, ci.rettype)
-    funname = ctx.names[sig]
+    ctx.localidx = length(ci.parent.specTypes.parameters) - 1
     cfg = Core.Compiler.compute_basic_blocks(code)
     relooper = RelooperCreate(ctx.mod)
 
@@ -73,7 +83,7 @@ function _compile(ctx::CompilerContext; exported = false)
         end
     end
     # Create blocks
-    rblocks = [RelooperAddBlock(relooper, _compile(ctx, cfg, phis, idx)) for idx in eachindex(cfg.blocks)]
+    rblocks = [RelooperAddBlock(relooper, compile_block(ctx, cfg, phis, idx)) for idx in eachindex(cfg.blocks)]
     # Create branches
     for (idx, block) in enumerate(cfg.blocks)
         terminator = code[last(block.stmts)]
@@ -90,11 +100,6 @@ function _compile(ctx::CompilerContext; exported = false)
             RelooperAddBranch(rblocks[idx], rblocks[idx + 1], C_NULL, C_NULL)
         end
     end
-    body = RelooperRenderAndDispose(relooper, rblocks[1], 0)
-    BinaryenAddFunction(ctx.mod, funname, bparams, results, ctx.locals, length(ctx.locals), body)
-    if exported
-        BinaryenAddFunctionExport(ctx.mod, funname, funname)
-    end
-    return nothing
+    RelooperRenderAndDispose(relooper, rblocks[1], 0)
 end
 
