@@ -109,8 +109,9 @@ hasglobal(ctx, mod, name) = hasglobal(ctx, mod.eval(name))
 function compile_inline(ctx::CompilerContext, fun, tt, resultloc = nothing)
     tt = Base.to_tuple_type(tt)
     ci = code_typed(fun, tt, interp = StaticInterpreter())[1].first
-    newctx = CompilerContext(ctx, ci)
-    body = compile_method_body(newctx)
-    return nothing
+    newctx = CompilerContext(ctx.mod, ctx.names, ctx.sigs, ctx.imports, ctx.wtypes, ctx.globals,
+                             ci, ctx.body, ctx.locals, ctx.localidx, ctx.varmap)
+    
+    return compile_method_body(newctx)
 end
 

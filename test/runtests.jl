@@ -1,7 +1,6 @@
 using TestItemRunner
-using SafeTestsets
 using Test
-using Binaryen
+using WebAssemblyCompiler
 
 include("setup.jl")   
 

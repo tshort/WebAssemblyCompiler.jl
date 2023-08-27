@@ -1,5 +1,5 @@
 @testitem "LibBinaryen" begin
-    using Binaryen.LibBinaryen
+    using WebAssemblyCompiler.LibBinaryen
     using NodeCall
     NodeCall.initialize(node_args = ["--experimental-wasm-gc"]);
 
@@ -47,14 +47,14 @@
     @await p
     @test node"funs.adder(5,6)" == 11
 
-    run(`$(Binaryen.Bin.wasmdis()) t.wasm -o t.wat`)
+    run(`$(WebAssemblyCompiler.Bin.wasmdis()) t.wasm -o t.wat`)
     wat = read("t.wat", String)
     @test contains(wat, raw"func $0 (param $0 i32) (param $1 i32) (result i32)")
 
 end
 
 @testitem "LibBinaryen 2" begin
-    using Binaryen.LibBinaryen
+    using WebAssemblyCompiler.LibBinaryen
     using NodeCall
     NodeCall.initialize(node_args = ["--experimental-wasm-gc"]);
 
@@ -106,7 +106,7 @@ end
 
     # Clean up the mod, which owns all the objects we created above
     BinaryenModuleDispose(mod)
-    run(`$(Binaryen.Bin.wasmdis()) t2.wasm -o t2.wat`)
+    run(`$(WebAssemblyCompiler.Bin.wasmdis()) t2.wasm -o t2.wat`)
 
     # js = """
     # var funs = {};
@@ -122,7 +122,7 @@ end
     # @await p
     # @test node"funs.adder(5,6)" == 11
 
-    # run(`$(Binaryen.Bin.wasmdis()) t.wasm -o t.wat`)
+    # run(`$(WebAssemblyCompiler.Bin.wasmdis()) t.wasm -o t.wat`)
     # wat = read("t.wat", String)
     # @test contains(wat, raw"func $0 (param $0 i32) (param $1 i32) (result i32)")
 

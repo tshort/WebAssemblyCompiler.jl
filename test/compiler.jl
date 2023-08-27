@@ -87,7 +87,7 @@ end
         x + twox(y)
     end
     compile(f7, (Float64,Float64); filepath = "j.wasm")
-    # run(`$(Binaryen.Bin.wasmdis()) j.wasm -o j.wat`)
+    # run(`$(WebAssemblyCompiler.Bin.wasmdis()) j.wasm -o j.wat`)
     jsfun = jsfunctions(f7, (Float64,Float64))
     @test f7(3.0, 4.0) == jsfun.f7(3.0, 4.0)
 
@@ -111,7 +111,7 @@ end
         @inbounds a[i]
     end
     compile(f8, (Int32,); filepath = "j.wasm")
-    run(`$(Binaryen.Bin.wasmdis()) j.wasm -o j.wat`)
+    run(`$(WebAssemblyCompiler.Bin.wasmdis()) j.wasm -o j.wat`)
     jsfun = jsfunctions(f8, (Int32,))
     @test f8(Int32(3)) == jsfun.f8(Int32(3))
 
@@ -120,7 +120,7 @@ end
         unsafe_trunc(Int32, length(a))
     end
     compile(f9, (Int32,); filepath = "j.wasm")
-    run(`$(Binaryen.Bin.wasmdis()) j.wasm -o j.wat`)
+    run(`$(WebAssemblyCompiler.Bin.wasmdis()) j.wasm -o j.wat`)
     ## BROKEN
     # jsfun = jsfunctions(f9, (Int32,))
     # @test f9(Int32(3)) == jsfun.f9(Int32(3))
@@ -134,7 +134,7 @@ end
         f10a(a) + x
     end
     compile(f10, (Float64,); filepath = "j.wasm")
-    run(`$(Binaryen.Bin.wasmdis()) j.wasm -o j.wat`)
+    run(`$(WebAssemblyCompiler.Bin.wasmdis()) j.wasm -o j.wat`)
     jsfun = jsfunctions(f10, (Float64,))
     x = 3.0
     @test f10(x) == jsfun.f10(x)
@@ -145,7 +145,7 @@ end
         b[2] * x
     end
     compile(f11, (Float64,); filepath = "arraycopy.wasm", validate = true)
-    run(`$(Binaryen.Bin.wasmdis()) arraycopy.wasm -o arraycopy.wat`)
+    run(`$(WebAssemblyCompiler.Bin.wasmdis()) arraycopy.wasm -o arraycopy.wat`)
     # In NodeCall: Compiling function #0 failed: invalid array index.
     # Works in the browser.
     # jsfun = jsfunctions(f11, (Float64,))
@@ -172,7 +172,7 @@ end
     end
     # x = X(1., 2., 3.)
     compile(f11, (Float64,); filepath = "j.wasm")
-    run(`$(Binaryen.Bin.wasmdis()) j.wasm -o j.wat`)
+    run(`$(WebAssemblyCompiler.Bin.wasmdis()) j.wasm -o j.wat`)
     jsfun = jsfunctions(f11, (Float64,))
     x = 3.0
     @test f11(x) == jsfun.f11(x)
@@ -187,7 +187,7 @@ end
         y.c + 1
     end
     compile(((f12, Float64,),); filepath = "j.wasm")
-    # run(`$(Binaryen.Bin.wasmdis()) j.wasm -o j.wat`)
+    # run(`$(WebAssemblyCompiler.Bin.wasmdis()) j.wasm -o j.wat`)
     jsfun = jsfunctions(f12, (Float64,))
     x = 3.0
     @test f12(x) == jsfun.f12(x)
@@ -203,7 +203,7 @@ end
         return x
     end
     compile(f, (Float64,); filepath = "string.wasm")
-    run(`$(Binaryen.Bin.wasmdis()) string.wasm -o string.wat`)
+    run(`$(WebAssemblyCompiler.Bin.wasmdis()) string.wasm -o string.wat`)
     ## NodeCall doesn't work because its version of Node doesn't support stringrefs.
     # jsfun = jsfunctions(f, (Float64,))
     # jsfun.f(1.0)
@@ -276,7 +276,7 @@ end
         @inbounds tpl[x]
     end
     compile(f1, (Int32,); filepath = "j.wasm")
-    run(`$(Binaryen.Bin.wasmdis()) j.wasm -o j.wat`)
+    run(`$(WebAssemblyCompiler.Bin.wasmdis()) j.wasm -o j.wat`)
     jsfun = jsfunctions(f1, (Int32,))
     x = Int32(1)
     @test f1(x) == jsfun.f1(x)
@@ -289,14 +289,14 @@ end
     const a = [1.,2.,3.,4.]
     f1(i) = @inbounds length(a)
     compile(f1, (Int32,); filepath = "globalarray.wasm", validate = true)
-    run(`$(Binaryen.Bin.wasmdis()) globalarray.wasm -o globalarray.wat`)
+    run(`$(WebAssemblyCompiler.Bin.wasmdis()) globalarray.wasm -o globalarray.wat`)
     # works in browser!
     # jsfun = jsfunctions(f1, (Int32,))
     # @test jsfun.f1(1) == f1(1)
 
     f(i) = @inbounds a[i]
     compile(f, (Int32,); filepath = "globalarray.wasm")
-    run(`$(Binaryen.Bin.wasmdis()) globalarray.wasm -o globalarray.wat`)
+    run(`$(WebAssemblyCompiler.Bin.wasmdis()) globalarray.wasm -o globalarray.wat`)
     jsfun = jsfunctions(f, (Int32,))
     @test jsfun.f(1) == f(1)
     
@@ -311,7 +311,7 @@ end
     const x = Z(Y(1.,2.), 3.)
     g1(i) = x.a.a
     compile(g1, (Int32,); filepath = "globalcombo.wasm")
-    run(`$(Binaryen.Bin.wasmdis()) globalcombo.wasm -o globalcombo.wat`)
+    run(`$(WebAssemblyCompiler.Bin.wasmdis()) globalcombo.wasm -o globalcombo.wat`)
     jsfun = jsfunctions(g1, (Int32,))
     @test jsfun.g1(1) == g1(1)
 
@@ -324,14 +324,14 @@ end
     const xx = X([1.,2.], [5., 6.], 3.)
     g1(i) = xx.b[i]
     compile(g1, (Int32,); filepath = "globalcombo2.wasm")
-    run(`$(Binaryen.Bin.wasmdis()) globalcombo2.wasm -o globalcombo2.wat`)
+    run(`$(WebAssemblyCompiler.Bin.wasmdis()) globalcombo2.wasm -o globalcombo2.wat`)
     jsfun = jsfunctions(g1, (Int32,))
     @test jsfun.g1(1) == g1(1)
     # @show jsfun.g1(2)
 
     g2(i) = xx.b[i] + length(xx.a)
     compile(g2, (Int32,); filepath = "globalcombo3.wasm")
-    run(`$(Binaryen.Bin.wasmdis()) globalcombo3.wasm -o globalcombo3.wat`)
+    run(`$(WebAssemblyCompiler.Bin.wasmdis()) globalcombo3.wasm -o globalcombo3.wat`)
     # jsfun = jsfunctions(g2, (Int32,))
     # @test jsfun.g2(1) == g2(1)
     # @show jsfun.g2(2)
@@ -340,7 +340,7 @@ end
     const d = Dict{Int32,Int32}(1 => 10, 2 => 20, 3 => 30, 4 => 40)
     f(i) = get(d, i, Int32(-1))
     compile(f, (Int32,); filepath = "dict.wasm")
-    run(`$(Binaryen.Bin.wasmdis()) dict.wasm -o dict.wat`)
+    run(`$(WebAssemblyCompiler.Bin.wasmdis()) dict.wasm -o dict.wat`)
     # works in browser!
     # jsfun = jsfunctions(f, (Int32,))
     # @show jsfun.f(1)

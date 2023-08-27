@@ -1,4 +1,4 @@
-module Binaryen
+module WebAssemblyCompiler
 
 using Binaryen_jll
 

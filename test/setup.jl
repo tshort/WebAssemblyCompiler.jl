@@ -1,5 +1,5 @@
 using Test
-using Binaryen
+using WebAssemblyCompiler
 
 using NodeCall
 # NodeCall.initialize(node_args = ["--experimental-wasm-gc", "--experimental-wasm-stringref"]);

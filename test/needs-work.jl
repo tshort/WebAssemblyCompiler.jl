@@ -4,7 +4,7 @@
         get(d, 2, -1.0) + x
     end
     compile(f1, (Float64,); filepath = "dict.wasm")
-    run(`$(Binaryen.Bin.wasmdis()) dict.wasm -o dict.wat`)
+    run(`$(WebAssemblyCompiler.Bin.wasmdis()) dict.wasm -o dict.wat`)
     # jsfun = jsfunctions(f1, (Float64,))
     # x = 1.0
     # @test jsfun.f1(x) == f1(x)
@@ -16,7 +16,7 @@
         get(d, 2, -1.0) + x
     end
     compile(f2, (Float64,); filepath = "dict.wasm")
-    run(`$(Binaryen.Bin.wasmdis()) dict.wasm -o dict.wat`)
+    run(`$(WebAssemblyCompiler.Bin.wasmdis()) dict.wasm -o dict.wat`)
     # Dictionaries advantages
     # - sizehint in constructor
     # - less complications
