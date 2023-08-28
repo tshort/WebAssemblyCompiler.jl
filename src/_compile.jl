@@ -52,12 +52,12 @@ function _compile(ctx::CompilerContext, x::I32)
     return res
 end
 
-const addglobal = Ref(false)
 
 function _compile(ctx::CompilerContext, x::T) where T <: Array 
-    arraytype = BinaryenTypeGetHeapType(gettype(ctx, T))
+    # TODO: fix this
+    buffertype = BinaryenTypeGetHeapType(gettype(ctx, Buffer{eltype(roottype(ctx, T))}))
     values = [_compile(ctx, v) for v in x]
-    return BinaryenArrayNewFixed(ctx.mod, arraytype, values, length(x))
+    return BinaryenArrayNewFixed(ctx.mod, buffertype, values, length(x))
 end
 
 function _compile(ctx::CompilerContext, x::T) where T # general version for structs

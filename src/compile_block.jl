@@ -408,81 +408,70 @@ function compile_block(ctx::CompilerContext, cfg::Core.Compiler.CFG, phis, idx)
 
         ## Builtins / key functions ##
 
-        elseif matchgr(node, :arrayref) do bool, arr, i
-                if haskey(ctx.meta, :arraypass)    # arrays are low-level buffers here
-                    T = eltype(roottype(ctx, arr))
-                    signed = T <: Signed && sizeof(T) < 4
-                    ## subtract one from i for zero-based indexing in WASM
-                    i = BinaryenBinary(ctx.mod, BinaryenAddInt32(), 
-                                       _compile(ctx, I32(i)), 
-                                       _compile(ctx, Int32(-1)))
-                    binaryenfun(ctx, idx, BinaryenArrayGet, arr, i, gettype(ctx, T), Pass(signed))
-                else    # higher-level support
-                    x = compile_inline(ctx, idx, getindex, (ArrayWrapper{eltype(roottype(ctx, arr))}, Int), (arr, i), :arraypass)
-                    update(ctx, x)
-                end
+        elseif matchgr(node, :arrayref) do bool, arraywrapper, i
+                T = roottype(ctx, arraywrapper)
+                eT = eltype(T)
+                buffer = BinaryenStructGet(ctx.mod, UInt32(0), _compile(ctx, arraywrapper), gettype(ctx, Buffer{eT}), false)
+                signed = eT <: Signed && sizeof(eT) < 4
+                ## subtract one from i for zero-based indexing in WASM
+                i = BinaryenBinary(ctx.mod, BinaryenAddInt32(), _compile(ctx, I32(i)), _compile(ctx, Int32(-1)))
+                binaryenfun(ctx, idx, BinaryenArrayGet, buffer, i, gettype(ctx, T), Pass(signed))
             end
 
-        elseif matchgr(node, :arrayset) do bool, arr, val, i
-                if haskey(ctx.meta, :arraypass)    # arrays are low-level buffers here
-                    i = BinaryenBinary(ctx.mod, BinaryenAddInt32(), 
-                                       _compile(ctx, I32(i)), 
-                                       _compile(ctx, Int32(-1)))
-                    x = BinaryenArraySet(ctx.mod, _compile(ctx, arr), i, _compile(ctx, val))
-                    update!(ctx, x)
-                else    # higher-level support
-                    x = compile_inline(ctx, idx, setindex!, (ArrayWrapper{eltype(roottype(ctx, arr))}, typeof(val), Int), (arr, val, i), :arraypass)
-                    update(ctx, x)
-                end
+        elseif matchgr(node, :arrayset) do bool, arraywrapper, val, i
+                T = roottype(ctx, arraywrapper)
+                @show T
+                eT = eltype(T)
+                buffer = BinaryenStructGet(ctx.mod, UInt32(0), _compile(ctx, arraywrapper), gettype(ctx, Buffer{eT}), false)
+                i = BinaryenBinary(ctx.mod, BinaryenAddInt32(), _compile(ctx, I32(i)), _compile(ctx, Int32(-1)))
+                x = BinaryenArraySet(ctx.mod, buffer, i, _compile(ctx, val))
+                update!(ctx, x)
             end
 
-        elseif matchgr(node, :arraylen) do arr
-                if haskey(ctx.meta, :arraypass)    # arrays are low-level buffers here
-                    if sizeof(Int) == 8 # extend to Int64
-                        unaryfun(ctx, idx, (BinaryenExtendUInt32,), BinaryenArrayLen(ctx.mod, _compile(ctx, arr)))
-                    else
-                        binaryenfun(ctx, idx, BinaryenArrayLen, arr)
-                    end
-                else    # higher-level support
-                    x = compile_inline(ctx, idx, length, (ArrayWrapper{eltype(roottype(ctx, arr))},), (arr,), :arraypass)
+        elseif matchgr(node, :arraylen) do arraywrapper
+                T = roottype(ctx, arraywrapper)
+                eT = eltype(T)
+                buffer = BinaryenStructGet(ctx.mod, UInt32(0), _compile(ctx, arraywrapper), gettype(ctx, Buffer{eT}), false)
+                x = BinaryenArrayLen(ctx.mod, buffer)
+                if sizeof(Int) == 8 # extend to Int64
+                    unaryfun(ctx, idx, (BinaryenExtendUInt32,), x)
+                else
                     setlocal!(ctx, idx, x)
                 end
             end
 
-        elseif matchgr(node, :arraysize) do arr, n
-                if haskey(ctx.meta, :arraypass)    # arrays are low-level buffers here
-                    n != 1 && @warn "arraysize(x, n) with n>1 isn't supported"
-                    if sizeof(Int) == 8 # extend to Int64
-                        unaryfun(ctx, idx, (BinaryenExtendUInt32,), BinaryenArrayLen(ctx.mod, _compile(ctx, arr)))
-                    else
-                        binaryenfun(ctx, idx, BinaryenArrayLen, arr)
-                    end
-                else    # higher-level support
-                    x = compile_inline(ctx, idx, size, (ArrayWrapper{eltype(roottype(ctx, arr))}, Int), (arr, n), :arraypass)
+        elseif matchgr(node, :arraysize) do arraywrapper, n
+                T = roottype(ctx, arraywrapper)
+                eT = eltype(T)
+                buffer = BinaryenStructGet(ctx.mod, UInt32(0), _compile(ctx, arraywrapper), gettype(ctx, Buffer{eT}), false)
+                x = BinaryenArrayLen(ctx.mod, buffer)
+                if sizeof(Int) == 8 # extend to Int64
+                    unaryfun(ctx, idx, (BinaryenExtendUInt32,), x)
+                else
                     setlocal!(ctx, idx, x)
                 end
             end
 
         elseif matchforeigncall(node, :jl_alloc_array_1d) do args
                 elT = eltype(args[1])
-                size = args[6]
-                if haskey(ctx.meta, :arraypass)    # Create low-level buffers
-                    @show "here"
-                    arraytype = BinaryenTypeGetHeapType(gettype(ctx, Buffer{elT}))
-                    @show arraytype
-                    binaryenfun(ctx, idx, BinaryenArrayNew, Pass(arraytype), I32(size), 0.0)
-                else                               # Create an array wrapper
-                    x = compile_inline(ctx, idx, ArrayWrapper{elT}, (Int32,), (size,), :arraypass)
-@show x
-                    setlocal!(ctx, idx, x)
-                end
+                size = _compile(ctx, I32(args[6]))
+                arraytype = BinaryenTypeGetHeapType(gettype(ctx, Buffer{elT}))
+                buffer = BinaryenArrayNew(ctx.mod, arraytype, size, _compile(ctx, 0.0))
+                wrappertype = BinaryenTypeGetHeapType(gettype(ctx, FakeArrayWrapper{elT}))
+                binaryenfun(ctx, idx, BinaryenStructNew, [buffer, size], UInt32(2), wrappertype; passall = true)
             end
 
         elseif matchforeigncall(node, :_jl_array_copy) do args
-                src = args[5]
-                dest = args[6]
+                srcarraywrapper = args[5]
+                T = roottype(ctx, srcarraywrapper)
+                eT = eltype(T)
+                srcbuffer = BinaryenStructGet(ctx.mod, UInt32(0), _compile(ctx, srcarraywrapper), gettype(ctx, Buffer{eT}), false)
+                destarraywrapper = args[6]
+                T = roottype(ctx, destarraywrapper)
+                eT = eltype(T)
+                destbuffer = BinaryenStructGet(ctx.mod, UInt32(0), _compile(ctx, destarraywrapper), gettype(ctx, Buffer{eT}), false)
                 n = args[7]
-                x = BinaryenArrayCopy(ctx.mod, _compile(ctx, dest), _compile(ctx, I32(0)), _compile(ctx, src), _compile(ctx, I32(0)), _compile(ctx, n))
+                x = BinaryenArrayCopy(ctx.mod, destbuffer, _compile(ctx, I32(0)), srcbuffer, _compile(ctx, I32(0)), _compile(ctx, n))
                 update!(ctx, x)
             end
 

@@ -76,7 +76,7 @@ function gettype(ctx, type)
     builtheaptypes = Array{BinaryenHeapType}(undef, 1)
     if type <: Buffer || type <: NTuple
         elt = eltype(type)
-        TypeBuilderSetArrayType(tb, 0, gettype(ctx, elt), sizeof(elt) == 1 ? BinaryenPackedTypeInt8() : BinaryenPackedTypeNotPacked(), type <: Array)
+        TypeBuilderSetArrayType(tb, 0, gettype(ctx, elt), sizeof(elt) == 1 ? BinaryenPackedTypeInt8() : BinaryenPackedTypeNotPacked(), type <: Buffer)
     else  # Structs
         fieldtypes = [gettype(ctx, T) for T in Base.datatype_fieldtypes(type)]
         n = length(fieldtypes)

@@ -294,11 +294,11 @@ end
     # jsfun = jsfunctions(f1, (Int32,))
     # @test jsfun.f1(1) == f1(1)
 
-    f(i) = @inbounds a[i]
-    compile(f, (Int32,); filepath = "globalarray.wasm")
-    run(`$(WebAssemblyCompiler.Bin.wasmdis()) globalarray.wasm -o globalarray.wat`)
-    jsfun = jsfunctions(f, (Int32,))
-    @test jsfun.f(1) == f(1)
+    f2(i) = @inbounds a[i]
+    compile(f2, (Int32,); filepath = "globalarray2.wasm", validate = true, optimize = true)
+    run(`$(WebAssemblyCompiler.Bin.wasmdis()) globalarray2.wasm -o globalarray2.wat`)
+    jsfun = jsfunctions(f2, (Int32,))
+    @test jsfun.f2(1) == f2(1)
     
     struct Y
         a::Float64
