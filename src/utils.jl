@@ -63,9 +63,18 @@ function gettype(ctx, type)
     if specialtype(type) !== nothing
         return specialtype(type)
     end
+    if type <: Array
+        @show type
+        wrappertype = gettype(ctx, FakeArrayWrapper{eltype(type)})
+        ctx.wtypes[type] = wrappertype
+        return wrappertype
+    end
+    @show type
+    @show ctx.wtypes
+    # exit()
     tb = TypeBuilderCreate(1)
     builtheaptypes = Array{BinaryenHeapType}(undef, 1)
-    if type <: Array || type <: NTuple
+    if type <: Buffer || type <: NTuple
         elt = eltype(type)
         TypeBuilderSetArrayType(tb, 0, gettype(ctx, elt), sizeof(elt) == 1 ? BinaryenPackedTypeInt8() : BinaryenPackedTypeNotPacked(), type <: Array)
     else  # Structs
@@ -106,12 +115,19 @@ hasglobal(ctx, gval) = haskey(ctx.globals, objectid(gval))
 hasglobal(ctx, mod, name) = hasglobal(ctx, mod.eval(name))
 
 
-function compile_inline(ctx::CompilerContext, fun, tt, meta = nothing)
+function compile_inline(ctx::CompilerContext, idx, fun, tt, args, meta = nothing)
     tt = Base.to_tuple_type(tt)
     ci = code_typed(fun, tt, interp = StaticInterpreter())[1].first
+    @show ci
     meta = meta !== Nothing ? Dict{Symbol, Any}(meta => 1) : Dict{Symbol, Any}()
+    meta[:inlining] = ctx.localidx    # this is the local variable used in place of the return
+    ctx.localidx += 1
     newctx = CompilerContext(ctx.mod, ctx.names, ctx.sigs, ctx.imports, ctx.wtypes, ctx.globals,
                              ci, ctx.body, ctx.locals, ctx.localidx, ctx.varmap, meta)
+    # TODO: how to wire in input args?
+    for (i, a) in enumerate(args)
+        setlocal!(newctx, idx + i - 1, _compile(newctx, a))
+    end
     return compile_method_body(newctx)
 end
 

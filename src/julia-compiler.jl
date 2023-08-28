@@ -1,6 +1,7 @@
 include("types.jl")
 include("mixtape.jl")
 include("interpreter.jl")
+include("array.jl")
 include("compile_block.jl")
 include("_compile.jl")
 include("utils.jl")
@@ -29,6 +30,7 @@ function compile(funs; filepath = "foo.wasm", validate = false, optimize = false
     end
     # Compile funs
     for ci in cis
+        @show ci
         compile_method(CompilerContext(ctx, ci), exported = true)
     end
     # BinaryenModulePrint(ctx.mod)
@@ -60,7 +62,7 @@ import Core.Compiler: block_for_inst, compute_basic_blocks
 function compile_method_body(ctx::CompilerContext)
     ci = ctx.ci
     code = ci.code
-    ctx.localidx = length(ci.parent.specTypes.parameters) - 1
+    ctx.localidx += length(ci.parent.specTypes.parameters) - 1
     cfg = Core.Compiler.compute_basic_blocks(code)
     relooper = RelooperCreate(ctx.mod)
 

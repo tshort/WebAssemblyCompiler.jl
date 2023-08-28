@@ -3,46 +3,55 @@
 # MIT license.
 # https://github.com/tpapp/PushVectors.jl/blob/master/LICENSE.md
 
-mutable struct PushVector{T, V <: AbstractVector{T}} <: AbstractVector{T}
+struct Buffer{T} <: AbstractVector{T} end
+mutable struct FakeArrayWrapper{T} <: AbstractVector{T}
     "Vector used for storage."
-    parent::V
+    parent::Buffer{T}
     "Number of elements held by `parent`."
-    len::Int
+    len::Int32
+end
+
+
+mutable struct ArrayWrapper{T} <: AbstractVector{T}
+    "Vector used for storage."
+    parent::Vector{T}
+    "Number of elements held by `parent`."
+    len::Int32
 end
 
 """
-    PushVector{T}(sizehint = 4)
+    ArrayWrapper{T}(sizehint = 4)
 
-Create a `PushVector` for elements typed `T`, with no initial elements. `sizehint`
+Create a `ArrayWrapper` for elements typed `T`, with no initial elements. `sizehint`
 determines the initial allocated size.
 """
-function PushVector{T}(sizehint::Integer = 4) where {T}
+function ArrayWrapper{T}(sizehint::Integer = 4) where {T}
     sizehint ≥ 0 || throw(DomainError(sizehint, "Invalid initial size."))
-    PushVector(Vector{T}(undef, sizehint), 0)
+    ArrayWrapper{T}(Vector{T}(undef, sizehint), 0)
 end
 
-@inline Base.length(v::PushVector) = v.len
+@inline Base.length(v::ArrayWrapper) = v.len
 
-@inline Base.size(v::PushVector) = (v.len, )
+@inline Base.size(v::ArrayWrapper) = (v.len, )
 
-function Base.sizehint!(v::PushVector, n)
+function Base.sizehint!(v::ArrayWrapper, n)
     if length(v.parent) < n || n ≥ v.len
         resize!(v.parent, n)
     end
     nothing
 end
 
-@inline function Base.getindex(v::PushVector, i)
+@inline function Base.getindex(v::ArrayWrapper, i)
     @boundscheck checkbounds(v, i)
     @inbounds v.parent[i]
 end
 
-@inline function Base.setindex!(v::PushVector, x, i)
+@inline function Base.setindex!(v::ArrayWrapper, x, i)
     @boundscheck checkbounds(v, i)
     @inbounds v.parent[i] = x
 end
 
-function Base.push!(v::PushVector, x)
+function Base.push!(v::ArrayWrapper, x)
     v.len += 1
     if v.len > length(v.parent)
         resize!(v.parent, v.len * 2)
@@ -51,9 +60,9 @@ function Base.push!(v::PushVector, x)
     v
 end
 
-Base.empty!(v::PushVector) = (v.len = 0; v)
+Base.empty!(v::ArrayWrapper) = (v.len = 0; v)
 
-function Base.append!(v::PushVector, xs)
+function Base.append!(v::ArrayWrapper, xs)
     ι_xs = eachindex(xs)        # allow generalized indexing
     l = length(ι_xs)
     if l ≤ 4
@@ -79,5 +88,5 @@ Shrink the buffer `v` to its current content and return that vector.
 !!! NOTE
     Consequences are undefined if you modify `v` after this.
 """
-finish!(v::PushVector) = resize!(v.parent, v.len)
+finish!(v::ArrayWrapper) = resize!(v.parent, v.len)
 
