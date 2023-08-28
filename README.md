@@ -26,6 +26,10 @@
 
 * [x] WASM arrays (more like buffers)
 * [ ] Julia arrays
+  - [x] Basic wrapper type
+  - [ ] Add ability to grow an array
+    - routine to call Julia code
+    - rework Julia code to grow the ArrayWrapper
 * [x] Structs
 * [x] Tuples
 * [ ] Strings

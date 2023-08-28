@@ -64,13 +64,10 @@ function gettype(ctx, type)
         return specialtype(type)
     end
     if type <: Array
-        @show type
         wrappertype = gettype(ctx, FakeArrayWrapper{eltype(type)})
         ctx.wtypes[type] = wrappertype
         return wrappertype
     end
-    @show type
-    @show ctx.wtypes
     # exit()
     tb = TypeBuilderCreate(1)
     builtheaptypes = Array{BinaryenHeapType}(undef, 1)
@@ -118,7 +115,6 @@ hasglobal(ctx, mod, name) = hasglobal(ctx, mod.eval(name))
 function compile_inline(ctx::CompilerContext, idx, fun, tt, args, meta = nothing)
     tt = Base.to_tuple_type(tt)
     ci = code_typed(fun, tt, interp = StaticInterpreter())[1].first
-    @show ci
     meta = meta !== Nothing ? Dict{Symbol, Any}(meta => 1) : Dict{Symbol, Any}()
     meta[:inlining] = ctx.localidx    # this is the local variable used in place of the return
     ctx.localidx += 1

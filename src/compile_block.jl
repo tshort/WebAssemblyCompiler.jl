@@ -2,24 +2,19 @@ function update!(ctx::CompilerContext, x, localtype = nothing)
     # TODO: check the type of x, compare that with the wasm type of localtype, and if they differ,
     #       convert one to the other. Hopefully, this is mainly Int32 -> Int64. 
     push!(ctx.body, x)
-    @show ctx.body
-    @show localtype
     if localtype !== nothing
         push!(ctx.locals, gettype(ctx, localtype))
         ctx.localidx += 1
     end
-    BinaryenExpressionPrint(x)
+    # BinaryenExpressionPrint(x)
     return nothing
 end
 
 function setlocal!(ctx, idx, x)
     T = ssatype(ctx, idx)
-        @show x
     if T != Union{}
         ctx.varmap[idx] = ctx.localidx
-        @show ctx.varmap
         x = BinaryenLocalSet(ctx.mod, ctx.localidx, x)
-        @show x
         update!(ctx, x, ssatype(ctx, idx))
     else
         push!(ctx.body, x)
@@ -60,7 +55,7 @@ function compile_block(ctx::CompilerContext, cfg::Core.Compiler.CFG, phis, idx)
     ctx.body = BinaryenExpressionRef[]
     for idx in idxs
         node = ci.code[idx]
-        @show idx, node
+        # @show idx, node
         # if idx == 17
         #     dump(node)
         # end
@@ -420,7 +415,6 @@ function compile_block(ctx::CompilerContext, cfg::Core.Compiler.CFG, phis, idx)
 
         elseif matchgr(node, :arrayset) do bool, arraywrapper, val, i
                 T = roottype(ctx, arraywrapper)
-                @show T
                 eT = eltype(T)
                 buffer = BinaryenStructGet(ctx.mod, UInt32(0), _compile(ctx, arraywrapper), gettype(ctx, Buffer{eT}), false)
                 i = BinaryenBinary(ctx.mod, BinaryenAddInt32(), _compile(ctx, I32(i)), _compile(ctx, Int32(-1)))
