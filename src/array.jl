@@ -54,7 +54,7 @@ end
 function Base.push!(v::ArrayWrapper, x)
     v.len += 1
     if v.len > length(v.parent)
-        newbuffer = similar(v.parent, min(v.len * 2, j))
+        newbuffer = similar(v.parent, min(v.len * Int32(2), j))
         copyto!(newbuffer, 1:length(v), v, 1:length(v))
         v.parent = newbuffer
     end
@@ -65,7 +65,7 @@ end
 function Base._growend!(v::ArrayWrapper, amount)
     v.len += amount
     if v.len > length(v.parent)
-        newbuffer = similar(v.parent, nextpow(2, nextpow(2, v.len)))
+        newbuffer = similar(v.parent, nextpow(Int32(2), nextpow(Int32(2), v.len)))
         copyto!(newbuffer, 1:length(v), v, 1:length(v))
         v.parent = newbuffer
     end

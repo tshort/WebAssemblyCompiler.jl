@@ -73,7 +73,7 @@ function gettype(ctx, type)
     builtheaptypes = Array{BinaryenHeapType}(undef, 1)
     if type <: Buffer || type <: NTuple
         elt = eltype(type)
-        TypeBuilderSetArrayType(tb, 0, gettype(ctx, elt), sizeof(elt) == 1 ? BinaryenPackedTypeInt8() : BinaryenPackedTypeNotPacked(), type <: Buffer)
+        TypeBuilderSetArrayType(tb, 0, gettype(ctx, elt), isbitstype(elt) && sizeof(elt) == 1 ? BinaryenPackedTypeInt8() : BinaryenPackedTypeNotPacked(), type <: Buffer)
     else  # Structs
         fieldtypes = [gettype(ctx, T) for T in Base.datatype_fieldtypes(type)]
         n = length(fieldtypes)
@@ -111,7 +111,7 @@ getglobal(ctx, mod, name; compiledval = nothing) = getglobal(ctx, mod.eval(name)
 hasglobal(ctx, gval) = haskey(ctx.globals, objectid(gval))
 hasglobal(ctx, mod, name) = hasglobal(ctx, mod.eval(name))
 
-
+# BROKEN
 function compile_inline(ctx::CompilerContext, idx, fun, tt, args, meta = nothing)
     tt = Base.to_tuple_type(tt)
     ci = code_typed(fun, tt, interp = StaticInterpreter())[1].first
@@ -127,19 +127,25 @@ function compile_inline(ctx::CompilerContext, idx, fun, tt, args, meta = nothing
     return compile_method_body(newctx)
 end
 
-function jlinvoke(ctx::CompilerContext, idx, fun, argtypes, args...)
+function jlinvoke(ctx::CompilerContext, idx, fun, argtypes, args...; meta = nothing)
     nargs = length(args)
-    sig = Tuple{fun, argtypes...}
+    sig = Tuple{typeof(fun), argtypes...}
     rettype = gettype(ctx, ssatype(ctx, idx))
     args = [_compile(ctx, x) for x in args]
     if haskey(ctx.names, sig)
         name = ctx.names[sig]
     else
+        meta = meta !== Nothing ? Dict{Symbol, Any}(meta => 1) : Dict{Symbol, Any}()
         newci = code_typed(fun, Base.to_tuple_type(argtypes), interp = StaticInterpreter())[1].first
-        name = string("julia_", node.args[1].def.name)
+        @show newci
+        name = string("julia_", fun)
+        @show sig
+        @show newci.parent.specTypes
         ctx.sigs[name] = sig
         ctx.names[sig] = name
-        compile_method(CompilerContext(ctx, newci))
+        newctx = CompilerContext(ctx.mod, ctx.names, ctx.sigs, ctx.imports, ctx.wtypes, ctx.globals,
+                                 newci, ctx.body, ctx.locals, ctx.localidx, ctx.varmap, meta)
+        compile_method(newctx)
     end
     setlocal!(ctx, idx, BinaryenCall(ctx.mod, name, args, nargs, rettype))
 end

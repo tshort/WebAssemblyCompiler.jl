@@ -6,7 +6,7 @@ function update!(ctx::CompilerContext, x, localtype = nothing)
         push!(ctx.locals, gettype(ctx, localtype))
         ctx.localidx += 1
     end
-    # BinaryenExpressionPrint(x)
+    BinaryenExpressionPrint(x)
     return nothing
 end
 
@@ -24,16 +24,19 @@ function binaryfun(ctx, idx, bfuns, a, b)
     ctx.varmap[idx] = ctx.localidx
     Ta = roottype(ctx, a)
     Tb = roottype(ctx, b)
-    if sizeof(Ta) == sizeof(Tb)
-    elseif sizeof(Ta) == 4
-        b = Int32(reinterpret(Int64, b))
-    elseif sizeof(Ta) == 8
-        b = Int64(reinterpret(Int32, b))
+    _a = _compile(ctx, a)
+    _b = _compile(ctx, b)
+    if sizeof(Ta) !== sizeof(Tb)   # try to make the sizes the same, at least for Integers
+        if sizeof(Ta) == 4
+            _b = BinaryenUnary(ctx.mod, BinaryenWrapInt64(), _b)
+        elseif sizeof(Ta) == 8
+            _b = BinaryenUnary(ctx.mod, Tb <: Signed ? BinaryenExtendSInt32() : BinaryenExtendUInt32(), _b)
+        end
     end
     x = BinaryenBinary(ctx.mod,
                        sizeof(Ta) < 8 && length(bfuns) > 1 ? bfuns[2]() : bfuns[1](),
-                       _compile(ctx, a),
-                       _compile(ctx, b))
+                       _a,
+                       _b)
     setlocal!(ctx, idx, x)
 end
 function unaryfun(ctx, idx, bfuns, a)
@@ -55,7 +58,7 @@ function compile_block(ctx::CompilerContext, cfg::Core.Compiler.CFG, phis, idx)
     ctx.body = BinaryenExpressionRef[]
     for idx in idxs
         node = ci.code[idx]
-        # @show idx, node
+        @show idx, node
         # if idx == 17
         #     dump(node)
         # end
@@ -80,7 +83,8 @@ function compile_block(ctx::CompilerContext, cfg::Core.Compiler.CFG, phis, idx)
         ## Intrinsics ##
 
         elseif matchgr(node, :neg_int) do a
-                binaryfun(ctx, idx, (BinaryenSubInt64, BinaryenSubInt32), 0, a)
+                T = roottype(ctx, a)
+                binaryfun(ctx, idx, (BinaryenSubInt64, BinaryenSubInt32), T(0), a)
             end
 
         elseif matchgr(node, :neg_float) do a
@@ -108,11 +112,15 @@ function compile_block(ctx::CompilerContext, cfg::Core.Compiler.CFG, phis, idx)
             end
 
         elseif matchgr(node, :srem_int) do a, b
-                binaryfun(ctx, idx, (BinaryenRemS64, BinaryenRemS32), a, b)
+                binaryfun(ctx, idx, (BinaryenRemSInt64, BinaryenRemSInt32), a, b)
+            end
+
+        elseif matchgr(node, :checked_srem_int) do a, b    # LIES - it isn't checked
+                binaryfun(ctx, idx, (BinaryenRemSInt64, BinaryenRemSInt32), a, b)
             end
 
         elseif matchgr(node, :urem_int) do a, b
-                binaryfun(ctx, idx, (BinaryenRemU64, BinaryenRemU32), a, b)
+                binaryfun(ctx, idx, (BinaryenRemUInt64, BinaryenRemUInt32), a, b)
             end
 
         elseif matchgr(node, :add_float) do a, b
@@ -251,9 +259,9 @@ function compile_block(ctx::CompilerContext, cfg::Core.Compiler.CFG, phis, idx)
                 unaryfun(ctx, idx, (BinaryenClzInt64, BinaryenClzInt32), a)
         end
 
-        # elseifmatchgr(f node:cttz_int) do a, b
-        #         binaryfun(ctx, idx, (BinaryenCtzInt64, BinaryenCtzInt32), a, b)
-        # end
+        elseif matchgr(node, :cttz_int) do a
+                unaryfun(ctx, idx, (BinaryenCtzInt64, BinaryenCtzInt32), a)
+        end
 
         ## I'm not sure these are right
         elseif matchgr(node, :sext_int) do a, b
@@ -267,10 +275,10 @@ function compile_block(ctx::CompilerContext, cfg::Core.Compiler.CFG, phis, idx)
 
         elseif matchgr(node, :zext_int) do a, b
                 t = (roottype(ctx, a), roottype(ctx, b))
-                t == (UInt64, UInt16) ? unaryfun(ctx, idx, (BinaryenExtendU16Int64,), b) :
-                t == (UInt64, UInt32) ? unaryfun(ctx, idx, (BinaryenExtendUInt32,), b) :
-                t == (UInt32, UInt8)  ? unaryfun(ctx, idx, (BinaryenExtendU8Int32,), b) :
-                t == (UInt32, UInt16) ? unaryfun(ctx, idx, (BinaryenExtendU16Int32,), b) :
+                sizeof(t[1]) == 8 && sizeof(t[2]) == 2 ? unaryfun(ctx, idx, (BinaryenExtendU16Int64,), b) :
+                sizeof(t[1]) == 8 && sizeof(t[2]) == 4 ? unaryfun(ctx, idx, (BinaryenExtendUInt32,), b) :
+                sizeof(t[1]) == 4 && sizeof(t[2]) == 1 ? unaryfun(ctx, idx, (BinaryenExtendU8Int32,), b) :
+                sizeof(t[1]) == 4 && sizeof(t[2]) == 2 ? unaryfun(ctx, idx, (BinaryenExtendU16Int32,), b) :
                 error("Unsupported `zext_int` types $t")
             end
 
@@ -424,13 +432,15 @@ function compile_block(ctx::CompilerContext, cfg::Core.Compiler.CFG, phis, idx)
 
         elseif matchgr(node, :arraylen) do arraywrapper
                 if haskey(ctx.meta, :arraypass)    # arrays are low-level buffers here
-                    x = arraywrapper
+                    x = _compile(ctx, arraywrapper)
                 else    # higher-level support
                     T = roottype(ctx, arraywrapper)
                     eT = eltype(T)
                     buffer = BinaryenStructGet(ctx.mod, UInt32(0), _compile(ctx, arraywrapper), gettype(ctx, Buffer{eT}), false)
                     x = BinaryenArrayLen(ctx.mod, buffer)
                 end
+                @show ctx.meta
+                @show x
                 if sizeof(Int) == 8 # extend to Int64
                     unaryfun(ctx, idx, (BinaryenExtendUInt32,), x)
                 else
@@ -460,11 +470,13 @@ function compile_block(ctx::CompilerContext, cfg::Core.Compiler.CFG, phis, idx)
             end
 
         elseif matchforeigncall(node, :jl_array_grow_end) do args
-                elT = eltype(args[1])
                 arraywrapper = args[5]
+                elT = eltype(roottype(ctx, arraywrapper))
                 len = args[6]
+                @show args
+                @show elT
                 # TODO ...
-                jlinvoke(ctx, idx, grow_end!, (ArrayWrapper, Int), arraywrapper, len)
+                jlinvoke(ctx, idx, Base._growend!, (ArrayWrapper{elT}, Int), arraywrapper, len, meta = :arraypass)
             end
  
         elseif matchforeigncall(node, :_jl_array_copy) do args
@@ -589,9 +601,13 @@ function compile_block(ctx::CompilerContext, cfg::Core.Compiler.CFG, phis, idx)
             end
 
         elseif node isa Expr && node.head == :invoke
-            if DomainError isa node.args[1].specTypes.parameters[1] ||
-               Core.throw_inexacterror isa node.args[1].specTypes.parameters[1] ||
-               Base.Math.throw_complex_domainerror isa node.args[1].specTypes.parameters[1]
+            @show node.args[1].specTypes.parameters[1]
+            T = node.args[1].specTypes.parameters[1]
+            if isa(DomainError, T) ||
+               isa(InexactError, T) ||
+               isa(Base.throw_domerr_powbysq, T) ||
+               isa(Core.throw_inexacterror, T) ||
+               isa(Base.Math.throw_complex_domainerror, T)
                 # skip errors
                 continue
             end
@@ -604,6 +620,7 @@ function compile_block(ctx::CompilerContext, cfg::Core.Compiler.CFG, phis, idx)
             else
                 MI = node.args[1]
                 newci = Base.code_typed_by_type(sig)[1][1]
+                @show newci
                 name = string("julia_", node.args[1].def.name)
                 ctx.sigs[name] = sig
                 ctx.names[sig] = name

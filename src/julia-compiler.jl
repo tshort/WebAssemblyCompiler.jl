@@ -30,6 +30,7 @@ function compile(funs; filepath = "foo.wasm", validate = false, optimize = false
     end
     # Compile funs
     for ci in cis
+        @show ci
         compile_method(CompilerContext(ctx, ci), exported = true)
     end
     # BinaryenModulePrint(ctx.mod)
