@@ -127,3 +127,20 @@ function compile_inline(ctx::CompilerContext, idx, fun, tt, args, meta = nothing
     return compile_method_body(newctx)
 end
 
+function jlinvoke(ctx::CompilerContext, idx, fun, argtypes, args...)
+    nargs = length(args)
+    sig = Tuple{fun, argtypes...}
+    rettype = gettype(ctx, ssatype(ctx, idx))
+    args = [_compile(ctx, x) for x in args]
+    if haskey(ctx.names, sig)
+        name = ctx.names[sig]
+    else
+        newci = code_typed(fun, Base.to_tuple_type(argtypes), interp = StaticInterpreter())[1].first
+        name = string("julia_", node.args[1].def.name)
+        ctx.sigs[name] = sig
+        ctx.names[sig] = name
+        compile_method(CompilerContext(ctx, newci))
+    end
+    setlocal!(ctx, idx, BinaryenCall(ctx.mod, name, args, nargs, rettype))
+end
+

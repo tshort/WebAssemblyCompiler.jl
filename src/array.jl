@@ -54,9 +54,21 @@ end
 function Base.push!(v::ArrayWrapper, x)
     v.len += 1
     if v.len > length(v.parent)
-        resize!(v.parent, v.len * 2)
+        newbuffer = similar(v.parent, min(v.len * 2, j))
+        copyto!(newbuffer, 1:length(v), v, 1:length(v))
+        v.parent = newbuffer
     end
     v.parent[v.len] = x
+    v
+end
+
+function Base.grow_end!(v::ArrayWrapper, amount)
+    v.len += amount
+    if v.len > length(v.parent)
+        newbuffer = similar(v.parent, nextpow(2, nextpow(2, v.len)))
+        copyto!(newbuffer, 1:length(v), v, 1:length(v))
+        v.parent = newbuffer
+    end
     v
 end
 

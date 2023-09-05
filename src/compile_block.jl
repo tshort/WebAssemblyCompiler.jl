@@ -455,6 +455,14 @@ function compile_block(ctx::CompilerContext, cfg::Core.Compiler.CFG, phis, idx)
                 binaryenfun(ctx, idx, BinaryenStructNew, [buffer, size], UInt32(2), wrappertype; passall = true)
             end
 
+        elseif matchforeigncall(node, :jl_array_grow_end) do args
+                elT = eltype(args[1])
+                arraywrapper = args[5]
+                len = args[6]
+                # TODO ...
+                jlinvoke(ctx, idx, grow_end!, (ArrayWrapper, Int), arraywrapper, len)
+            end
+ 
         elseif matchforeigncall(node, :_jl_array_copy) do args
                 srcarraywrapper = args[5]
                 T = roottype(ctx, srcarraywrapper)
@@ -585,8 +593,6 @@ function compile_block(ctx::CompilerContext, cfg::Core.Compiler.CFG, phis, idx)
             end
             nargs = length(node.args) - 2
             sig = node.args[1].specTypes
-            jparams = [gettype(ctx, T) for T in[sig.parameters...][2:end]]
-            bparams = BinaryenTypeCreate(jparams, length(jparams))
             rettype = gettype(ctx, ssatype(ctx, idx))
             args = [_compile(ctx, x) for x in node.args[3:end]]
             if haskey(ctx.names, sig)

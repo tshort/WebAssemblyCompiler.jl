@@ -1,3 +1,5 @@
+struct ExternRef end
+
 
 wtypes() = Dict{Any, BinaryenType}(
     Int64 => BinaryenTypeInt64(),
@@ -8,14 +10,16 @@ wtypes() = Dict{Any, BinaryenType}(
     Bool  => BinaryenTypeInt32(),
     Float64 => BinaryenTypeFloat64(),
     Float32 => BinaryenTypeFloat32(),
-    Symbol => BinaryenTypeInt64(),
+    Symbol => BinaryenTypeInt64(),   # fix this
     String => BinaryenTypeStringref(),
+    ExternRef => BinaryenTypeExternref()
+    Any => BinaryenTypeEqref(),
     Core.TypeofBottom => BinaryenTypeNone(),
     Union{} => BinaryenTypeNone(),
     Nothing => BinaryenTypeNone(),
 )
 
-const basictypes = [Int64, Int32, UInt64, UInt32, UInt8, Bool , Float64, Float32]
+const basictypes = [Int64, Int32, UInt64, UInt32, UInt8, Bool, Float64, Float32]
 
 mutable struct CompilerContext
     ## module-level context
