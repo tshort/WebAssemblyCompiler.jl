@@ -423,10 +423,14 @@ function compile_block(ctx::CompilerContext, cfg::Core.Compiler.CFG, phis, idx)
             end
 
         elseif matchgr(node, :arraylen) do arraywrapper
-                T = roottype(ctx, arraywrapper)
-                eT = eltype(T)
-                buffer = BinaryenStructGet(ctx.mod, UInt32(0), _compile(ctx, arraywrapper), gettype(ctx, Buffer{eT}), false)
-                x = BinaryenArrayLen(ctx.mod, buffer)
+                if haskey(ctx.meta, :arraypass)    # arrays are low-level buffers here
+                    x = arraywrapper
+                else    # higher-level support
+                    T = roottype(ctx, arraywrapper)
+                    eT = eltype(T)
+                    buffer = BinaryenStructGet(ctx.mod, UInt32(0), _compile(ctx, arraywrapper), gettype(ctx, Buffer{eT}), false)
+                    x = BinaryenArrayLen(ctx.mod, buffer)
+                end
                 if sizeof(Int) == 8 # extend to Int64
                     unaryfun(ctx, idx, (BinaryenExtendUInt32,), x)
                 else

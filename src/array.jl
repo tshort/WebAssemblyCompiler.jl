@@ -62,7 +62,7 @@ function Base.push!(v::ArrayWrapper, x)
     v
 end
 
-function Base.grow_end!(v::ArrayWrapper, amount)
+function Base._growend!(v::ArrayWrapper, amount)
     v.len += amount
     if v.len > length(v.parent)
         newbuffer = similar(v.parent, nextpow(2, nextpow(2, v.len)))
