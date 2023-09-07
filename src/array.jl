@@ -11,7 +11,6 @@ mutable struct FakeArrayWrapper{T} <: AbstractVector{T}
     len::Int32
 end
 
-
 mutable struct ArrayWrapper{T} <: AbstractVector{T}
     "Vector used for storage."
     parent::Vector{T}

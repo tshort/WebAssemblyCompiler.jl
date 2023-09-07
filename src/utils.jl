@@ -57,7 +57,6 @@ basename(m::Core.MethodInstance) = basename(m.def)
 basename(m::Method) = m.name == :Type ? m.sig.parameters[1].parameters[1].name.name : m.name
 
 function gettype(ctx, type)
-    @show type
     if type <: Array && haskey(ctx.meta, :arraypass)
         return gettype(ctx, Buffer{eltype(type)})
     end
@@ -67,10 +66,8 @@ function gettype(ctx, type)
     if specialtype(type) !== nothing
         return specialtype(type)
     end
-    @show "new type"
     if type <: Array && !haskey(ctx.meta, :arraypass)
         wrappertype = gettype(ctx, FakeArrayWrapper{eltype(type)})
-        @show wrappertype
         ctx.wtypes[type] = wrappertype
         return wrappertype
     end
@@ -152,7 +149,6 @@ function jlinvoke(ctx::CompilerContext, idx, fun, argtypes, args...; meta = noth
     end
     jlrettype = ssatype(ctx, idx)
     rettype = gettype(ctx, jlrettype)
-    @show rettype
     x = BinaryenCall(ctx.mod, name, args, nargs, rettype)
     if jlrettype !== Nothing
         setlocal!(ctx, idx, x)
@@ -161,3 +157,8 @@ function jlinvoke(ctx::CompilerContext, idx, fun, argtypes, args...; meta = noth
     end
 end
 
+function getbuffer(ctx::CompilerContext, arraywrapper)
+    T = roottype(ctx, arraywrapper)
+    eT = eltype(T)
+    return BinaryenStructGet(ctx.mod, UInt32(0), _compile(ctx, arraywrapper), gettype(ctx, Buffer{eT}), false)
+end

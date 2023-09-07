@@ -31,7 +31,7 @@ function compile(funs; filepath = "foo.wasm", validate = false, optimize = false
     for ci in cis
         compile_method(CompilerContext(ctx, ci), exported = true)
     end
-    BinaryenModulePrint(ctx.mod)
+    # BinaryenModulePrint(ctx.mod)
     @debug BinaryenModulePrint(ctx.mod)
     validate && BinaryenModuleValidate(ctx.mod)
     optimize && BinaryenModuleOptimize(ctx.mod)

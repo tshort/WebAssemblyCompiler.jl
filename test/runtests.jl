@@ -18,11 +18,11 @@ include("setup.jl")
         push!(a, x)
         return x
     end
-    compile(f1, (Float64,); filepath = "grow.wasm", validate = true)
-    run(`$(WebAssemblyCompiler.Bin.wasmdis()) grow.wasm -o grow.wat`)
+    # compile(f1, (Float64,); filepath = "grow.wasm", validate = true)
+    # run(`$(WebAssemblyCompiler.Bin.wasmdis()) grow.wasm -o grow.wat`)
     # jsfun = jsfunctions(f1, (Float64,))
     # x = 1.0
     # @test jsfun.f1(x) == f1(x)
-exit()
+# exit()
 
 @run_package_tests
