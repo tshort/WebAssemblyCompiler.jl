@@ -69,13 +69,8 @@ function compile_block(ctx::CompilerContext, cfg::Core.Compiler.CFG, phis, idx)
             update!(ctx, BinaryenUnreachable(ctx.mod))
 
         elseif node isa Core.ReturnNode
-            if haskey(ctx.meta, :inlining)
-                # replace returning with a local assignment
-                setlocal!(ctx, ctx.meta[:inlining], _compile(ctx, node.val))
-                
-            else
-                update!(ctx, BinaryenReturn(ctx.mod, _compile(ctx, node.val)))
-            end
+            @show node.val
+            update!(ctx, BinaryenReturn(ctx.mod, node.val isa Nothing ? C_NULL : _compile(ctx, node.val)))
 
         elseif node isa Core.PiNode
             setlocal!(ctx, idx, _compile(ctx, node.val))
@@ -418,7 +413,8 @@ function compile_block(ctx::CompilerContext, cfg::Core.Compiler.CFG, phis, idx)
                 signed = eT <: Signed && sizeof(eT) < 4
                 ## subtract one from i for zero-based indexing in WASM
                 i = BinaryenBinary(ctx.mod, BinaryenAddInt32(), _compile(ctx, I32(i)), _compile(ctx, Int32(-1)))
-                binaryenfun(ctx, idx, BinaryenArrayGet, buffer, i, gettype(ctx, T), Pass(signed))
+                # binaryenfun(ctx, idx, BinaryenArrayGet, buffer, i, gettype(ctx, T), Pass(signed))
+                binaryenfun(ctx, idx, BinaryenArrayGet, buffer, i, gettype(ctx, T), Pass(false))
             end
 
         elseif matchgr(node, :arrayset) do bool, arraywrapper, val, i
@@ -436,11 +432,9 @@ function compile_block(ctx::CompilerContext, cfg::Core.Compiler.CFG, phis, idx)
                 else    # higher-level support
                     T = roottype(ctx, arraywrapper)
                     eT = eltype(T)
-                    buffer = BinaryenStructGet(ctx.mod, UInt32(0), _compile(ctx, arraywrapper), gettype(ctx, Buffer{eT}), false)
-                    x = BinaryenArrayLen(ctx.mod, buffer)
+                    x = BinaryenStructGet(ctx.mod, UInt32(0), _compile(ctx, arraywrapper), gettype(ctx, Buffer{eT}), false)
                 end
-                @show ctx.meta
-                @show x
+                x = BinaryenArrayLen(ctx.mod, x)
                 if sizeof(Int) == 8 # extend to Int64
                     unaryfun(ctx, idx, (BinaryenExtendUInt32,), x)
                 else
@@ -473,9 +467,6 @@ function compile_block(ctx::CompilerContext, cfg::Core.Compiler.CFG, phis, idx)
                 arraywrapper = args[5]
                 elT = eltype(roottype(ctx, arraywrapper))
                 len = args[6]
-                @show args
-                @show elT
-                # TODO ...
                 jlinvoke(ctx, idx, Base._growend!, (ArrayWrapper{elT}, Int), arraywrapper, len, meta = :arraypass)
             end
  
@@ -496,7 +487,8 @@ function compile_block(ctx::CompilerContext, cfg::Core.Compiler.CFG, phis, idx)
         elseif matchgr(node, :getfield) do x, index
                 T = roottype(ctx, x)
                 if T <: NTuple
-                    unsigned = eltype(T) <: Unsigned
+                    # unsigned = eltype(T) <: Unsigned
+                    unsigned = true
                     ## subtract one from i for zero-based indexing in WASM
                     i = BinaryenBinary(ctx.mod, BinaryenAddInt32(), 
                                        _compile(ctx, I32(index)), 
@@ -509,7 +501,8 @@ function compile_block(ctx::CompilerContext, cfg::Core.Compiler.CFG, phis, idx)
                     field = index
                     index = UInt32(findfirst(x -> x == field.value, fieldnames(T)) - 1)
                     eT = Base.datatype_fieldtypes(T)[index + 1]
-                    unsigned = eT <: Unsigned
+                    # unsigned = eT <: Unsigned
+                    unsigned = true
                     binaryenfun(ctx, idx, BinaryenStructGet, index, _compile(ctx, x), gettype(ctx, eT), !unsigned, passall = true)
                 end
             end
@@ -601,10 +594,10 @@ function compile_block(ctx::CompilerContext, cfg::Core.Compiler.CFG, phis, idx)
             end
 
         elseif node isa Expr && node.head == :invoke
-            @show node.args[1].specTypes.parameters[1]
             T = node.args[1].specTypes.parameters[1]
             if isa(DomainError, T) ||
                isa(InexactError, T) ||
+               isa(OverflowError, T) ||
                isa(Base.throw_domerr_powbysq, T) ||
                isa(Core.throw_inexacterror, T) ||
                isa(Base.Math.throw_complex_domainerror, T)
@@ -620,7 +613,6 @@ function compile_block(ctx::CompilerContext, cfg::Core.Compiler.CFG, phis, idx)
             else
                 MI = node.args[1]
                 newci = Base.code_typed_by_type(sig)[1][1]
-                @show newci
                 name = string("julia_", node.args[1].def.name)
                 ctx.sigs[name] = sig
                 ctx.names[sig] = name

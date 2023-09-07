@@ -65,11 +65,11 @@ end
 function Base._growend!(v::ArrayWrapper, amount)
     v.len += amount
     if v.len > length(v.parent)
-        newbuffer = similar(v.parent, nextpow(Int32(2), nextpow(Int32(2), v.len)))
+        # newbuffer = similar(v.parent, nextpow(Int32(2), nextpow(Int32(2), v.len)))
+        newbuffer = similar(v.parent, Int32(2) * v.len)
         copyto!(newbuffer, 1:length(v), v, 1:length(v))
         v.parent = newbuffer
     end
-    v
 end
 
 Base.empty!(v::ArrayWrapper) = (v.len = 0; v)

@@ -8,8 +8,6 @@ end
 
 # @overlay MT Base.sqrt(x::Float64) = @ccall BinaryenUnary.BinaryenSqrtFloat32(x::Float64)::Float64
 
-# @overlay MT Base.sin(x::Float64) = ccall((:sin, :Math), Float64, (Float64,), x)
-# @overlay MT Base.cos(x::Float64) = ccall((:cos, :Math), Float64, (Float64,), x)
 @overlay MT Base.sin(x::Float64) = @ccall Math.sin(x::Float64)::Float64
 @overlay MT Base.cos(x::Float64) = @ccall :Math.cos(x::Float64)::Float64
 @overlay MT Base.tan(x::Float64) = @ccall :Math.tan(x::Float64)::Float64
@@ -17,6 +15,22 @@ end
 @overlay MT Base.acos(x::Float64) = @ccall :Math.acos(x::Float64)::Float64
 @overlay MT Base.atan(x::Float64) = @ccall :Math.atan(x::Float64)::Float64
 @overlay MT Base.atan(x::Float64, y::Float64) = @ccall Math.atan2(x::Float64, y::Float64)::Float64
+@overlay MT Base.sinh(x::Float64) = @ccall Math.sinh(x::Float64)::Float64
+@overlay MT Base.cosh(x::Float64) = @ccall :Math.cosh(x::Float64)::Float64
+@overlay MT Base.tanh(x::Float64) = @ccall :Math.tanh(x::Float64)::Float64
+@overlay MT Base.asinh(x::Float64) = @ccall Math.asinh(x::Float64)::Float64
+@overlay MT Base.acosh(x::Float64) = @ccall :Math.acosh(x::Float64)::Float64
+@overlay MT Base.atanh(x::Float64) = @ccall :Math.atanh(x::Float64)::Float64
+@overlay MT Base.log(x::Float64) = @ccall :Math.log(x::Float64)::Float64
+@overlay MT Base.log2(x::Float64) = @ccall :Math.log2(x::Float64)::Float64
+@overlay MT Base.log10(x::Float64) = @ccall :Math.log10(x::Float64)::Float64
+@overlay MT Base.log1p(x::Float64) = @ccall :Math.log1p(x::Float64)::Float64
+@overlay MT Base.exp(x::Float64) = @ccall :Math.exp(x::Float64)::Float64
+@overlay MT Base.expm1(x::Float64) = @ccall :Math.expm1(x::Float64)::Float64
+@overlay MT Base.cbrt(x::Float64) = @ccall :Math.cbrt(x::Float64)::Float64
+@overlay MT Base.:^(x::Float64, y::Float64) = @ccall :Math.pow(x::Float64, y::Float64)::Float64
+@overlay MT Base.sign(x::Float64) = @ccall :Math.sign(x::Float64)::Float64
+@overlay MT Base.rand() = @ccall Math.random()::Float64
 
 @overlay MT Base.cconvert(::Type{String}, x::String) = x
 @overlay MT Base.unsafe_convert(::Type{String}, x::String) = x

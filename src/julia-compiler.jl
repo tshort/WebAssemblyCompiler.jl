@@ -21,7 +21,6 @@ function compile(funs; filepath = "foo.wasm", validate = false, optimize = false
         tt = length(funtpl) > 1 ? Base.to_tuple_type(funtpl[2:end]) : Tuple{}
         isconcretetype(tt) || error("input type signature $tt for $(funtpl[1]) is not concrete")
         ci = code_typed(funtpl[1], tt, interp = StaticInterpreter())[1].first
-        # @show ci
         push!(cis, ci)
         name = string(funtpl[1])
         sig = ci.parent.specTypes
@@ -30,10 +29,9 @@ function compile(funs; filepath = "foo.wasm", validate = false, optimize = false
     end
     # Compile funs
     for ci in cis
-        @show ci
         compile_method(CompilerContext(ctx, ci), exported = true)
     end
-    # BinaryenModulePrint(ctx.mod)
+    BinaryenModulePrint(ctx.mod)
     @debug BinaryenModulePrint(ctx.mod)
     validate && BinaryenModuleValidate(ctx.mod)
     optimize && BinaryenModuleOptimize(ctx.mod)

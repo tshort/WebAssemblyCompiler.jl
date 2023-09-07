@@ -57,21 +57,27 @@ basename(m::Core.MethodInstance) = basename(m.def)
 basename(m::Method) = m.name == :Type ? m.sig.parameters[1].parameters[1].name.name : m.name
 
 function gettype(ctx, type)
+    @show type
+    if type <: Array && haskey(ctx.meta, :arraypass)
+        return gettype(ctx, Buffer{eltype(type)})
+    end
     if haskey(ctx.wtypes, type)
         return ctx.wtypes[type]
     end
     if specialtype(type) !== nothing
         return specialtype(type)
     end
-    if type <: Array
+    @show "new type"
+    if type <: Array && !haskey(ctx.meta, :arraypass)
         wrappertype = gettype(ctx, FakeArrayWrapper{eltype(type)})
+        @show wrappertype
         ctx.wtypes[type] = wrappertype
         return wrappertype
     end
     # exit()
     tb = TypeBuilderCreate(1)
     builtheaptypes = Array{BinaryenHeapType}(undef, 1)
-    if type <: Buffer || type <: NTuple
+    if type <: Buffer || type <: Array || type <: NTuple
         elt = eltype(type)
         TypeBuilderSetArrayType(tb, 0, gettype(ctx, elt), isbitstype(elt) && sizeof(elt) == 1 ? BinaryenPackedTypeInt8() : BinaryenPackedTypeNotPacked(), type <: Buffer)
     else  # Structs
@@ -83,6 +89,7 @@ function gettype(ctx, type)
     end
     TypeBuilderBuildAndDispose(tb, builtheaptypes, C_NULL, C_NULL)
     newtype = BinaryenTypeFromHeapType(builtheaptypes[1], true)
+    # BinaryenExpressionPrint( BinaryenLocalSet(ctx.mod, 100, BinaryenLocalGet(ctx.mod, 99, newtype)))
     ctx.wtypes[type] = newtype
     return newtype
 end
@@ -130,23 +137,27 @@ end
 function jlinvoke(ctx::CompilerContext, idx, fun, argtypes, args...; meta = nothing)
     nargs = length(args)
     sig = Tuple{typeof(fun), argtypes...}
-    rettype = gettype(ctx, ssatype(ctx, idx))
     args = [_compile(ctx, x) for x in args]
     if haskey(ctx.names, sig)
         name = ctx.names[sig]
     else
         meta = meta !== Nothing ? Dict{Symbol, Any}(meta => 1) : Dict{Symbol, Any}()
         newci = code_typed(fun, Base.to_tuple_type(argtypes), interp = StaticInterpreter())[1].first
-        @show newci
         name = string("julia_", fun)
-        @show sig
-        @show newci.parent.specTypes
         ctx.sigs[name] = sig
         ctx.names[sig] = name
         newctx = CompilerContext(ctx.mod, ctx.names, ctx.sigs, ctx.imports, ctx.wtypes, ctx.globals,
-                                 newci, ctx.body, ctx.locals, ctx.localidx, ctx.varmap, meta)
+                                 newci, BinaryenExpressionRef[], BinaryenType[], 0, Dict{Int, Int}(), meta)
         compile_method(newctx)
     end
-    setlocal!(ctx, idx, BinaryenCall(ctx.mod, name, args, nargs, rettype))
+    jlrettype = ssatype(ctx, idx)
+    rettype = gettype(ctx, jlrettype)
+    @show rettype
+    x = BinaryenCall(ctx.mod, name, args, nargs, rettype)
+    if jlrettype !== Nothing
+        setlocal!(ctx, idx, x)
+    else
+        update!(ctx, x)
+    end
 end
 
