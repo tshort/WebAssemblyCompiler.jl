@@ -13,16 +13,16 @@ include("setup.jl")
     # @test jsfun.nextpow(x,y) == nextpow(x,y)
     # @show jsfun.nextpow(x,y)
 
-    function f1(x)
+    function f12(x)
         a = Array{Float64, 1}(undef, 0)
         push!(a, x)
         return x
     end
-    # compile(f1, (Float64,); filepath = "grow.wasm", validate = true)
-    # run(`$(WebAssemblyCompiler.Bin.wasmdis()) grow.wasm -o grow.wat`)
+    compile(f12, (Float64,); filepath = "f12.wasm", validate = true)
+    run(`$(WebAssemblyCompiler.Bin.wasmdis()) f12.wasm -o f12.wat`)
     # jsfun = jsfunctions(f1, (Float64,))
     # x = 1.0
     # @test jsfun.f1(x) == f1(x)
-# exit()
+exit()
 
 @run_package_tests
