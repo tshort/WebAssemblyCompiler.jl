@@ -20,3 +20,11 @@
     # Dictionaries advantages
     # - sizehint in constructor
     # - less complications
+
+    compile(nextpow, (Int32,Int32); filepath = "nextpow.wasm")
+    run(`$(WebAssemblyCompiler.Bin.wasmdis()) nextpow.wasm -o nextpow.wat`)
+    jsfun = jsfunctions(nextpow, (Int32,Int32))
+    x = Int32(2)
+    y = Int32(7)
+    @test jsfun.nextpow(x,y) == nextpow(x,y)
+    @show jsfun.nextpow(x,y)

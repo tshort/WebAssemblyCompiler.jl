@@ -54,13 +54,10 @@ end
 
 
 function _compile(ctx::CompilerContext, x::T) where T <: Array 
-    # TODO: fix this
     elT = eltype(roottype(ctx, T))
-    buffertype = BinaryenTypeGetHeapType(gettype(ctx, Buffer{elT}))
+    buffertype = BinaryenTypeGetHeapType(gettype(ctx, Vector{elT}))
     values = [_compile(ctx, v) for v in x]
-    buffer = BinaryenArrayNewFixed(ctx.mod, buffertype, values, length(x))
-    wrappertype = BinaryenTypeGetHeapType(gettype(ctx, FakeArrayWrapper{elT}))
-    return BinaryenStructNew(ctx.mod, [buffer, _compile(ctx, Int32(length(x)))], 2, wrappertype)
+    return BinaryenArrayNewFixed(ctx.mod, buffertype, values, length(x))
 end
 
 function _compile(ctx::CompilerContext, x::T) where T # general version for structs

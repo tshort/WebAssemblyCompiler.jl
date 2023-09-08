@@ -41,34 +41,40 @@ function Base.sizehint!(v::ArrayWrapper, n)
 end
 
 @inline function Base.getindex(v::ArrayWrapper, i)
-    @boundscheck checkbounds(v, i)
+    # @boundscheck checkbounds(v, i)
     @inbounds v.parent[i]
 end
 
 @inline function Base.setindex!(v::ArrayWrapper, x, i)
-    @boundscheck checkbounds(v, i)
+    # @boundscheck checkbounds(v, i)
     @inbounds v.parent[i] = x
 end
 
 function Base.push!(v::ArrayWrapper, x)
-    v.len += 1
-    if v.len > length(v.parent)
-        newbuffer = similar(v.parent, min(v.len * Int32(2), j))
-        copyto!(newbuffer, 1:length(v), v, 1:length(v))
+    newlen = length(v) + Int32(1)
+    if newlen > length(v.parent)
+        newbuffer = similar(v.parent, max(v.len * Int32(2), 8)).parent
+        copyto!(newbuffer, Int32(1), v.parent, Int32(1), length(v))
         v.parent = newbuffer
     end
-    v.parent[v.len] = x
+    v.len += 1
+    @inbounds v.parent[v.len] = x
     v
 end
+# The case above doesn't work equally when compiled with WebAssemblyCompiler.
+# The `similar` returns an ArrayWrapper in WebAssemblyCompiler, so it needs the `.parent` at the end.
+# By the same token, `similar(v::ArrayWrapper)` should fail because it'll try to stuff another copy in itself.
 
 function Base._growend!(v::ArrayWrapper, amount)
-    v.len += amount
-    if v.len > length(v.parent)
+    newlen = length(v) + amount
+    if newlen > length(v.parent)
         # newbuffer = similar(v.parent, nextpow(Int32(2), nextpow(Int32(2), v.len)))
-        newbuffer = similar(v.parent, Int32(2) * v.len)
-        copyto!(newbuffer, 1:length(v), v, 1:length(v))
+        newbuffer = similar(v.parent, max(newlen, Int32(2) * v.len))
+        copyto!(newbuffer.parent, 1, v.parent, 1, v.len)
         v.parent = newbuffer
     end
+    v.len += amount
+    return
 end
 
 Base.empty!(v::ArrayWrapper) = (v.len = 0; v)
@@ -90,6 +96,12 @@ function Base.append!(v::ArrayWrapper, xs)
     end
     v
 end
+
+Base.copy(v::ArrayWrapper{T}) where T =
+    ArrayWrapper{T}(copy(v.parent), Int32(length(v)))
+
+Base.copyto!(v::ArrayWrapper{T}) where T =
+    ArrayWrapper{T}(copy(v.parent), Int32(length(v)))
 
 """
     finish!(v)

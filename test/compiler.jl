@@ -106,21 +106,21 @@ end
     include("setup.jl")   
 
     function f8(i)
-        a = Array{Float64,1}(undef, Int32(3))
+        a = Array{Float64,1}(undef, 3)
         @inbounds a[i] = 3.0
         @inbounds a[i]
     end
-    compile(f8, (Int32,); filepath = "j.wasm")
-    run(`$(WebAssemblyCompiler.Bin.wasmdis()) j.wasm -o j.wat`)
+    compile(f8, (Int32,); filepath = "f8.wasm")
+    run(`$(WebAssemblyCompiler.Bin.wasmdis()) f8.wasm -o f8.wat`)
     jsfun = jsfunctions(f8, (Int32,))
     @test f8(Int32(3)) == jsfun.f8(Int32(3))
 
     function f9(i)
-        a = Array{Float64,1}(undef, Int32(i))
+        a = Array{Float64,1}(undef, i)
         unsafe_trunc(Int32, length(a))
     end
-    compile(f9, (Int32,); filepath = "j.wasm")
-    run(`$(WebAssemblyCompiler.Bin.wasmdis()) j.wasm -o j.wat`)
+    compile(f9, (Int32,); filepath = "f9.wasm")
+    run(`$(WebAssemblyCompiler.Bin.wasmdis()) f9.wasm -o f9.wat`)
     ## BROKEN
     # jsfun = jsfunctions(f9, (Int32,))
     # @test f9(Int32(3)) == jsfun.f9(Int32(3))
@@ -133,8 +133,8 @@ end
         a = Array{Float64, 1}(undef, 3)
         f10a(a) + x
     end
-    compile(f10, (Float64,); filepath = "j.wasm")
-    run(`$(WebAssemblyCompiler.Bin.wasmdis()) j.wasm -o j.wat`)
+    compile(f10, (Float64,); filepath = "f10.wasm")
+    run(`$(WebAssemblyCompiler.Bin.wasmdis()) f10.wasm -o f10.wat`)
     jsfun = jsfunctions(f10, (Float64,))
     x = 3.0
     @test f10(x) == jsfun.f10(x)
@@ -151,6 +151,22 @@ end
     # jsfun = jsfunctions(f11, (Float64,))
     # x = 2.0
     # @test jsfun.f11(x) == f11(x)
+
+    function f12(x)
+        a = Array{Float64, 1}(undef, 0)
+        push!(a, x)
+        push!(a, x)
+        push!(a, x)
+        push!(a, x)
+        push!(a, x)
+        push!(a, 2x)
+        return x * a[6]
+    end
+    x = 2.0
+    compile(f12, (Float64,); filepath = "f12.wasm", validate = true)
+    run(`$(WebAssemblyCompiler.Bin.wasmdis()) f12.wasm -o f12.wat`)
+    # jsfun = jsfunctions(f12, (Float64,))
+    # @test jsfun.f12(x) == f12(x)
 
 end
 

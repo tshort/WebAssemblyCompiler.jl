@@ -57,26 +57,18 @@ basename(m::Core.MethodInstance) = basename(m.def)
 basename(m::Method) = m.name == :Type ? m.sig.parameters[1].parameters[1].name.name : m.name
 
 function gettype(ctx, type)
-    if type <: Array && haskey(ctx.meta, :arraypass)
-        return gettype(ctx, Buffer{eltype(type)})
-    end
     if haskey(ctx.wtypes, type)
         return ctx.wtypes[type]
     end
     if specialtype(type) !== nothing
         return specialtype(type)
     end
-    if type <: Array && !haskey(ctx.meta, :arraypass)
-        wrappertype = gettype(ctx, FakeArrayWrapper{eltype(type)})
-        ctx.wtypes[type] = wrappertype
-        return wrappertype
-    end
     # exit()
     tb = TypeBuilderCreate(1)
     builtheaptypes = Array{BinaryenHeapType}(undef, 1)
-    if type <: Buffer || type <: Array || type <: NTuple
+    if type <: Array || type <: NTuple
         elt = eltype(type)
-        TypeBuilderSetArrayType(tb, 0, gettype(ctx, elt), isbitstype(elt) && sizeof(elt) == 1 ? BinaryenPackedTypeInt8() : BinaryenPackedTypeNotPacked(), type <: Buffer)
+        TypeBuilderSetArrayType(tb, 0, gettype(ctx, elt), isbitstype(elt) && sizeof(elt) == 1 ? BinaryenPackedTypeInt8() : BinaryenPackedTypeNotPacked(), type <: Array)
     else  # Structs
         fieldtypes = [gettype(ctx, T) for T in Base.datatype_fieldtypes(type)]
         n = length(fieldtypes)

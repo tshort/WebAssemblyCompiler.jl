@@ -2646,7 +2646,7 @@ function BinaryenReturnCallIndirect(_module, table, target, operands, numOperand
 end
 
 """
-    BinaryenLocalGet(_module, index, type)
+    BinaryenGet(_module, index, type)
 
 LocalGet: Note the 'type' parameter. It might seem redundant, since the
           local at that index must have a type. However, this API lets you

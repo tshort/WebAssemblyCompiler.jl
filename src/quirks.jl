@@ -35,13 +35,15 @@ end
 @overlay MT Base.cconvert(::Type{String}, x::String) = x
 @overlay MT Base.unsafe_convert(::Type{String}, x::String) = x
 
-@overlay MT function Base.copy(src::Array{T, N}) where {T, N}
-    dest = similar(src)
-    @ccall _jl_array_copy(src::Array{T,N}, dest::Array{T,N}, length(src)::Int32)::Cvoid
-    return dest
-end
+# @overlay MT function Base.copy(src::Array{T, N}) where {T, N}
+#     dest = similar(src)
+#     @ccall _jl_array_copy(src::Array{T,N}, dest::Array{T,N}, length(src)::Int32)::Cvoid
+#     return dest
+# end
 # @overlay MT Base.size(x::Vector) = length(x)
 
+@overlay MT Array{T,1}(::UndefInitializer, m::Int) where {T} =
+    ArrayWrapper{T}(ccall(:jl_alloc_array_1d, Array{T,1}, (Any, Int), Array{T,1}, max(m, 2)), m)
 
 
 # # math.jl

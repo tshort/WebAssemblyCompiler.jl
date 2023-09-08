@@ -405,24 +405,21 @@ function compile_block(ctx::CompilerContext, cfg::Core.Compiler.CFG, phis, idx)
 
         ## Builtins / key functions ##
 
-        elseif matchgr(node, :arrayref) do bool, arraywrapper, i
-                buffer = getbuffer(ctx, arraywrapper)
-                # signed = eT <: Signed && sizeof(eT) < 4
+        elseif matchgr(node, :arrayref) do bool, buffer, i
                 signed = false
                 ## subtract one from i for zero-based indexing in WASM
                 i = BinaryenBinary(ctx.mod, BinaryenAddInt32(), _compile(ctx, I32(i)), _compile(ctx, Int32(-1)))
-                binaryenfun(ctx, idx, BinaryenArrayGet, buffer, i, gettype(ctx, roottype(ctx, arraywrapper)), Pass(signed))
+                binaryenfun(ctx, idx, BinaryenArrayGet, buffer, i, gettype(ctx, roottype(ctx, buffer)), Pass(signed))
             end
 
-        elseif matchgr(node, :arrayset) do bool, arraywrapper, val, i
-                buffer = getbuffer(ctx, arraywrapper)
+        elseif matchgr(node, :arrayset) do bool, buffer, val, i
                 i = BinaryenBinary(ctx.mod, BinaryenAddInt32(), _compile(ctx, I32(i)), _compile(ctx, Int32(-1)))
-                x = BinaryenArraySet(ctx.mod, buffer, i, _compile(ctx, val))
+                x = BinaryenArraySet(ctx.mod, _compile(ctx, buffer), i, _compile(ctx, val))
                 update!(ctx, x)
             end
 
-        elseif matchgr(node, :arraylen) do arraywrapper
-                x = BinaryenArrayLen(ctx.mod, getbuffer(ctx, arraywrapper))
+        elseif matchgr(node, :arraylen) do buffer
+                x = BinaryenArrayLen(ctx.mod, _compile(ctx, buffer))
                 if sizeof(Int) == 8 # extend to Int64
                     unaryfun(ctx, idx, (BinaryenExtendUInt32,), x)
                 else
@@ -430,8 +427,8 @@ function compile_block(ctx::CompilerContext, cfg::Core.Compiler.CFG, phis, idx)
                 end
             end
 
-        elseif matchgr(node, :arraysize) do arraywrapper, n
-                x = BinaryenArrayLen(ctx.mod, getbuffer(ctx, arraywrapper))
+        elseif matchgr(node, :arraysize) do buffer, n
+                x = BinaryenArrayLen(ctx.mod, _compile(ctx, buffer))
                 if sizeof(Int) == 8 # extend to Int64
                     unaryfun(ctx, idx, (BinaryenExtendUInt32,), x)
                 else
@@ -440,37 +437,31 @@ function compile_block(ctx::CompilerContext, cfg::Core.Compiler.CFG, phis, idx)
             end
 
         elseif matchforeigncall(node, :jl_alloc_array_1d) do args
-                elT = eltype(args[1])
-                size = _compile(ctx, I32(args[6]))
-                arraytype = BinaryenTypeGetHeapType(gettype(ctx, Buffer{elT}))
-                buffer = BinaryenArrayNew(ctx.mod, arraytype, size, _compile(ctx, 0.0))
-                wrappertype = BinaryenTypeGetHeapType(gettype(ctx, FakeArrayWrapper{elT}))
-                binaryenfun(ctx, idx, BinaryenStructNew, [buffer, size], UInt32(2), wrappertype; passall = true)
+                size = args[6]
+                arraytype = BinaryenTypeGetHeapType(gettype(ctx, args[1]))
+                binaryenfun(ctx, idx, BinaryenArrayNew, Pass(arraytype), I32(size), 0.0)
             end
 
-        elseif matchforeigncall(node, :jl_array_grow_end) do args
-                arraywrapper = args[5]
-                _arraywrapper = _compile(ctx, arraywrapper)
-                buffer = getbuffer(ctx, )
-                bufferlen = BinaryenArrayLen(ctx.mod, buffer)
-                extralen = _compile(ctx, args[6])
-                arraylen = BinaryenStructGet(ctx.mod, 1, _arraywrapper, C_NULL)
-                newlen = BinaryenBinary(ctx.mod, BinaryenAddInt32(), arraylen, extralen)
-                _arraywrapper = BinaryenStructSet(ctx.mod, 1, _arraywrapper, newlen)
-                neednewbuffer = BinaryenBinary(ctx.mod, BinaryenLeUInt32(), arraylen, newlen)
-                x = BinaryenIf(ctx.mod, neednewbuffer,
-                               BinaryenStructSet(ctx.mod, 0, _arraywrapper, BinaryenArrayNew(ctx.mod, arraytype, newlen, _compile(ctx, 0.0))), 
-                               _arraywrapper)
-                update!(ctx, x)
+        elseif matchforeigncall(node, :jl_array_copy) do args
+                src = _compile(ctx, args[5])
+                n = BinaryenArrayLen(ctx.mod, src)
+                arraytype = gettype(ctx, roottype(ctx, args[5]))
+                arrayheaptype = BinaryenTypeGetHeapType(arraytype)
+                dest = BinaryenArrayNew(ctx.mod, arrayheaptype, n, _compile(ctx, 0.0))
+                setlocal!(ctx, idx, dest)
+                x = BinaryenArrayCopy(ctx.mod, BinaryenLocalGet(ctx.mod, ctx.localidx - 1, arraytype), _compile(ctx, I32(0)), src, _compile(ctx, I32(0)), n)
+                push!(ctx.body, x)
             end
- 
-        elseif matchforeigncall(node, :_jl_array_copy) do args
-                srcbuffer = getbuffer(ctx, args[5])
-                destbuffer = getbuffer(ctx, args[6])
-                n = args[7]
-                x = BinaryenArrayCopy(ctx.mod, destbuffer, _compile(ctx, I32(0)), srcbuffer, _compile(ctx, I32(0)), _compile(ctx, n))
-                update!(ctx, x)
-            end
+
+        elseif node isa Expr && node.head == :invoke && node.args[2] isa GlobalRef && node.args[2].name == :_copyto_impl!
+            destbuffer = _compile(ctx, node.args[3])
+            desti = BinaryenBinary(ctx.mod, BinaryenAddInt32(), _compile(ctx, _compile(ctx, node.args[4])), _compile(ctx, Int32(-1)))
+            srcbuffer = _compile(ctx, node.args[5])
+            srci = BinaryenBinary(ctx.mod, BinaryenAddInt32(), _compile(ctx, _compile(ctx, node.args[6])), _compile(ctx, Int32(-1)))
+            n = _compile(ctx, node.args[7])
+            setlocal!(ctx, idx, destbuffer)
+            x = BinaryenArrayCopy(ctx.mod, destbuffer, desti, srcbuffer, srci, n)
+            push!(ctx.body, x)
 
         elseif matchgr(node, :getfield) do x, index
                 T = roottype(ctx, x)
@@ -582,6 +573,7 @@ function compile_block(ctx::CompilerContext, cfg::Core.Compiler.CFG, phis, idx)
             T = node.args[1].specTypes.parameters[1]
             if isa(DomainError, T) ||
                isa(InexactError, T) ||
+               isa(BoundsError, T) ||
                isa(OverflowError, T) ||
                isa(Base.throw_domerr_powbysq, T) ||
                isa(Core.throw_inexacterror, T) ||
@@ -597,7 +589,7 @@ function compile_block(ctx::CompilerContext, cfg::Core.Compiler.CFG, phis, idx)
                 name = ctx.names[sig]
             else
                 MI = node.args[1]
-                newci = Base.code_typed_by_type(sig)[1][1]
+                newci = Base.code_typed_by_type(sig, interp = StaticInterpreter())[1][1]
                 name = string("julia_", node.args[1].def.name)
                 ctx.sigs[name] = sig
                 ctx.names[sig] = name
