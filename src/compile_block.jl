@@ -448,15 +448,6 @@ function compile_block(ctx::CompilerContext, cfg::Core.Compiler.CFG, phis, idx)
                 binaryenfun(ctx, idx, BinaryenStructNew, [buffer, size], UInt32(2), wrappertype; passall = true)
             end
 
-            # destbuffer = _compile(ctx, node.args[3])
-            # desti = BinaryenBinary(ctx.mod, BinaryenAddInt32(), _compile(ctx, _compile(ctx, node.args[4])), _compile(ctx, Int32(-1)))
-            # srcbuffer = _compile(ctx, node.args[5])
-            # srci = BinaryenBinary(ctx.mod, BinaryenAddInt32(), _compile(ctx, _compile(ctx, node.args[6])), _compile(ctx, Int32(-1)))
-            # n = _compile(ctx, node.args[7])
-            # setlocal!(ctx, idx, destbuffer)
-            # x = BinaryenArrayCopy(ctx.mod, destbuffer, desti, srcbuffer, srci, n)
-            # push!(ctx.body, x)
-
         elseif matchforeigncall(node, :jl_array_grow_end) do args
                 arraywrapper = args[5]
                 elT = eltype(roottype(ctx, args[5]))
@@ -620,7 +611,7 @@ function compile_block(ctx::CompilerContext, cfg::Core.Compiler.CFG, phis, idx)
                 name = ctx.names[sig]
             else
                 MI = node.args[1]
-                newci = Base.code_typed_by_type(sig)[1][1]
+                newci = Base.code_typed_by_type(sig, interp = StaticInterpreter())[1][1]
                 # @show newci
                 name = string("julia_", node.args[1].def.name)
                 ctx.sigs[name] = sig
