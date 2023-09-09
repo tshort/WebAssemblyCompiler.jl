@@ -6,7 +6,7 @@ function update!(ctx::CompilerContext, x, localtype = nothing)
         push!(ctx.locals, gettype(ctx, localtype))
         ctx.localidx += 1
     end
-    BinaryenExpressionPrint(x)
+    # BinaryenExpressionPrint(x)
     return nothing
 end
 
@@ -58,7 +58,7 @@ function compile_block(ctx::CompilerContext, cfg::Core.Compiler.CFG, phis, idx)
     ctx.body = BinaryenExpressionRef[]
     for idx in idxs
         node = ci.code[idx]
-        @show idx, node
+        # @show idx, node
         # if idx == 17
         #     dump(node)
         # end
@@ -448,21 +448,42 @@ function compile_block(ctx::CompilerContext, cfg::Core.Compiler.CFG, phis, idx)
                 binaryenfun(ctx, idx, BinaryenStructNew, [buffer, size], UInt32(2), wrappertype; passall = true)
             end
 
+            # destbuffer = _compile(ctx, node.args[3])
+            # desti = BinaryenBinary(ctx.mod, BinaryenAddInt32(), _compile(ctx, _compile(ctx, node.args[4])), _compile(ctx, Int32(-1)))
+            # srcbuffer = _compile(ctx, node.args[5])
+            # srci = BinaryenBinary(ctx.mod, BinaryenAddInt32(), _compile(ctx, _compile(ctx, node.args[6])), _compile(ctx, Int32(-1)))
+            # n = _compile(ctx, node.args[7])
+            # setlocal!(ctx, idx, destbuffer)
+            # x = BinaryenArrayCopy(ctx.mod, destbuffer, desti, srcbuffer, srci, n)
+            # push!(ctx.body, x)
+
         elseif matchforeigncall(node, :jl_array_grow_end) do args
                 arraywrapper = args[5]
-                elT = eltype(roottype(ctx, args[1]))
+                elT = eltype(roottype(ctx, args[5]))
+                arraytype = gettype(ctx, Buffer{elT})
+                arrayheaptype = BinaryenTypeGetHeapType(arraytype)
+                arraywrappertype = gettype(ctx, Vector{elT})
                 _arraywrapper = _compile(ctx, arraywrapper)
                 buffer = getbuffer(ctx, args[5])
                 bufferlen = BinaryenArrayLen(ctx.mod, buffer)
                 extralen = _compile(ctx, I32(args[6]))
                 arraylen = BinaryenStructGet(ctx.mod, 1, _arraywrapper, C_NULL, false)
                 newlen = BinaryenBinary(ctx.mod, BinaryenAddInt32(), arraylen, extralen)
-                _arraywrapper = BinaryenStructSet(ctx.mod, 1, _arraywrapper, newlen)
+                newbufferlen = BinaryenBinary(ctx.mod, BinaryenMulInt32(), newlen, _compile(ctx, I32(2)))
                 neednewbuffer = BinaryenBinary(ctx.mod, BinaryenLeUInt32(), arraylen, newlen)
-                arrayheaptype = BinaryenTypeGetHeapType(gettype(ctx, Buffer{elT}))
+                newbufferget = BinaryenLocalGet(ctx.mod, ctx.localidx, arraytype)
+                newbufferblock = [
+                    BinaryenLocalSet(ctx.mod, ctx.localidx, BinaryenArrayNew(ctx.mod, arrayheaptype, newbufferlen, _compile(ctx, 0.0))),
+                    BinaryenArrayCopy(ctx.mod, newbufferget, _compile(ctx, I32(0)), buffer, _compile(ctx, I32(0)), _compile(ctx, arraylen)),
+                    BinaryenStructSet(ctx.mod, 0, _arraywrapper, newbufferget),
+                ]
+                push!(ctx.locals, arraytype)
+                ctx.localidx += 1
                 x = BinaryenIf(ctx.mod, neednewbuffer,
-                               BinaryenStructSet(ctx.mod, 0, _arraywrapper, BinaryenArrayNew(ctx.mod, arrayheaptype, newlen, _compile(ctx, 0.0))), 
-                               _arraywrapper)
+                               BinaryenBlock(ctx.mod, "newbuff", newbufferblock, length(newbufferblock), BinaryenTypeAuto()), 
+                               C_NULL)
+                update!(ctx, x)
+                x = BinaryenStructSet(ctx.mod, 1, _arraywrapper, newlen)
                 update!(ctx, x)
             end
  
@@ -600,7 +621,7 @@ function compile_block(ctx::CompilerContext, cfg::Core.Compiler.CFG, phis, idx)
             else
                 MI = node.args[1]
                 newci = Base.code_typed_by_type(sig)[1][1]
-                @show newci
+                # @show newci
                 name = string("julia_", node.args[1].def.name)
                 ctx.sigs[name] = sig
                 ctx.names[sig] = name

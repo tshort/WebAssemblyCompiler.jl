@@ -18,11 +18,12 @@ include("setup.jl")
         push!(a, x)
         return x
     end
+    x = 2.0
+    @show f12(x)
     compile(f12, (Float64,); filepath = "f12.wasm", validate = true)
     run(`$(WebAssemblyCompiler.Bin.wasmdis()) f12.wasm -o f12.wat`)
-    # jsfun = jsfunctions(f1, (Float64,))
-    # x = 1.0
-    # @test jsfun.f1(x) == f1(x)
-exit()
+    # jsfun = jsfunctions(f12, (Float64,))
+    # @test jsfun.f12(x) == f12(x)
+# exit()
 
 @run_package_tests

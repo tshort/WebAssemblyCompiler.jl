@@ -29,12 +29,12 @@ function compile(funs; filepath = "foo.wasm", validate = false, optimize = false
     end
     # Compile funs
     for ci in cis
-        @show ci
+        # @show ci
         compile_method(CompilerContext(ctx, ci), exported = true)
     end
     @debug BinaryenModulePrint(ctx.mod)
     validate && BinaryenModuleValidate(ctx.mod)
-    BinaryenModulePrint(ctx.mod)
+    # BinaryenModulePrint(ctx.mod)
     optimize && BinaryenModuleOptimize(ctx.mod)
     out = BinaryenModuleAllocateAndWrite(ctx.mod, C_NULL)
     write(filepath, unsafe_wrap(Vector{UInt8}, Ptr{UInt8}(out.binary), (out.binaryBytes,)))
