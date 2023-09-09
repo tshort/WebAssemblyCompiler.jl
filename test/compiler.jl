@@ -152,6 +152,20 @@ end
     # x = 2.0
     # @test jsfun.f11(x) == f11(x)
 
+    function f12(x)
+        a = Array{Float64, 1}(undef, 0)
+        push!(a, x)
+        push!(a, x)
+        push!(a, x)
+        push!(a, x)
+        push!(a, x)
+        push!(a, 2x)
+        return @inbounds x * a[6]
+    end
+    x = 2.0
+    compile(f12, (Float64,); filepath = "f12.wasm", validate = true)
+    run(`$(WebAssemblyCompiler.Bin.wasmdis()) f12.wasm -o f12.wat`)
+
 end
 
 @testitem "Structs" begin

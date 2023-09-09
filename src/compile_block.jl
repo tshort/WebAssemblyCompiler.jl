@@ -422,7 +422,7 @@ function compile_block(ctx::CompilerContext, cfg::Core.Compiler.CFG, phis, idx)
             end
 
         elseif matchgr(node, :arraylen) do arraywrapper
-                x = BinaryenArrayLen(ctx.mod, getbuffer(ctx, arraywrapper))
+                x = BinaryenStructGet(ctx.mod, 1, _compile(ctx, arraywrapper), C_NULL, false)
                 if sizeof(Int) == 8 # extend to Int64
                     unaryfun(ctx, idx, (BinaryenExtendUInt32,), x)
                 else
@@ -431,7 +431,7 @@ function compile_block(ctx::CompilerContext, cfg::Core.Compiler.CFG, phis, idx)
             end
 
         elseif matchgr(node, :arraysize) do arraywrapper, n
-                x = BinaryenArrayLen(ctx.mod, getbuffer(ctx, arraywrapper))
+                x = BinaryenStructGet(ctx.mod, 1, _compile(ctx, arraywrapper), C_NULL, false)
                 if sizeof(Int) == 8 # extend to Int64
                     unaryfun(ctx, idx, (BinaryenExtendUInt32,), x)
                 else
