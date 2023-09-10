@@ -58,7 +58,7 @@ function compile_block(ctx::CompilerContext, cfg::Core.Compiler.CFG, phis, idx)
     ctx.body = BinaryenExpressionRef[]
     for idx in idxs
         node = ci.code[idx]
-        # @show idx, node
+        @show idx, node
         # if idx == 17
         #     dump(node)
         # end
@@ -574,7 +574,7 @@ function compile_block(ctx::CompilerContext, cfg::Core.Compiler.CFG, phis, idx)
             name = string(modname, extname)
             nargs = length(node.args[3])
             rettype = gettype(ctx, node.args[2])
-            sig = node.args[7:(7 + nargs - 1)]
+            sig = node.args[6:(6 + nargs - 1)]
             jparams = [gettype(ctx, T) for T in node.args[3]]
             bparams = BinaryenTypeCreate(jparams, length(jparams))
             args = [_compile(ctx, x) for x in sig]
@@ -587,6 +587,31 @@ function compile_block(ctx::CompilerContext, cfg::Core.Compiler.CFG, phis, idx)
             x = BinaryenCall(ctx.mod, name, args, nargs, rettype)
             # setlocal!(ctx, idx, x)
             if node.args[2] == Nothing
+                push!(ctx.body, x)
+            else
+                setlocal!(ctx, idx, x)
+            end
+
+        elseif node isa Expr && node.head == :call && node.args[1] isa GlobalRef && node.args[1].name == :llvmcall
+            modname = "ext"
+            extname = node.args[2]
+            @show node.args
+            name = string(modname, extname)
+            nargs = length(node.args) - 4
+            jlrettype = eval(node.args[3])
+            rettype = gettype(ctx, jlrettype)
+            sig = node.args[5:end]
+            jparams = [gettype(ctx, T) for T in node.args[4].parameters]
+            bparams = BinaryenTypeCreate(jparams, length(jparams))
+            args = [_compile(ctx, x) for x in sig]
+            if !haskey(ctx.imports, name)
+                BinaryenAddFunctionImport(ctx.mod, name, modname, extname, bparams, rettype)
+                ctx.imports[name] = sig
+            elseif ctx.imports[name] != sig
+                error("Mismatch in foreigncall import for $name: $sig vs. $(ctx.imports[name]).")
+            end
+            x = BinaryenCall(ctx.mod, name, args, nargs, rettype)
+            if jlrettype == Nothing
                 push!(ctx.body, x)
             else
                 setlocal!(ctx, idx, x)
@@ -612,7 +637,7 @@ function compile_block(ctx::CompilerContext, cfg::Core.Compiler.CFG, phis, idx)
             else
                 MI = node.args[1]
                 newci = Base.code_typed_by_type(sig, interp = StaticInterpreter())[1][1]
-                # @show newci
+                @show newci
                 name = string("julia_", node.args[1].def.name)
                 ctx.sigs[name] = sig
                 ctx.names[sig] = name

@@ -5,11 +5,11 @@ using NodeCall
 # NodeCall.initialize(node_args = ["--experimental-wasm-gc", "--experimental-wasm-stringref"]);
 NodeCall.initialize(node_args = ["--experimental-wasm-gc"]);
 
-jsfunctions(fun, tt) = jsfunctions(((fun, tt...),))
+# jsfunctions(fun, tt) = jsfunctions(((fun, tt...),))
 
-function jsfunctions(funs)
+function jsfunctions(funs...)
     wpath = tempname() * ".wasm"
-    compile(funs, filepath = wpath)
+    compile(funs..., filepath = wpath)
     js = """
     var funs = {};
     (async () => {
