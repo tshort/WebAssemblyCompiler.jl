@@ -4,17 +4,23 @@ using WebAssemblyCompiler
 
 include("setup.jl")   
 
+struct Box{T}
+    x::T
+end
+
 # include("needs-work.jl")   
 
-    # function fa13(x)
-    #     a = Vector{Any}(undef, 3)
-    #     a[1] = 1.0
-    #     a[2] = "hello"
-    #     a[3] = Int32(2)
-    #     return string(a...)
-    # end
-    # compile(((fa13, Float64,); filepath = "fa13.wasm")
-    # run`$(WebAssemblyCompiler.Bin.wasmdis()) fa13.wasm -o fa13.wat`)
+    function fa13(x)
+        a = Vector{Any}(undef, 3)
+        a[1] = Box(1.0)
+        # a[2] = "hello"
+        a[3] = Box(Int32(2))
+        # b = a[1].x::Float64
+        return x
+    end
+    compile((fa13, Float64,); filepath = "fa13.wasm", validate = true)
+    run(`$(WebAssemblyCompiler.Bin.wasmdis()) fa13.wasm -o fa13.wat`)
+# exit()
  
     # compile((string, Float64,Int32, String); filepath = "fstr13.wasm")
 

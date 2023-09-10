@@ -162,3 +162,6 @@ function getbuffer(ctx::CompilerContext, arraywrapper)
     eT = eltype(T)
     return BinaryenStructGet(ctx.mod, UInt32(0), _compile(ctx, arraywrapper), gettype(ctx, Buffer{eT}), false)
 end
+
+arraydefault(x) = zero(x)
+arraydefault(x::Type{Any}) = Ref(0)

@@ -443,7 +443,7 @@ function compile_block(ctx::CompilerContext, cfg::Core.Compiler.CFG, phis, idx)
                 elT = eltype(args[1])
                 size = _compile(ctx, I32(args[6]))
                 arraytype = BinaryenTypeGetHeapType(gettype(ctx, Buffer{elT}))
-                buffer = BinaryenArrayNew(ctx.mod, arraytype, size, _compile(ctx, 0.0))
+                buffer = BinaryenArrayNew(ctx.mod, arraytype, size, _compile(ctx, arraydefault(elT)))
                 wrappertype = BinaryenTypeGetHeapType(gettype(ctx, FakeArrayWrapper{elT}))
                 binaryenfun(ctx, idx, BinaryenStructNew, [buffer, size], UInt32(2), wrappertype; passall = true)
             end
@@ -464,7 +464,7 @@ function compile_block(ctx::CompilerContext, cfg::Core.Compiler.CFG, phis, idx)
                 neednewbuffer = BinaryenBinary(ctx.mod, BinaryenLeUInt32(), arraylen, newlen)
                 newbufferget = BinaryenLocalGet(ctx.mod, ctx.localidx, arraytype)
                 newbufferblock = [
-                    BinaryenLocalSet(ctx.mod, ctx.localidx, BinaryenArrayNew(ctx.mod, arrayheaptype, newbufferlen, _compile(ctx, 0.0))),
+                    BinaryenLocalSet(ctx.mod, ctx.localidx, BinaryenArrayNew(ctx.mod, arrayheaptype, newbufferlen, _compile(ctx, arraydefault(elT)))),
                     BinaryenArrayCopy(ctx.mod, newbufferget, _compile(ctx, I32(0)), buffer, _compile(ctx, I32(0)), _compile(ctx, arraylen)),
                     BinaryenStructSet(ctx.mod, 0, _arraywrapper, newbufferget),
                 ]

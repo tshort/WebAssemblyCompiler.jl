@@ -39,8 +39,13 @@ mutable struct CompilerContext
     meta::Dict{Symbol, Any}
 end
 
+const wat = """
+(module
+) 
+"""
+
 CompilerContext(ci::Core.CodeInfo) = 
-    CompilerContext(BinaryenModuleCreate(), Dict{DataType, String}(), Dict{String, DataType}(), Dict{String, DataType}(), wtypes(), Dict{String, Any}(),
+    CompilerContext(BinaryenModuleParse(wat), Dict{DataType, String}(), Dict{String, DataType}(), Dict{String, DataType}(), wtypes(), Dict{String, Any}(),
                     ci, BinaryenExpressionRef[], BinaryenType[], 0, Dict{Int, Int}(), Dict{Symbol, Any}())
 CompilerContext(ctx::CompilerContext, ci::Core.CodeInfo) = 
     CompilerContext(ctx.mod, ctx.names, ctx.sigs, ctx.imports, ctx.wtypes, ctx.globals,
