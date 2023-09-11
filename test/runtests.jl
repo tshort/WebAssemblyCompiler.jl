@@ -8,9 +8,10 @@ include("setup.jl")
         a = Vector{Any}(undef, 3)
         a[1] = 1.5
         a[2] = Int32(2)
-        # a[3] = "hello"
+        a[3] = "hello"
         jsa = JS.tojs(a)
         JS.console_log(jsa)
+        JS.console_log(string("hello", "world"))
         return x
     end
     compile((fa13a, Float64,); filepath = "fa13a.wasm", validate = true)

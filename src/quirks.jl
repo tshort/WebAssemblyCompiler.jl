@@ -42,7 +42,7 @@ end
 end
 # @overlay MT Base.size(x::Vector) = length(x)
 
-# @overlay MT Base.string(x...) = JS.print_array_to_string(Any[x...])
+@overlay MT Base.string(x...) = JS.print_array_to_string(Any[x...])
 
 
 # # math.jl

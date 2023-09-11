@@ -15,6 +15,7 @@ export async function run(x) {
                 jsarraynew: n => new Array(n),
                 jsarraysetf64: (v, i, x) => v[i] = x,
                 jsarrayseti32: (v, i, x) => v[i] = x,
+                jsarraysetstr: (v, i, x) => v[i] = x,
                 print_array_to_string: (x) => x.join(""),
                 console_log: x => console.log(x),
                 console_log_str: x => console.log(x),
