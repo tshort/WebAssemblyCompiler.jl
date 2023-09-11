@@ -163,5 +163,13 @@ function getbuffer(ctx::CompilerContext, arraywrapper)
     return BinaryenStructGet(ctx.mod, UInt32(0), _compile(ctx, arraywrapper), gettype(ctx, Buffer{eT}), false)
 end
 
+function box(ctx::CompilerContext, val, valT)
+    if valT <: Union{Int64, Int32, UInt64, UInt32, Float64, Float32, Char, Bool, UInt8, Int8, String}
+        boxtype = BinaryenTypeGetHeapType(gettype(ctx, Box{valT}))
+        return BinaryenStructNew(ctx.mod, [val], UInt32(1), boxtype)
+    end         
+    return val
+end
+
 arraydefault(x) = zero(x)
 arraydefault(x::Type{Any}) = Ref(0)

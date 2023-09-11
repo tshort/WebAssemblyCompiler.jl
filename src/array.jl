@@ -10,6 +10,7 @@ mutable struct FakeArrayWrapper{T} <: AbstractVector{T}
     "Number of elements held by `parent`."
     len::Int32
 end
+Base.eltype(::FakeArrayWrapper{T}) where T = T
 
 mutable struct ArrayWrapper{T} <: AbstractVector{T}
     "Vector used for storage."
@@ -17,6 +18,7 @@ mutable struct ArrayWrapper{T} <: AbstractVector{T}
     "Number of elements held by `parent`."
     len::Int32
 end
+Base.eltype(::ArrayWrapper{T}) where T = T
 
 """
     ArrayWrapper{T}(sizehint = 4)

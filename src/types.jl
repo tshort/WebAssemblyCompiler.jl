@@ -1,5 +1,8 @@
 struct Externref end
 
+struct Box{T}
+    x::T
+end
 
 wtypes() = Dict{Any, BinaryenType}(
     Int64 => BinaryenTypeInt64(),

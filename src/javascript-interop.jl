@@ -1,11 +1,7 @@
 export JS
 
 module JS
-using ..WebAssemblyCompiler
-
-struct Box{T}
-    x::T
-end
+using ..WebAssemblyCompiler: WebAssemblyCompiler, Box
 
 arraynew(n) = Base.llvmcall("jsarraynew", WebAssemblyCompiler.Externref, Tuple{Int32}, n)
 ## Use setindex! instead?? If so, need an ArrayRef type

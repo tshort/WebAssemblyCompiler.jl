@@ -423,7 +423,12 @@ function compile_block(ctx::CompilerContext, cfg::Core.Compiler.CFG, phis, idx)
         elseif matchgr(node, :arrayset) do bool, arraywrapper, val, i
                 buffer = getbuffer(ctx, arraywrapper)
                 i = BinaryenBinary(ctx.mod, BinaryenAddInt32(), _compile(ctx, I32(i)), _compile(ctx, Int32(-1)))
-                x = BinaryenArraySet(ctx.mod, buffer, i, _compile(ctx, val))
+                x = _compile(ctx, val)
+                aT = eltype(roottype(ctx, arraywrapper))
+                if aT == Any  # Box if needed
+                    x = box(ctx, x, roottype(ctx, val))
+                end         
+                x = BinaryenArraySet(ctx.mod, buffer, i, x)
                 update!(ctx, x)
             end
 

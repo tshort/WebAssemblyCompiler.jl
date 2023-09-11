@@ -373,8 +373,8 @@ end
 
     function fa13a(x)
         a = Vector{Any}(undef, 3)
-        a[1] = JS.Box(1.5)
-        a[2] = JS.Box(Int32(2))
+        a[1] = 1.5
+        a[2] = Int32(2)
         jsa = JS.tojs(a)
         JS.console_log(jsa)
         return x
