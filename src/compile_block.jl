@@ -6,7 +6,7 @@ function update!(ctx::CompilerContext, x, localtype = nothing)
         push!(ctx.locals, gettype(ctx, localtype))
         ctx.localidx += 1
     end
-    BinaryenExpressionPrint(x)
+    # BinaryenExpressionPrint(x)
     return nothing
 end
 
@@ -58,7 +58,7 @@ function compile_block(ctx::CompilerContext, cfg::Core.Compiler.CFG, phis, idx)
     ctx.body = BinaryenExpressionRef[]
     for idx in idxs
         node = ci.code[idx]
-        @show idx, node
+        # @show idx, node
         # if idx == 17
         #     dump(node)
         # end
@@ -598,10 +598,11 @@ function compile_block(ctx::CompilerContext, cfg::Core.Compiler.CFG, phis, idx)
                 setlocal!(ctx, idx, x)
             end
 
-        elseif node isa Expr && node.head == :call && node.args[1] isa GlobalRef && node.args[1].name == :llvmcall
+        elseif node isa Expr && node.head == :call && 
+               ((node.args[1] isa GlobalRef && node.args[1].name == :llvmcall) ||
+                node.args[1] == Core.Intrinsics.llvmcall)
             modname = "ext"
             extname = node.args[2]
-            @show node.args
             name = string(modname, extname)
             nargs = length(node.args) - 4
             jlrettype = eval(node.args[3])
@@ -614,9 +615,6 @@ function compile_block(ctx::CompilerContext, cfg::Core.Compiler.CFG, phis, idx)
                 BinaryenAddFunctionImport(ctx.mod, name, modname, extname, bparams, rettype)
                 ctx.imports[name] = name
             elseif ctx.imports[name] != name
-                @show sig
-                @show ctx.imports[name]
-                @show ctx.imports
                 error("Mismatch in foreigncall import for $name: $sig vs. $(ctx.imports[name]).")
             end
             x = BinaryenCall(ctx.mod, name, args, nargs, rettype)
@@ -647,7 +645,7 @@ function compile_block(ctx::CompilerContext, cfg::Core.Compiler.CFG, phis, idx)
                 MI = node.args[1]
                 global newci
                 newci = Base.code_typed_by_type(sig, interp = StaticInterpreter())[1][1]
-                @show newci
+                # @show newci
                 name = string("julia_", node.args[1].def.name)
                 ctx.sigs[name] = sig
                 ctx.names[sig] = name

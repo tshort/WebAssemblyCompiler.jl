@@ -166,18 +166,8 @@ end
     compile((f12, Float64,); filepath = "f12.wasm", validate = true)
     run(`$(WebAssemblyCompiler.Bin.wasmdis()) f12.wasm -o f12.wat`)
 
-    function fa13(x)
-        a = Vector{Any}(undef, 3)
-        a[1] = Box(1.0)
-        # a[2] = "hello"
-        a[3] = Box(Int32(2))
-        # b = a[1].x::Float64
-        return x
-    end
-    compile((fa13, Float64,); filepath = "fa13.wasm", validate = true)
-    run(`$(WebAssemblyCompiler.Bin.wasmdis()) fa13.wasm -o fa13.wat`)
-    
 end
+
 
 @testitem "Structs" begin
     include("setup.jl")   
@@ -377,4 +367,19 @@ end
     ccall((:set_verbose, :libccalltest), Cvoid, (Int32,), false)
     x = false
     @ccall :libccalltest.set_verbose(x::Int32)::Cvoid
+end
+
+@testitem "JavaScript interop" begin
+
+    function fa13a(x)
+        a = Vector{Any}(undef, 3)
+        a[1] = JS.Box(1.5)
+        a[2] = JS.Box(Int32(2))
+        jsa = JS.tojs(a)
+        JS.console_log(jsa)
+        return x
+    end
+    compile((fa13a, Float64,); filepath = "fa13a.wasm", validate = true)
+    run(`$(WebAssemblyCompiler.Bin.wasmdis()) fa13a.wasm -o fa13a.wat`)
+    
 end

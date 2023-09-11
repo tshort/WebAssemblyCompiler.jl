@@ -9,9 +9,7 @@ function compile(funs::Tuple...; filepath = "foo.wasm", validate = false, optimi
     # BinaryenModuleSetFeatures(ctx.mod, BinaryenFeatureReferenceTypes() | BinaryenFeatureGC() | BinaryenFeatureStrings())
     BinaryenModuleSetFeatures(ctx.mod, BinaryenFeatureAll())
     # Create CodeInfo's, and fill in names first
-    @show funs
     for funtpl in funs
-        @show funtpl
         tt = length(funtpl) > 1 ? Base.to_tuple_type(funtpl[2:end]) : Tuple{}
         # isconcretetype(tt) || error("input type signature $tt for $(funtpl[1]) is not concrete")
         ci = code_typed(funtpl[1], tt, interp = StaticInterpreter())[1].first
@@ -23,7 +21,7 @@ function compile(funs::Tuple...; filepath = "foo.wasm", validate = false, optimi
     end
     # Compile funs
     for ci in cis
-        @show ci
+        # @show ci
         compile_method(CompilerContext(ctx, ci), exported = true)
     end
     @debug BinaryenModulePrint(ctx.mod)
