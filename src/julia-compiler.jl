@@ -1,11 +1,3 @@
-include("types.jl")
-include("mixtape.jl")
-include("interpreter.jl")
-include("array.jl")
-include("compile_block.jl")
-include("_compile.jl")
-include("utils.jl")
-include("quirks.jl")
 
 export compile
 # compile(fun, tt; filepath = "foo.wasm", validate = false, optimize = false) = compile(((fun, tt...),); filepath, validate, optimize)

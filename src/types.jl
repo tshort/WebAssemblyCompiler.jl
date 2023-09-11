@@ -1,4 +1,4 @@
-struct ExternRef end
+struct Externref end
 
 
 wtypes() = Dict{Any, BinaryenType}(
@@ -12,7 +12,7 @@ wtypes() = Dict{Any, BinaryenType}(
     Float32 => BinaryenTypeFloat32(),
     Symbol => BinaryenTypeInt64(),   # fix this
     String => BinaryenTypeStringref(),
-    ExternRef => BinaryenTypeExternref(),
+    Externref => BinaryenTypeExternref(),
     Any => BinaryenTypeEqref(),
     Core.TypeofBottom => BinaryenTypeNone(),
     Union{} => BinaryenTypeNone(),

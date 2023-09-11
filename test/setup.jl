@@ -27,6 +27,7 @@ function jsfunctions(funs...)
                 error: x => console.error(x),
              },
              ext: {
+                console_log: x => console.log(x),
                 twox: x => 2*x
                 }});
         funs = instance.exports;

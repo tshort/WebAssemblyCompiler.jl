@@ -6,7 +6,7 @@ function update!(ctx::CompilerContext, x, localtype = nothing)
         push!(ctx.locals, gettype(ctx, localtype))
         ctx.localidx += 1
     end
-    # BinaryenExpressionPrint(x)
+    BinaryenExpressionPrint(x)
     return nothing
 end
 
@@ -72,7 +72,13 @@ function compile_block(ctx::CompilerContext, cfg::Core.Compiler.CFG, phis, idx)
             update!(ctx, BinaryenReturn(ctx.mod, node.val isa Nothing ? C_NULL : _compile(ctx, node.val)))
 
         elseif node isa Core.PiNode
-            setlocal!(ctx, idx, _compile(ctx, node.val))
+            fromT = roottype(ctx, node.val)
+            toT = ssatype(ctx, idx)
+            x = _compile(ctx, node.val)
+            if fromT == Any # Need to cast to the right value
+                x = BinaryenRefCast(ctx.mod, x, gettype(ctx, toT))
+            end
+            setlocal!(ctx, idx, x)
 
         ## Intrinsics ##
 
@@ -606,8 +612,11 @@ function compile_block(ctx::CompilerContext, cfg::Core.Compiler.CFG, phis, idx)
             args = [_compile(ctx, x) for x in sig]
             if !haskey(ctx.imports, name)
                 BinaryenAddFunctionImport(ctx.mod, name, modname, extname, bparams, rettype)
-                ctx.imports[name] = sig
-            elseif ctx.imports[name] != sig
+                ctx.imports[name] = name
+            elseif ctx.imports[name] != name
+                @show sig
+                @show ctx.imports[name]
+                @show ctx.imports
                 error("Mismatch in foreigncall import for $name: $sig vs. $(ctx.imports[name]).")
             end
             x = BinaryenCall(ctx.mod, name, args, nargs, rettype)
@@ -636,6 +645,7 @@ function compile_block(ctx::CompilerContext, cfg::Core.Compiler.CFG, phis, idx)
                 name = ctx.names[sig]
             else
                 MI = node.args[1]
+                global newci
                 newci = Base.code_typed_by_type(sig, interp = StaticInterpreter())[1][1]
                 @show newci
                 name = string("julia_", node.args[1].def.name)
@@ -644,6 +654,13 @@ function compile_block(ctx::CompilerContext, cfg::Core.Compiler.CFG, phis, idx)
                 compile_method(CompilerContext(ctx, newci))
             end
             setlocal!(ctx, idx, BinaryenCall(ctx.mod, name, args, nargs, rettype))
+
+        elseif node isa Expr && node.head == :call && node.args[1] isa GlobalRef && node.args[1].name == :isa    # val isa T
+            T = node.args[3]
+            wT = gettype(ctx, T)   # do I need heap type here?
+            val = _compile(ctx, node.args[2])
+            x = BinaryenRefTest(ctx.mod, val, wT)
+            setlocal!(ctx, idx, x)
 
         # DECLARE_BUILTIN(applicable);
         # DECLARE_BUILTIN(_apply_iterate);

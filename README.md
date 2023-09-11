@@ -28,6 +28,12 @@
 * [x] Julia arrays
   - [x] Basic wrapper type
   - [x] Add ability to grow an array
+* [ ] JS integration
+  - [ ] Any arrays
+    - [ ] Box and unbox values
+    - [ ] Wrap and unwrap strings
+  - [ ] Helper functions in WAT
+    - [ ]
 * [x] Structs
 * [x] Tuples
 * [ ] Strings
