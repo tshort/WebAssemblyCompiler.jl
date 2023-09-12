@@ -371,7 +371,7 @@ end
 
 @testitem "JavaScript interop" begin
 
-    function fa13a(x)
+    function fjs10(x)
         a = Vector{Any}(undef, 3)
         a[1] = 1.5
         a[2] = Int32(2)
@@ -379,7 +379,25 @@ end
         JS.console_log(jsa)
         return x
     end
-    compile((fa13a, Float64,); filepath = "fa13a.wasm", validate = true)
-    run(`$(WebAssemblyCompiler.Bin.wasmdis()) fa13a.wasm -o fa13a.wat`)
-    
+    compile((fjs10, Float64,); filepath = "fjs10.wasm", validate = true)
+    run(`$(WebAssemblyCompiler.Bin.wasmdis()) fjs10.wasm -o fjs10.wat`)
+
+    function fjs11(x)
+        a = Any[1.5, Int32(2), "hello"]
+        jsa = JS.tojs(a)
+        JS.console_log(jsa)
+        return x
+    end
+    compile((fjs11, Float64,); filepath = "fjs11.wasm", validate = true)
+    run(`$(WebAssemblyCompiler.Bin.wasmdis()) fjs11.wasm -o fjs11.wat`)
+    compile((fjs11, Float64,); filepath = "fjs11o.wasm", optimize = true)
+    run(`$(WebAssemblyCompiler.Bin.wasmdis()) fjs11o.wasm -o fjs11o.wat`)
+     
+    function fjs12(x)
+        JS.console_log(string("hello", "world"))
+        return x
+    end
+    compile((fjs12, Float64,); filepath = "fjs12.wasm", validate = true)
+    run(`$(WebAssemblyCompiler.Bin.wasmdis()) fjs12.wasm -o fjs12.wat`)
+
 end

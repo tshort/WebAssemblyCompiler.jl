@@ -11,6 +11,7 @@ Dictionaries = "85a47980-9c8c-11e8-2b9f-f7ca1fa99fb4"
 GPUCompiler = "61eb1bfa-7361-4325-ad38-22787b887f55"
 NodeCall = "84d67a5e-1aa2-4817-a501-81e0ebf70bff"
 Reexport = "189a3867-3050-52da-a836-e630ba90ab69"
+Unrolled = "9602ed7d-8fef-5bc8-8597-8f21381861e8"
 libjlnode_jll = "e3ef64f0-f261-50ad-b884-29c8a26457f8"
 libnode_jll = "76d26698-d9ba-5ca1-ae24-4ac9393d02a0"
 

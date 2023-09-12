@@ -29,19 +29,20 @@
   - [x] Basic wrapper type
   - [x] Add ability to grow an array
 * [ ] JS integration
-  - [ ] Any arrays
-    - [ ] Box and unbox values
-    - [ ] Wrap and unwrap strings
-  - [ ] Helper functions in WAT
-    - [ ]
+  - [x] Any arrays
+    - [x] Box values
+  - [ ] Fix string()
 * [x] Structs
 * [x] Tuples
-* [ ] Strings
+* [x] Strings
+  - [ ] concatenate
 * [ ] Unions
 * [ ] Symbols
 * [ ] svec
 * [x] General type generator
 * [ ] Replicate Julia's type tree with Binaryen's TypeBuilder?
+
+
 
 ### libjulia
 
@@ -61,6 +62,7 @@
 * [ ] Varargs
 * [x] jl_array_copy
 * [ ] unsafe_copyto! - needs overlay
+* [ ] Split up tests
 
 ### Things Working and Things Broken
 
@@ -76,9 +78,7 @@ Working:
 
 Broken but feasible:
 
-* Resizable arrays
-* Multidimensional arrays
-* String operations
+* Multidimensional arrays--Wait on the new Array/Memory/MemoryRef work
 
 Broken and hard:
 
@@ -104,7 +104,7 @@ The main disadvantages of StaticCompiler are:
 
 The compiler in this project is better in some ways, including:
 * Support for WebAssembly GC (structs, strings, arrays, ...).
-* Better interop with JavaScript.
+* Good interop with JavaScript.
 * Can tailor compilation to WebAssembly better.
 * Hacking the compiler is easier.
 

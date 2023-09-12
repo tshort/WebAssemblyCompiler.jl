@@ -532,7 +532,7 @@ function compile_block(ctx::CompilerContext, cfg::Core.Compiler.CFG, phis, idx)
 
                     binaryenfun(ctx, idx, BinaryenArrayGet, _compile(ctx, x), Pass(i), gettype(ctx, eltype(T)), Pass(!unsigned))
                 else
-                    eT = Base.datatype_fieldtypes(T)[index]
+                    eT = Base.datatype_fieldtypes(T)[_compile(ctx, index)]
                     unsigned = eT <: Unsigned
                     binaryenfun(ctx, idx, BinaryenStructGet, UInt32(index - 1), _compile(ctx, x), gettype(ctx, eT), !unsigned, passall = true)
                 end

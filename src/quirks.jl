@@ -42,7 +42,21 @@ end
 end
 # @overlay MT Base.size(x::Vector) = length(x)
 
-@overlay MT Base.string(x...) = JS.print_array_to_string(Any[x...])
+@overlay MT Base.string(x...) = JS.print_array_to_string(JS.tojs(Any[x...]))
+
+# Redo this to unroll the loop
+@overlay MT Base.getindex(::Type{Any}, @nospecialize vals...) = unrolledgetindex(vals)
+
+using Unrolled
+
+@unroll function unrolledgetindex(vals)
+    a = Vector{Any}(undef, length(vals))
+    @unroll for i = 1:length(vals)
+        a[i] = vals[i]
+    end
+    return a
+end
+
 
 
 # # math.jl
