@@ -1,5 +1,5 @@
 export async function run(x) {
-    const response = await fetch('fjs12.wasm');
+    const response = await fetch('fjs13.wasm');
     const bytes = await response.arrayBuffer();
     const { instance } = await WebAssembly.instantiate(bytes, {Math: {
                 sin: x => Math.sin(x), 
@@ -16,15 +16,16 @@ export async function run(x) {
                 jsarraysetf64: (v, i, x) => v[i] = x,
                 jsarrayseti32: (v, i, x) => v[i] = x,
                 jsarraysetstr: (v, i, x) => v[i] = x,
-                print_array_to_string: (x) => x.join(""),
+                jseval: (x) => eval(x),
+                array_to_string: (x) => x.join(""),
                 console_log: x => console.log(x),
                 console_log_str: x => console.log(x),
                 twox: x => 2*x
                 }});
 
-    const { fjs12 } = instance.exports;
+    const { fjs13 } = instance.exports;
 
-    return fjs12(x)
+    return fjs13(x)
 
 }
 

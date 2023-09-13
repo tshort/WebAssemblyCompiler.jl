@@ -400,4 +400,12 @@ end
     compile((fjs12, Float64,); filepath = "fjs12.wasm", validate = true)
     run(`$(WebAssemblyCompiler.Bin.wasmdis()) fjs12.wasm -o fjs12.wat`)
 
+
+    function fjs13(x)
+        JS.eval("console.log('hello world')")
+        return x
+    end
+    compile((fjs13, Float64,); filepath = "fjs13.wasm", validate = true)
+    run(`$(WebAssemblyCompiler.Bin.wasmdis()) fjs13.wasm -o fjs13.wat`)
+
 end

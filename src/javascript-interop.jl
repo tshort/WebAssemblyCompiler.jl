@@ -12,7 +12,9 @@ arraysetstr(jsa, i, x) = Base.llvmcall("jsarraysetstr", Nothing, Tuple{WebAssemb
 console_log(x) = Base.llvmcall("console_log", Nothing, Tuple{WebAssemblyCompiler.Externref}, x)
 console_log(x::String) = Base.llvmcall("console_log_str", Nothing, Tuple{String}, x)
 
-print_array_to_string(x) = Base.llvmcall("print_array_to_string", String, Tuple{WebAssemblyCompiler.Externref}, x)
+eval(x::String) = Base.llvmcall("jseval", WebAssemblyCompiler.Externref, Tuple{String}, x)
+
+print_array_to_string(x) = Base.llvmcall("array_to_string", String, Tuple{WebAssemblyCompiler.Externref}, x)
 
 function tojs(v::Vector{Any})
     jsa = arraynew(Int32(length(v)))
