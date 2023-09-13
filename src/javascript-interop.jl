@@ -14,7 +14,7 @@ console_log(x::String) = Base.llvmcall("console_log_str", Nothing, Tuple{String}
 
 eval(x::String) = Base.llvmcall("jseval", WebAssemblyCompiler.Externref, Tuple{String}, x)
 
-print_array_to_string(x) = Base.llvmcall("array_to_string", String, Tuple{WebAssemblyCompiler.Externref}, x)
+array_to_string(x) = Base.llvmcall("array_to_string", String, Tuple{WebAssemblyCompiler.Externref}, x)
 
 function tojs(v::Vector{Any})
     jsa = arraynew(Int32(length(v)))
