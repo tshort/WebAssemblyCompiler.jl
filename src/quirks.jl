@@ -42,7 +42,7 @@ end
 end
 # @overlay MT Base.size(x::Vector) = length(x)
 
-@overlay MT Base.string(x...) = JS.print_array_to_string(JS.tojs(Any[x...]))
+@overlay MT Base.string(x...) = JS.array_to_string(JS.tojs(Any[x...]))
 
 # Redo this to unroll the loop
 @overlay MT Base.getindex(::Type{Any}, @nospecialize vals...) = unrolledgetindex(vals)
@@ -57,6 +57,7 @@ using Unrolled
     return a
 end
 
+@overlay MT Base.hash(x::String) = Int(Base.llvmcall("\$hash-string", Int32, Tuple{String}, x))
 
 
 # # math.jl

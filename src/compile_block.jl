@@ -607,8 +607,9 @@ function compile_block(ctx::CompilerContext, cfg::Core.Compiler.CFG, phis, idx)
                ((node.args[1] isa GlobalRef && node.args[1].name == :llvmcall) ||
                 node.args[1] == Core.Intrinsics.llvmcall)
             modname = "ext"
-            extname = node.args[2]
-            name = string(modname, extname)
+            funname = node.args[2]
+            internalfun = funname[1] == '$'
+            name = internalfun ? funname[2:end] : string(modname, funname)
             nargs = length(node.args) - 4
             jlrettype = eval(node.args[3])
             rettype = gettype(ctx, jlrettype)
@@ -616,11 +617,13 @@ function compile_block(ctx::CompilerContext, cfg::Core.Compiler.CFG, phis, idx)
             jparams = [gettype(ctx, T) for T in node.args[4].parameters]
             bparams = BinaryenTypeCreate(jparams, length(jparams))
             args = [_compile(ctx, x) for x in sig]
-            if !haskey(ctx.imports, name)
-                BinaryenAddFunctionImport(ctx.mod, name, modname, extname, bparams, rettype)
-                ctx.imports[name] = name
-            elseif ctx.imports[name] != name
-                error("Mismatch in foreigncall import for $name: $sig vs. $(ctx.imports[name]).")
+            if !internalfun
+                if !haskey(ctx.imports, name)
+                    BinaryenAddFunctionImport(ctx.mod, name, modname, funname, bparams, rettype)
+                    ctx.imports[name] = name
+                elseif ctx.imports[name] != name
+                    error("Mismatch in foreigncall import for $name: $sig vs. $(ctx.imports[name]).")
+                end
             end
             x = BinaryenCall(ctx.mod, name, args, nargs, rettype)
             if jlrettype == Nothing

@@ -1,5 +1,5 @@
 export async function run(x) {
-    const response = await fetch('fjs13.wasm');
+    const response = await fetch('fjs14.wasm');
     const bytes = await response.arrayBuffer();
     const { instance } = await WebAssembly.instantiate(bytes, {Math: {
                 sin: x => Math.sin(x), 
@@ -23,9 +23,9 @@ export async function run(x) {
                 twox: x => 2*x
                 }});
 
-    const { fjs13 } = instance.exports;
+    const { fjs14 } = instance.exports;
 
-    return fjs13(x)
+    return fjs14(x)
 
 }
 

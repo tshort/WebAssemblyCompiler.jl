@@ -408,4 +408,11 @@ end
     compile((fjs13, Float64,); filepath = "fjs13.wasm", validate = true)
     run(`$(WebAssemblyCompiler.Bin.wasmdis()) fjs13.wasm -o fjs13.wat`)
 
+    function fjs14(x)
+        y = hash("hello")
+        return Float64(y) + x
+    end
+    compile((fjs14, Float64,); filepath = "fjs14.wasm", validate = true)
+    run(`$(WebAssemblyCompiler.Bin.wasmdis()) fjs14.wasm -o fjs14.wat`)
+
 end

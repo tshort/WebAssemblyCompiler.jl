@@ -42,13 +42,18 @@ mutable struct CompilerContext
     meta::Dict{Symbol, Any}
 end
 
-const wat = """
+const wat = raw"""
 (module
+
+  (func $hash-string
+    (param $s stringref) (result i32)
+    (return (string.hash (local.get $s))))
+
 ) 
 """
 
 CompilerContext(ci::Core.CodeInfo) = 
-    CompilerContext(BinaryenModuleParse(wat), Dict{DataType, String}(), Dict{String, DataType}(), Dict{String, DataType}(), wtypes(), Dict{String, Any}(),
+    CompilerContext(BinaryenModuleParse(wat), Dict{DataType, String}(), Dict{String, DataType}(), Dict{String, Any}(), wtypes(), Dict{String, Any}(),
                     ci, BinaryenExpressionRef[], BinaryenType[], 0, Dict{Int, Int}(), Dict{Symbol, Any}())
 CompilerContext(ctx::CompilerContext, ci::Core.CodeInfo) = 
     CompilerContext(ctx.mod, ctx.names, ctx.sigs, ctx.imports, ctx.wtypes, ctx.globals,
