@@ -6,7 +6,14 @@ include("setup.jl")
 
 # const WebAssemblyCompiler._DEBUG_ = true
 
-# exit()
+    function fjs12(x)
+        JS.console_log("hello world")
+        return x
+    end
+    compile((fjs12, Float64,); filepath = "fjs12.wasm", validate = true)
+    run(`$(WebAssemblyCompiler.Bin.wasmdis()) fjs12.wasm -o fjs12.wat`)
+
+exit()
 
     # using Dictionaries
     # function fdict1(x)
@@ -16,6 +23,6 @@ include("setup.jl")
     # compile((fdict1, Float64,); filepath = "fdict1.wasm")
     # run(`$(WebAssemblyCompiler.Bin.wasmdis()) fdict1.wasm -o fdict1.wat`)
  
-exit()
+# exit()
 
 @run_package_tests

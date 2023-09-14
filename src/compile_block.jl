@@ -568,59 +568,26 @@ function compile_block(ctx::CompilerContext, cfg::Core.Compiler.CFG, phis, idx)
             x = BinaryenStructNew(ctx.mod, args, nargs, type)
             binaryenfun(ctx, idx, BinaryenStructNew, args, nargs, type; passall = true)
 
-        elseif node isa Expr && node.head == :foreigncall    # general foreigncalls that need to be imported
-            if node.args[1] isa QuoteNode
-                modname = "ext"
-                extname = node.args[1].value
-            elseif node.args[1] isa Tuple
-                modname = node.args[1][2]
-                extname = node.args[1][1]
-            else
-                modname = node.args[1].args[3].name
-                extname = node.args[1].args[2].value
-            end
-            name = string(modname, extname)
-            nargs = length(node.args[3])
-            rettype = gettype(ctx, node.args[2])
-            sig = node.args[6:(6 + nargs - 1)]
-            jparams = [gettype(ctx, T) for T in node.args[3]]
-            bparams = BinaryenTypeCreate(jparams, length(jparams))
-            args = [_compile(ctx, x) for x in sig]
-            if !haskey(ctx.imports, name)
-                BinaryenAddFunctionImport(ctx.mod, name, modname, extname, bparams, rettype)
-                ctx.imports[name] = sig
-            elseif ctx.imports[name] != sig
-                error("Mismatch in foreigncall import for $name: $sig vs. $(ctx.imports[name]).")
-            end
-            x = BinaryenCall(ctx.mod, name, args, nargs, rettype)
-            # setlocal!(ctx, idx, x)
-            if node.args[2] == Nothing
-                push!(ctx.body, x)
-            else
-                setlocal!(ctx, idx, x)
-            end
-
         elseif node isa Expr && node.head == :call && 
                ((node.args[1] isa GlobalRef && node.args[1].name == :llvmcall) ||
                 node.args[1] == Core.Intrinsics.llvmcall)
-            modname = "ext"
-            funname = node.args[2]
-            internalfun = funname[1] == '$'
+            jscode = node.args[2]
+            internalfun = jscode[1] == '$'
             nargs = length(node.args) - 4
             jlrettype = eval(node.args[3])
             rettype = gettype(ctx, jlrettype)
             typeparameters = node.args[4].parameters
-            name = internalfun ? funname[2:end] : string(modname, funname, rettype, typeparameters...)
+            name = internalfun ? jscode[2:end] : string(jscode, rettype, typeparameters...)
             sig = node.args[5:end]
             jparams = [gettype(ctx, T) for T in typeparameters]
             bparams = BinaryenTypeCreate(jparams, length(jparams))
             args = [_compile(ctx, x) for x in sig]
             if !internalfun
                 if !haskey(ctx.imports, name)
-                    BinaryenAddFunctionImport(ctx.mod, name, modname, funname, bparams, rettype)
-                    ctx.imports[name] = name
+                    BinaryenAddFunctionImport(ctx.mod, name, "js", jscode, bparams, rettype)
+                    ctx.imports[name] = jscode
                 elseif ctx.imports[name] != name
-                    error("Mismatch in foreigncall import for $name: $sig vs. $(ctx.imports[name]).")
+                    error("Mismatch in llvmcall import for $name: $sig vs. $(ctx.imports[name]).")
                 end
             end
             x = BinaryenCall(ctx.mod, name, args, nargs, rettype)
