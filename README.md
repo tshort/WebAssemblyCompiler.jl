@@ -28,10 +28,7 @@
 * [x] Julia arrays
   - [x] Basic wrapper type
   - [x] Add ability to grow an array
-* [ ] JS integration
-  - [x] Any arrays
-    - [x] Box values
-  - [ ] Fix string()
+  - [ ] Array copy
 * [x] Structs
 * [x] Tuples
 * [x] Strings
@@ -43,13 +40,18 @@
 * [ ] Replicate Julia's type tree with Binaryen's TypeBuilder?
 
 
+### JS integration
+  - [x] Any arrays
+    - [x] Box values
+    - [x] Nested arrays
+  - [x] Fix string()
+  - [x] Make objects
+  - [ ] Named tuples and structs to objects
+
 
 ### libjulia
 
 * [ ] IO
-* [ ] Approach?
-    * [ ] Compile parts of libjulia itself to WASM
-    * [ ] Replicate functionality (current thinking)
 
 ### Tests
 

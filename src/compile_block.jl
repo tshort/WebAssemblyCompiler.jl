@@ -403,7 +403,7 @@ function compile_block(ctx::CompilerContext, cfg::Core.Compiler.CFG, phis, idx)
                 T <: Integer && sizeof(T) == 8 && Tval <: AbstractFloat ? unaryfun(ctx, idx, (BinaryenReinterpretFloat64,), val) :
                 T <: Integer && sizeof(T) == 4 && Tval <: AbstractFloat ? unaryfun(ctx, idx, (BinaryenReinterpretFloat32,), val) :
                 T <: Integer && Tval <: Integer ? setlocal!(ctx, idx, _compile(ctx, val)) :
-                error("Unsupported `bitcast` types")
+                error("Unsupported `bitcast` types, ($T, $Tval)")
             end
 
         ## TODO
@@ -649,10 +649,9 @@ function compile_block(ctx::CompilerContext, cfg::Core.Compiler.CFG, phis, idx)
                 name = ctx.names[sig]
             else
                 MI = node.args[1]
-                global newci
                 newci = Base.code_typed_by_type(sig, interp = StaticInterpreter())[1][1]
                 _DEBUG_ && @show newci
-                name = string("julia_", node.args[1].def.name)
+                name = string("julia_", node.args[1].def.name, sig.parameters[2:end]...)
                 ctx.sigs[name] = sig
                 ctx.names[sig] = name
                 compile_method(CompilerContext(ctx, newci))

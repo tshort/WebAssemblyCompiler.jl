@@ -37,6 +37,8 @@ function _compile(ctx::CompilerContext, x::Val)
     return BinaryenStructNew(ctx.mod, args, nargs, type)
 end
 
+_compile(ctx::CompilerContext, x::Type) = BinaryenConst(ctx.mod, BinaryenLiteralInt32(-99))
+
 struct Pass{T}
     val::T
 end

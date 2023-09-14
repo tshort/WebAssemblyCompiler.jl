@@ -16,36 +16,36 @@ end
 @testitem "Basics" begin
     include("setup.jl")   
     
-    function f1(x,y)
+    function fb1(x,y)
         a = x + y
         a + 1
     end
-    # compile((f1, Float64,Float64); filepath = "j.wasm")
-    jsfun = jsfunctions((f1, Float64,Float64))
-    @test f1(3.0, 4.0) == jsfun.f1(3.0, 4.0)
-    jsfun = jsfunctions((f1, Int32,Int32))
-    @test f1(3, 4) == jsfun.f1(3, 4)
-    jsfun = jsfunctions((f1, Float64,Int32))
-    @test f1(3, 4) == jsfun.f1(3, 4)
+    # compile((fb1, Float64,Float64); filepath = "j.wasm")
+    jsfun = jsfunctions((fb1, Float64,Float64))
+    @test fb1(3.0, 4.0) == jsfun.fb1(3.0, 4.0)
+    jsfun = jsfunctions((fb1, Int32,Int32))
+    @test fb1(3, 4) == jsfun.fb1(3, 4)
+    jsfun = jsfunctions((fb1, Float64,Int32))
+    @test fb1(3, 4) == jsfun.fb1(3, 4)
 
-    function f2(x,y)
+    function fb2(x,y)
         a = x + y
         a > 2 ? a + 1 : 2a
     end
-    jsfun = jsfunctions((f2, Float64,Float64))
-    @test f2(3.0, 4.0) == jsfun.f2(3.0, 4.0)
-    @test f2(-3.0, 4.0) == jsfun.f2(-3.0, 4.0)
-    jsfun = jsfunctions((f2, Int32,Int32))
-    @test f2(3, 4) == jsfun.f2(3, 4)
-    @test f2(-3, 4) == jsfun.f2(-3, 4)
+    jsfun = jsfunctions((fb2, Float64,Float64))
+    @test fb2(3.0, 4.0) == jsfun.fb2(3.0, 4.0)
+    @test fb2(-3.0, 4.0) == jsfun.fb2(-3.0, 4.0)
+    jsfun = jsfunctions((fb2, Int32,Int32))
+    @test fb2(3, 4) == jsfun.fb2(3, 4)
+    @test fb2(-3, 4) == jsfun.fb2(-3, 4)
 
-    jsfun = jsfunctions((f1, Float64, Float64),
-                        (f2, Float64, Float64))
-    @test f1(3.0, 4.0) == jsfun.f1(3.0, 4.0)
-    @test f2(3.0, 4.0) == jsfun.f2(3.0, 4.0)
+    jsfun = jsfunctions((fb1, Float64, Float64),
+                        (fb2, Float64, Float64))
+    @test fb1(3.0, 4.0) == jsfun.fb1(3.0, 4.0)
+    @test fb2(3.0, 4.0) == jsfun.fb2(3.0, 4.0)
     
 
-    function f3(x,y)
+    function fb3(x,y)
         if x > 1.0
             a = x + y
         else
@@ -53,11 +53,11 @@ end
         end
         a
     end
-    jsfun = jsfunctions((f3, Float64,Float64))
-    @test f3(0.0, 4.0) == jsfun.f3(0.0, 4.0)
-    @test f3(2.0, 4.0) == jsfun.f3(2.0, 4.0)
+    jsfun = jsfunctions((fb3, Float64,Float64))
+    @test fb3(0.0, 4.0) == jsfun.fb3(0.0, 4.0)
+    @test fb3(2.0, 4.0) == jsfun.fb3(2.0, 4.0)
 
-    function f4(x,y)
+    function fb4(x,y)
         if x > 1.0
             a = x + 1.0
             b = 3.0
@@ -67,38 +67,44 @@ end
         end
         a + b
     end
-    jsfun = jsfunctions((f4, Float64,Float64))
-    @test f4(0.0, 4.0) == jsfun.f4(0.0, 4.0)
-    @test f4(2.0, 4.0) == jsfun.f4(2.0, 4.0)
+    jsfun = jsfunctions((fb4, Float64,Float64))
+    @test fb4(0.0, 4.0) == jsfun.fb4(0.0, 4.0)
+    @test fb4(2.0, 4.0) == jsfun.fb4(2.0, 4.0)
 
-    function f5(x,y)
+    function fb5(x,y)
         a = 0.0
         while a < 4.0
             a = a + x
         end
         a + y
     end
-    jsfun = jsfunctions((f5, Float64,Float64))
-    @test f5(1.0, 4.0) == jsfun.f5(1.0, 4.0)
-    @test f5(5.0, 4.0) == jsfun.f5(5.0, 4.0)
+    jsfun = jsfunctions((fb5, Float64,Float64))
+    @test fb5(1.0, 4.0) == jsfun.fb5(1.0, 4.0)
+    @test fb5(5.0, 4.0) == jsfun.fb5(5.0, 4.0)
 
     @noinline twox(x) = 2x
-    function f7(x,y)
+    function fb7(x,y)
         x + twox(y)
     end
-    compile((f7, Float64,Float64); filepath = "j.wasm")
+    compile((fb7, Float64,Float64); filepath = "j.wasm")
     # run(`$(WebAssemblyCompiler.Bin.wasmdis()) j.wasm -o j.wat`)
-    jsfun = jsfunctions((f7, Float64,Float64))
-    @test f7(3.0, 4.0) == jsfun.f7(3.0, 4.0)
+    jsfun = jsfunctions((fb7, Float64,Float64))
+    @test fb7(3.0, 4.0) == jsfun.fb7(3.0, 4.0)
 
-    function f8(x)
+    function fb8(x)
         2x + twox(x)
     end
-    jsfun = jsfunctions((f7, Float64,Float64),
-                        (f8, Float64))
-    @test f7(3.0, 4.0) == jsfun.f7(3.0, 4.0)
-    @test f8(3.0) == jsfun.f8(3.0)
+    jsfun = jsfunctions((fb7, Float64,Float64),
+                        (fb8, Float64))
+    @test fb7(3.0, 4.0) == jsfun.fb7(3.0, 4.0)
+    @test fb8(3.0) == jsfun.fb8(3.0)
 
+    @noinline fb9a(x, ::Type{I}) where {I} = I === Int ? 1.0 * x : 5.0 * x
+    fb9(x) = fb9a(x, Float64) * x
+    compile((fb9, Float64); filepath = "fb9.wasm")
+    run(`$(WebAssemblyCompiler.Bin.wasmdis()) fb9.wasm -o fb9.wat`)
+    jsfun = jsfunctions((fb9, Float64))
+    @test fb9(3.0) == jsfun.fb9(3.0)
 
 end
 

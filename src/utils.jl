@@ -84,6 +84,9 @@ function gettype(ctx, type)
         return wrappertype
     end
     # exit()
+    if type <: Type
+        return BinaryenTypeInt32()
+    end
     tb = TypeBuilderCreate(1)
     builtheaptypes = Array{BinaryenHeapType}(undef, 1)
     if type <: Buffer || type <: Array || type <: NTuple

@@ -6,7 +6,6 @@ include("setup.jl")
 
 # const WebAssemblyCompiler._DEBUG_ = true
 
-
 # exit()
 
     # using Dictionaries
@@ -17,6 +16,6 @@ include("setup.jl")
     # compile((fdict1, Float64,); filepath = "fdict1.wasm")
     # run(`$(WebAssemblyCompiler.Bin.wasmdis()) fdict1.wasm -o fdict1.wat`)
  
-# exit()
+exit()
 
 @run_package_tests
