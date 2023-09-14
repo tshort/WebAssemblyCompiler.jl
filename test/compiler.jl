@@ -415,4 +415,28 @@ end
     compile((fjs14, Float64,); filepath = "fjs14.wasm", validate = true)
     run(`$(WebAssemblyCompiler.Bin.wasmdis()) fjs14.wasm -o fjs14.wat`)
 
-end
+    function fjs15(x)
+        y = JS.getelementbyid("myid")
+        JS.sethtml(y, "hello <strong>world</strong>")
+        return x
+    end
+    compile((fjs15, Float64,); filepath = "fjs15.wasm", validate = true)
+    run(`$(WebAssemblyCompiler.Bin.wasmdis()) fjs15.wasm -o fjs15.wat`)
+
+    function fjs16(x)
+        JS.sethtml("myid", "hello <strong>world</strong>")
+        return x
+    end
+    compile((fjs16, Float64,); filepath = "fjs16.wasm", validate = true)
+    run(`$(WebAssemblyCompiler.Bin.wasmdis()) fjs16.wasm -o fjs16.wat`)
+
+    function fjs17(x)
+        a = Any[1.5, Int32(2), "hello", Any[1.5, "world"]]
+        jsa = JS.tojs(a)
+        JS.console_log(jsa)
+        return x
+    end
+    compile((fjs17, Float64,); filepath = "fjs17.wasm", validate = true)
+    run(`$(WebAssemblyCompiler.Bin.wasmdis()) fjs17.wasm -o fjs17.wat`)
+
+ end

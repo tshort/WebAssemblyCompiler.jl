@@ -4,6 +4,10 @@ using WebAssemblyCompiler
 
 include("setup.jl")   
 
+# const WebAssemblyCompiler._DEBUG_ = true
+
+
+# exit()
 
     # using Dictionaries
     # function fdict1(x)

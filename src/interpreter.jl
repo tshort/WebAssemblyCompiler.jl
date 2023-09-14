@@ -68,7 +68,7 @@ Core.Compiler.lock_mi_inference(interp::StaticInterpreter, mi::MethodInstance) =
 Core.Compiler.unlock_mi_inference(interp::StaticInterpreter, mi::MethodInstance) = nothing
 
 function Core.Compiler.add_remark!(interp::StaticInterpreter, sv::InferenceState, msg)
-    @safe_debug "Inference remark during  static compilation of $(sv.linfo): $msg"
+    # @safe_debug "Inference remark during  static compilation of $(sv.linfo): $msg"
 end
 
 

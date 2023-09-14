@@ -2,10 +2,10 @@
 export compile
 # compile(fun, tt; filepath = "foo.wasm", validate = false, optimize = false) = compile(((fun, tt...),); filepath, validate, optimize)
 
-function compile(funs::Tuple...; filepath = "foo.wasm", validate = false, optimize = false)
+function compile(funs::Tuple...; filepath = "foo.wasm", validate = false, optimize = false, experimental = true)
     cis = Core.CodeInfo[]
     dummyci = code_typed(() -> nothing, Tuple{})[1].first
-    ctx = CompilerContext(dummyci)
+    ctx = CompilerContext(dummyci; experimental)
     # BinaryenModuleSetFeatures(ctx.mod, BinaryenFeatureReferenceTypes() | BinaryenFeatureGC() | BinaryenFeatureStrings())
     BinaryenModuleSetFeatures(ctx.mod, BinaryenFeatureAll())
     # Create CodeInfo's, and fill in names first
@@ -21,12 +21,11 @@ function compile(funs::Tuple...; filepath = "foo.wasm", validate = false, optimi
     end
     # Compile funs
     for ci in cis
-        # @show ci
+        _DEBUG_ && @show ci
         compile_method(CompilerContext(ctx, ci), exported = true)
     end
-    @debug BinaryenModulePrint(ctx.mod)
+    _DEBUG_ && BinaryenModulePrint(ctx.mod)
     validate && BinaryenModuleValidate(ctx.mod)
-    # BinaryenModulePrint(ctx.mod)
     optimize && BinaryenModuleOptimize(ctx.mod)
     out = BinaryenModuleAllocateAndWrite(ctx.mod, C_NULL)
     write(filepath, unsafe_wrap(Vector{UInt8}, Ptr{UInt8}(out.binary), (out.binaryBytes,)))

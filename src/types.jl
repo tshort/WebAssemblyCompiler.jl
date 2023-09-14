@@ -42,7 +42,7 @@ mutable struct CompilerContext
     meta::Dict{Symbol, Any}
 end
 
-const wat = raw"""
+const experimentalwat = raw"""
 (module
 
   (func $hash-string
@@ -51,9 +51,15 @@ const wat = raw"""
 
 ) 
 """
+# The approach above is nice, because WAT is easier to write than Binaryen code.
+# But, the one above errors in NodeCall with the older version of V8. 
+const wat = raw"""
+(module
+) 
+"""
 
-CompilerContext(ci::Core.CodeInfo) = 
-    CompilerContext(BinaryenModuleParse(wat), Dict{DataType, String}(), Dict{String, DataType}(), Dict{String, Any}(), wtypes(), Dict{String, Any}(),
+CompilerContext(ci::Core.CodeInfo; experimental = false) = 
+    CompilerContext(BinaryenModuleParse(experimental ? experimentalwat : wat), Dict{DataType, String}(), Dict{String, DataType}(), Dict{String, Any}(), wtypes(), Dict{String, Any}(),
                     ci, BinaryenExpressionRef[], BinaryenType[], 0, Dict{Int, Int}(), Dict{Symbol, Any}())
 CompilerContext(ctx::CompilerContext, ci::Core.CodeInfo) = 
     CompilerContext(ctx.mod, ctx.names, ctx.sigs, ctx.imports, ctx.wtypes, ctx.globals,

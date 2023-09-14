@@ -45,6 +45,18 @@ function matchforeigncall(fun, node, sym)
     return match
 end
 
+function matchllvmcall(fun, node, sym)
+    match = node isa Expr && node.head == :call && 
+            ((node.args[1] isa GlobalRef && node.args[1].name == :llvmcall) ||
+             node.args[1] == Core.Intrinsics.llvmcall) &&
+            node.args[2] == sym
+    if match
+        fargs = length(node.args) > 1 ? node.args[2:end] : []
+        fun(fargs)
+    end
+    return match
+end
+
 
 # Other utilities
 

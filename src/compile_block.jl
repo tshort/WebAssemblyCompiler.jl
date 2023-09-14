@@ -6,7 +6,7 @@ function update!(ctx::CompilerContext, x, localtype = nothing)
         push!(ctx.locals, gettype(ctx, localtype))
         ctx.localidx += 1
     end
-    # BinaryenExpressionPrint(x)
+    _DEBUG_ && BinaryenExpressionPrint(x)
     return nothing
 end
 
@@ -58,10 +58,10 @@ function compile_block(ctx::CompilerContext, cfg::Core.Compiler.CFG, phis, idx)
     ctx.body = BinaryenExpressionRef[]
     for idx in idxs
         node = ci.code[idx]
+        _DEBUG_ && @show idx 
+        _DEBUG_ && @show node
         # @show idx, node
-        # if idx == 17
-        #     dump(node)
-        # end
+
         if node isa Union{Core.GotoNode, Core.GotoIfNot, Core.PhiNode, Nothing}
             # do nothing
 
@@ -521,14 +521,11 @@ function compile_block(ctx::CompilerContext, cfg::Core.Compiler.CFG, phis, idx)
         elseif matchgr(node, :getfield) do x, index, bool
                 T = roottype(ctx, x)
                 if T <: NTuple
-                    # BinaryenModulePrint(ctx.mod)
                     unsigned = eltype(T) <: Unsigned
                     ## subtract one from i for zero-based indexing in WASM
                     i = BinaryenBinary(ctx.mod, BinaryenAddInt32(), 
                                        _compile(ctx, I32(index)), 
                                        _compile(ctx, Int32(-1)))
-                    # BinaryenExpressionPrint(i)
-                    # BinaryenExpressionPrint(_compile(ctx, x))
 
                     binaryenfun(ctx, idx, BinaryenArrayGet, _compile(ctx, x), Pass(i), gettype(ctx, eltype(T)), Pass(!unsigned))
                 else
@@ -609,12 +606,13 @@ function compile_block(ctx::CompilerContext, cfg::Core.Compiler.CFG, phis, idx)
             modname = "ext"
             funname = node.args[2]
             internalfun = funname[1] == '$'
-            name = internalfun ? funname[2:end] : string(modname, funname)
             nargs = length(node.args) - 4
             jlrettype = eval(node.args[3])
             rettype = gettype(ctx, jlrettype)
+            typeparameters = node.args[4].parameters
+            name = internalfun ? funname[2:end] : string(modname, funname, rettype, typeparameters...)
             sig = node.args[5:end]
-            jparams = [gettype(ctx, T) for T in node.args[4].parameters]
+            jparams = [gettype(ctx, T) for T in typeparameters]
             bparams = BinaryenTypeCreate(jparams, length(jparams))
             args = [_compile(ctx, x) for x in sig]
             if !internalfun
@@ -653,7 +651,7 @@ function compile_block(ctx::CompilerContext, cfg::Core.Compiler.CFG, phis, idx)
                 MI = node.args[1]
                 global newci
                 newci = Base.code_typed_by_type(sig, interp = StaticInterpreter())[1][1]
-                # @show newci
+                _DEBUG_ && @show newci
                 name = string("julia_", node.args[1].def.name)
                 ctx.sigs[name] = sig
                 ctx.names[sig] = name

@@ -9,7 +9,7 @@ NodeCall.initialize(node_args = ["--experimental-wasm-gc"]);
 
 function jsfunctions(funs...)
     wpath = tempname() * ".wasm"
-    compile(funs..., filepath = wpath)
+    compile(funs..., filepath = wpath, experimental = false)
     js = """
     var funs = {};
     (async () => {

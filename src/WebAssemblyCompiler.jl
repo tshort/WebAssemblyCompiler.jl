@@ -21,4 +21,7 @@ include("javascript-interop.jl")
 include("quirks.jl")
 include("julia-compiler.jl")
 
+# This is a kludge. Logging.jl caused a crash.
+_DEBUG_::Bool = false
+
 end

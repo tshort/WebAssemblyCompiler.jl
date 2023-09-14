@@ -3,14 +3,21 @@ export JS
 module JS
 using ..WebAssemblyCompiler: WebAssemblyCompiler, Box
 
-arraynew(n) = Base.llvmcall("jsarraynew", WebAssemblyCompiler.Externref, Tuple{Int32}, n)
-## Use setindex! instead?? If so, need an ArrayRef type
-arraysetf64(jsa, i, x) = Base.llvmcall("jsarraysetf64", Nothing, Tuple{WebAssemblyCompiler.Externref, Int32, Float64}, jsa, Int32(i - 1), x)
-arrayseti32(jsa, i, x) = Base.llvmcall("jsarrayseti32", Nothing, Tuple{WebAssemblyCompiler.Externref, Int32, Int32}, jsa, Int32(i - 1), x)
-arraysetstr(jsa, i, x) = Base.llvmcall("jsarraysetstr", Nothing, Tuple{WebAssemblyCompiler.Externref, Int32, String}, jsa, Int32(i - 1), x)
+arraynew(n) = Base.llvmcall("arraynew", WebAssemblyCompiler.Externref, Tuple{Int32}, n)
+## Use setindex! instead?? If so, need an ArrayRef type?
+set(jsa::WebAssemblyCompiler.Externref, i::Integer, x::T) where T = Base.llvmcall("set", Nothing, Tuple{WebAssemblyCompiler.Externref, Int32, T}, jsa, Int32(i - 1), x)
+set(jsa::WebAssemblyCompiler.Externref, str::String, x::T) where T = Base.llvmcall("set", Nothing, Tuple{WebAssemblyCompiler.Externref, String, T}, jsa, str, x)
+get(jsa::WebAssemblyCompiler.Externref, i::Integer, ::Type{T}) where T = Base.llvmcall("get", T, Tuple{WebAssemblyCompiler.Externref, Int32}, jsa, Int32(i - 1))
+get(jsa::WebAssemblyCompiler.Externref, str::String, ::Type{T}) where T = Base.llvmcall("get", T, Tuple{WebAssemblyCompiler.Externref, String}, jsa, str)
+
+objectnew(n) = Base.llvmcall("objectnew", WebAssemblyCompiler.Externref, Tuple{Int32}, n)
 
 console_log(x) = Base.llvmcall("console_log", Nothing, Tuple{WebAssemblyCompiler.Externref}, x)
-console_log(x::String) = Base.llvmcall("console_log_str", Nothing, Tuple{String}, x)
+console_log(x::String) = Base.llvmcall("console_log", Nothing, Tuple{String}, x)
+
+getelementbyid(x) = Base.llvmcall("getelementbyid", WebAssemblyCompiler.Externref, Tuple{String}, x)
+sethtml(ref::WebAssemblyCompiler.Externref, str) = Base.llvmcall("sethtml", Nothing, Tuple{WebAssemblyCompiler.Externref, String}, ref, str)
+sethtml(id::String, str) = sethtml(getelementbyid(id), str)
 
 eval(x::String) = Base.llvmcall("jseval", WebAssemblyCompiler.Externref, Tuple{String}, x)
 
@@ -20,11 +27,13 @@ function tojs(v::Vector{Any})
     jsa = arraynew(Int32(length(v)))
     for (i, x) in enumerate(v)
         if x isa Box{Float64}
-            arraysetf64(jsa, i, x.x)
+            set(jsa, i, x.x)
         elseif x isa Box{Int32}
-            arrayseti32(jsa, i, x.x)
+            set(jsa, i, x.x)
         elseif x isa Box{String}
-            arraysetstr(jsa, i, x.x)
+            set(jsa, i, x.x)
+        elseif x isa Vector{Any}
+            set(jsa, i, tojs(x))
         end
     end
     return jsa
