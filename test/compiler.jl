@@ -396,6 +396,16 @@ end
     @ccall :libccalltest.set_verbose(x::Int32)::Cvoid
 end
 
+@testitem "Dictionaries" begin
+    using Dictionaries
+    function fdict1(x)
+        d = Dictionary{Int32, Float64}(Int32[Int32(1),Int32(2),Int32(3)], [10.,20.,30.])
+        get(d, 2, -1.0) + x
+    end
+    compile((fdict1, Float64,); filepath = "fdict1.wasm", validate = true)
+    run(`$(WebAssemblyCompiler.Bin.wasmdis()) fdict1.wasm -o fdict1.wat`)
+end
+ 
 @testitem "JavaScript interop" begin
 
     function fjs10(x)

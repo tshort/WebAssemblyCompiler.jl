@@ -21,7 +21,7 @@ sethtml(id::String, str) = sethtml(getelementbyid(id), str)
 
 eval(x::String) = Base.llvmcall("(x) => eval(x)", WebAssemblyCompiler.Externref, Tuple{String}, x)
 
-array_to_string(x) = Base.llvmcall("(x) => x.join('')", String, Tuple{WebAssemblyCompiler.Externref}, x)
+array_to_string(x) = Base.llvmcall("(x) => x.join(\"\")", String, Tuple{WebAssemblyCompiler.Externref}, x)
 
 function tojs(v::Vector{Any})
     jsa = arraynew(Int32(length(v)))
