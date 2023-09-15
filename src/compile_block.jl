@@ -497,6 +497,17 @@ function compile_block(ctx::CompilerContext, cfg::Core.Compiler.CFG, phis, idx)
                 update!(ctx, x)
             end
 
+        elseif matchforeigncall(node, :_jl_array_copyto) do args
+                destbuffer = getbuffer(ctx, args[5])
+                doffs = _compile(ctx, args[6])
+                srcbuffer = getbuffer(ctx, args[7])
+                soffs = _compile(ctx, args[8])
+                n = _compile(ctx, args[9])
+                x = BinaryenArrayCopy(ctx.mod, destbuffer, doffs, srcbuffer, soffs, n)
+                update!(ctx, x)
+                setlocal!(ctx, idx, _compile(ctx, args[5]))
+            end
+
         elseif matchgr(node, :getfield) do x, index
                 T = roottype(ctx, x)
                 if T <: NTuple
@@ -602,6 +613,7 @@ function compile_block(ctx::CompilerContext, cfg::Core.Compiler.CFG, phis, idx)
             if isa(DomainError, T) ||
                isa(InexactError, T) ||
                isa(OverflowError, T) ||
+               isa(AssertionError, T) ||
                isa(Base.throw_domerr_powbysq, T) ||
                isa(Core.throw_inexacterror, T) ||
                isa(Base.Math.throw_complex_domainerror, T)

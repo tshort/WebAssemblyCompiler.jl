@@ -2,7 +2,7 @@
 export compile
 # compile(fun, tt; filepath = "foo.wasm", validate = false, optimize = false) = compile(((fun, tt...),); filepath, validate, optimize)
 
-function compile(funs::Tuple...; filepath = "foo.wasm", validate = false, optimize = false, experimental = true)
+function compile(funs::Tuple...; filepath = "foo.wasm", jspath = filepath * ".js", validate = false, optimize = false, experimental = true)
     cis = Core.CodeInfo[]
     dummyci = code_typed(() -> nothing, Tuple{})[1].first
     ctx = CompilerContext(dummyci; experimental)
@@ -31,6 +31,9 @@ function compile(funs::Tuple...; filepath = "foo.wasm", validate = false, optimi
     write(filepath, unsafe_wrap(Vector{UInt8}, Ptr{UInt8}(out.binary), (out.binaryBytes,)))
     Libc.free(out.binary)
     BinaryenModuleDispose(ctx.mod)
+    jstext = "var jsexports = { js: {} };\n"
+    jstext *= join(["jsexports['js']['$v'] = $v;" for (_,v) in ctx.imports], "\n")
+    write(jspath, jstext)
 end
 
 function compile_method(ctx::CompilerContext; exported = false)

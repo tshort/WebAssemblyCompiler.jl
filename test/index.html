@@ -4,12 +4,17 @@
 <body>
     <p>hello</p>
     <div id="myid"></div>
+    <script src="ftwox.wasm.js"></script> 
     <script type="module">
-      console.log("helo");
-      import { run } from './run.js';
+      export async function run(x) {
+          const response = await fetch('ftwox.wasm');
+          const bytes = await response.arrayBuffer();
+          const { instance } = await WebAssembly.instantiate(bytes, jsexports);
+          const { ftwox } = instance.exports;
+          return ftwox(x)
+      }
       var x = await run(2.0);
       console.log(x);
-      console.log("helo");
     </script>
 </body>
 

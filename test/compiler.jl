@@ -172,6 +172,13 @@ end
     compile((f12, Float64,); filepath = "f12.wasm", validate = true)
     run(`$(WebAssemblyCompiler.Bin.wasmdis()) f12.wasm -o f12.wat`)
 
+    # function f13(x)
+    #     a = [1.,2.,3.]
+    #     a[2] + x
+    # end
+    # compile((f13, Float64,); filepath = "f13.wasm")
+    # run(`$(WebAssemblyCompiler.Bin.wasmdis()) f13.wasm -o f13.wat`)
+
 end
 
 
@@ -231,15 +238,19 @@ end
 
 end
 
-@testitem "ccall" begin
+@testitem "llvmcall" begin
     include("setup.jl")   
 
-    f(x) = @ccall twox(x::Float64)::Float64
-    jsfun = jsfunctions((f, Float64,))
+    ftwox(x) = Base.llvmcall("(x) => 2*x", Float64, Tuple{Float64}, x)
     x = 0.5
-    @test jsfun.f(x) == 2x
+    # compile((ftwox, Float64,); filepath = "ftwox.wasm")
+    # run(`$(WebAssemblyCompiler.Bin.wasmdis()) ftwox.wasm -o ftwox.wat`)
+    jsfun = jsfunctions((ftwox, Float64,))
+    @test jsfun.ftwox(x) == 2x
     
-    mysin(x) = @ccall Math.sin(x::Float64)::Float64
+    mysin(x) = Base.llvmcall("(x) => Math.sin(x)", Float64, Tuple{Float64}, x)
+    # compile((mysin, Float64,); filepath = "mysin.wasm")
+    # run(`$(WebAssemblyCompiler.Bin.wasmdis()) mysin.wasm -o mysin.wat`)
     jsfun = jsfunctions((mysin, Float64,))
     x = 0.5
     @test jsfun.mysin(x) == sin(x)

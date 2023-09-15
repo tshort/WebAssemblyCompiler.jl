@@ -9,27 +9,16 @@ NodeCall.initialize(node_args = ["--experimental-wasm-gc"]);
 
 function jsfunctions(funs...)
     wpath = tempname() * ".wasm"
+    jspath = wpath * ".js"
     compile(funs..., filepath = wpath, experimental = false)
+    jsexports = read(jspath, String)
     js = """
+    $jsexports
     var funs = {};
     (async () => {
         const fs = require('fs');
         const wasmBuffer = fs.readFileSync('$wpath');
-        const {instance} = await WebAssembly.instantiate(wasmBuffer, 
-            {Math: {
-                sin: x => Math.sin(x), 
-                cos: x => Math.cos(x), 
-                tan: x => Math.tan(x), 
-                acos: x => Math.acos(x), 
-                },
-             console: {
-                log: x => console.log(x),
-                error: x => console.error(x),
-             },
-             ext: {
-                console_log: x => console.log(x),
-                twox: x => 2*x
-                }});
+        const { instance } = await WebAssembly.instantiate(wasmBuffer, jsexports);
         funs = instance.exports;
     })();
     """

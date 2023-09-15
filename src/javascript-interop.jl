@@ -12,7 +12,7 @@ get(jsa::WebAssemblyCompiler.Externref, str::String, ::Type{T}) where T = Base.l
 
 objectnew(n) = Base.llvmcall("() => ({})", WebAssemblyCompiler.Externref, Tuple{Int32}, n)
 
-console_log(x) = Base.llvmcall("x => console.log(x)", Nothing, Tuple{WebAssemblyCompiler.Externref}, x)
+console_log(x) = Base.llvmcall("(x) => console.log(x)", Nothing, Tuple{WebAssemblyCompiler.Externref}, x)
 console_log(x::String) = Base.llvmcall("x => console.log(x)", Nothing, Tuple{String}, x)
 
 getelementbyid(x) = Base.llvmcall("(x) => document.getElementById(x)", WebAssemblyCompiler.Externref, Tuple{String}, x)

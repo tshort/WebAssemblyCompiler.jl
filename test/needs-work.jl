@@ -28,3 +28,22 @@
     # y = Int32(7)
     # @test jsfun.nextpow(x,y) == nextpow(x,y)
     # @show jsfun.nextpow(x,y)
+
+    # Needs lots of work
+    using Cobweb
+    using Cobweb: h
+    using OrderedCollections
+    W.@overlay W.MT OrderedCollections.OrderedDict(kv) =
+        OrderedCollections.dict_with_eltype((K, V) -> OrderedDict{K, V}, kv, eltype(kv))
+
+    function fjs18(x)
+        html = string(
+            h.div."some-class"(
+                h.p("This is a child."),
+                h.div("So is this.")))
+        JS.sethtml("myid", html )
+        return x
+    end
+    compile((fjs18, Float64,); filepath = "fjs18.wasm", validate = true)
+    run(`$(WebAssemblyCompiler.Bin.wasmdis()) fjs18.wasm -o fjs18.wat`)
+
