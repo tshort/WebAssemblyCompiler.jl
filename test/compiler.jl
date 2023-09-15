@@ -476,4 +476,14 @@ end
     compile((fjs17, Float64,); filepath = "fjs17.wasm", validate = true)
     run(`$(WebAssemblyCompiler.Bin.wasmdis()) fjs17.wasm -o fjs17.wat`)
 
- end
+    function fjs18(x)
+        a = [1.5, 3.0]
+        jsa = JS.tojs(a)
+        JS.console_log(jsa)
+        return x
+    end
+    compile((fjs18, Float64,); filepath = "fjs18.wasm", validate = true)
+    run(`$(WebAssemblyCompiler.Bin.wasmdis()) fjs18.wasm -o fjs18.wat`)
+
+
+end

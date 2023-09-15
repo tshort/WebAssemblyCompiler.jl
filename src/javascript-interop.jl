@@ -10,6 +10,11 @@ set(jsa::WebAssemblyCompiler.Externref, str::String, x::T) where T = Base.llvmca
 get(jsa::WebAssemblyCompiler.Externref, i::Integer, ::Type{T}) where T = Base.llvmcall("(v, i) => v[i]", T, Tuple{WebAssemblyCompiler.Externref, Int32}, jsa, Int32(i - 1))
 get(jsa::WebAssemblyCompiler.Externref, str::String, ::Type{T}) where T = Base.llvmcall("(v, i) => v[i]", T, Tuple{WebAssemblyCompiler.Externref, String}, jsa, str)
 
+struct TypedArray{T} end
+
+TypedArray{Float64}(n) = Base.llvmcall("n => new Float64Array(n)", WebAssemblyCompiler.Externref, Tuple{Int32}, n)
+TypedArray{Float32}(n) = Base.llvmcall("n => new Float32Array(n)", WebAssemblyCompiler.Externref, Tuple{Int32}, n)
+
 objectnew(n) = Base.llvmcall("() => ({})", WebAssemblyCompiler.Externref, Tuple{Int32}, n)
 
 console_log(x) = Base.llvmcall("(x) => console.log(x)", Nothing, Tuple{WebAssemblyCompiler.Externref}, x)
@@ -35,6 +40,15 @@ function tojs(v::Vector{Any})
         elseif x isa Vector{Any}
             set(jsa, i, tojs(x))
         end
+    end
+    return jsa
+end
+
+# function tojs(v::Vector{T}) where T <: Union{Int64, Int32, UInt64, UInt32, Float64, Float32, Char, Bool, UInt8, Int8}
+function tojs(v::Vector{T}) where T <: Union{Float64, Float32}
+    jsa = TypedArray{T}(Int32(length(v)))
+    for (i, x) in enumerate(v)
+        set(jsa, i, x)
     end
     return jsa
 end
