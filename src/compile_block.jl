@@ -60,7 +60,6 @@ function compile_block(ctx::CompilerContext, cfg::Core.Compiler.CFG, phis, idx)
         node = ci.code[idx]
         _DEBUG_ && @show idx 
         _DEBUG_ && @show node
-        # @show idx, node
 
         if node isa Union{Core.GotoNode, Core.GotoIfNot, Core.PhiNode, Nothing}
             # do nothing
@@ -532,7 +531,8 @@ function compile_block(ctx::CompilerContext, cfg::Core.Compiler.CFG, phis, idx)
         elseif matchgr(node, :getfield) do x, index, bool
                 T = roottype(ctx, x)
                 if T <: NTuple
-                    unsigned = eltype(T) <: Unsigned
+                    # unsigned = eltype(T) <: Unsigned
+                    unsigned = true
                     ## subtract one from i for zero-based indexing in WASM
                     i = BinaryenBinary(ctx.mod, BinaryenAddInt32(), 
                                        _compile(ctx, I32(index)), 
@@ -541,7 +541,8 @@ function compile_block(ctx::CompilerContext, cfg::Core.Compiler.CFG, phis, idx)
                     binaryenfun(ctx, idx, BinaryenArrayGet, _compile(ctx, x), Pass(i), gettype(ctx, eltype(T)), Pass(!unsigned))
                 else
                     eT = Base.datatype_fieldtypes(T)[_compile(ctx, index)]
-                    unsigned = eT <: Unsigned
+                    # unsigned = eT <: Unsigned
+                    unsigned = true
                     binaryenfun(ctx, idx, BinaryenStructGet, UInt32(index - 1), _compile(ctx, x), gettype(ctx, eT), !unsigned, passall = true)
                 end
             end
@@ -567,17 +568,31 @@ function compile_block(ctx::CompilerContext, cfg::Core.Compiler.CFG, phis, idx)
                 jtype = jtype.mod.eval(jtype.name)
             end
             type = BinaryenTypeGetHeapType(gettype(ctx, jtype))
-            x = BinaryenStructNew(ctx.mod, args, nargs, type)
-            binaryenfun(ctx, idx, BinaryenStructNew, args, nargs, type; passall = true)
+            if jtype <: NTuple
+                values = [_compile(ctx, v) for v in node.args[2:end]]
+                N = Int32(length(node.args) - 1)
+                binaryenfun(ctx, idx, BinaryenArrayNewFixed, type, values, N; passall = true)
+            else
+                x = BinaryenStructNew(ctx.mod, args, nargs, type)
+                binaryenfun(ctx, idx, BinaryenStructNew, args, nargs, type; passall = true)
+            end
 
         elseif node isa Expr && node.head == :call && node.args[1] isa GlobalRef && node.args[1].name == :tuple
             ## need to cover NTuple case -> fixed array
-            nargs = UInt32(length(node.args) - 1)
-            args = [_compile(ctx, x) for x in node.args[2:end]]
-            jtype = node.args[1]
-            type = BinaryenTypeGetHeapType(gettype(ctx, jtype))
-            x = BinaryenStructNew(ctx.mod, args, nargs, type)
-            binaryenfun(ctx, idx, BinaryenStructNew, args, nargs, type; passall = true)
+            T = ssatype(ctx, idx)
+            if T <: NTuple
+                arraytype = BinaryenTypeGetHeapType(gettype(ctx, typeof(x)))
+                values = [_compile(ctx, v) for v in node.args[2:end]]
+                N = _compile(ctx, Int32(length(node.args) - 1))
+                binaryenfun(ctx, idx, BinaryenArrayNewFixed, arraytype, values, N; passall = true)
+            else
+                nargs = UInt32(length(node.args) - 1)
+                args = [_compile(ctx, x) for x in node.args[2:end]]
+                jtype = node.args[1]
+                type = BinaryenTypeGetHeapType(gettype(ctx, jtype))
+                x = BinaryenStructNew(ctx.mod, args, nargs, type)
+                binaryenfun(ctx, idx, BinaryenStructNew, args, nargs, type; passall = true)
+            end
 
         elseif node isa Expr && node.head == :call && 
                ((node.args[1] isa GlobalRef && node.args[1].name == :llvmcall) ||

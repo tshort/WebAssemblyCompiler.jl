@@ -7,16 +7,6 @@ const W = WebAssemblyCompiler
 # const WebAssemblyCompiler._DEBUG_ = true
 
 
-#     function f13(x)
-#         a = [1.,2.,x]
-#         a[2] + x
-#     end
-#     compile((f13, Float64,); filepath = "f13.wasm", validate = true)
-#     run(`$(WebAssemblyCompiler.Bin.wasmdis()) f13.wasm -o f13.wat`)
-
-
-# exit()
-
 #     using Dictionaries
     
 #     # compile((Dictionary{Int32,Float64}, Vector{Int32}, Vector{Float64}); filepath = "fdict0.wasm")

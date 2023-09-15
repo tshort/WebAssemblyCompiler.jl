@@ -220,6 +220,16 @@ end
     x = 3.0
     @test f12(x) == jsfun.f12(x)
 
+    function f13(x)
+        a = [1.,2.,x]
+        a[2] + x
+    end
+    compile((f13, Float64,); filepath = "f13.wasm", validate = true)
+    run(`$(WebAssemblyCompiler.Bin.wasmdis()) f13.wasm -o f13.wat`)
+    x = 3.0
+    jsfun = jsfunctions((f13, Float64,))
+    @test f13(x) == jsfun.f13(x)
+
 end
 
 @testitem "Strings" begin
