@@ -39,7 +39,7 @@ matchgr(node, sym) =
 matchcall(node, sym::Symbol) = 
     node isa Expr && node.head == :call && 
     node.args[1] isa GlobalRef && node.args[1].name == sym
-    
+
 matchcall(node, fun) = node isa Expr && node.head == :call && node.args[1] == fun
 
 ## Matches an expression starting with a foreigncall given by `sym`.
@@ -187,7 +187,7 @@ function getbuffer(ctx::CompilerContext, arraywrapper)
 end
 
 function box(ctx::CompilerContext, val, valT)
-    if valT <: Union{Int64, Int32, UInt64, UInt32, Float64, Float32, Char, Bool, UInt8, Int8, String}
+    if valT <: Union{Int64, Int32, UInt64, UInt32, Float64, Float32, Bool, UInt8, Int8, String, Char}
         boxtype = BinaryenTypeGetHeapType(gettype(ctx, Box{valT}))
         return BinaryenStructNew(ctx.mod, [val], UInt32(1), boxtype)
     end         

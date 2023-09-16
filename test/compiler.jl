@@ -525,3 +525,19 @@ end
     run(`$(WebAssemblyCompiler.Bin.wasmdis()) fjs22.wasm -o fjs22.wat`)
 
 end
+
+@testitem "IO" begin
+
+    function fio1(x)
+        io = JS.IOBuff()
+        print(io, x)
+        print(io, " hello", " hello", " world")
+        print(io, " hello", " hello", " world", "1", "2", "3", "4")
+        print(io, "X")
+        JS.console_log(take!(io))
+        return x
+    end
+    compile((fio1, Float64,); filepath = "fio1.wasm", validate = true)
+    run(`$(WebAssemblyCompiler.Bin.wasmdis()) fio1.wasm -o fio1.wat`)
+
+end

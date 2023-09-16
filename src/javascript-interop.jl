@@ -28,9 +28,11 @@ sethtml(id::String, str) = sethtml(getelementbyid(id), str)
 
 eval(x::String) = Base.llvmcall("(x) => eval(x)", WebAssemblyCompiler.Externref, Tuple{String}, x)
 
-array_to_string(x) = Base.llvmcall("(x) => x.join(\"\")", String, Tuple{WebAssemblyCompiler.Externref}, x)
+array_to_string(x::WebAssemblyCompiler.Externref) = Base.llvmcall("(x) => x.join(\"\")", String, Tuple{WebAssemblyCompiler.Externref}, x)
+array_to_string(x::Array) = array_to_string(object(x))
 
 object(x::Union{Int32, Float32, Float64, String, Symbol}) = x
+object(x::Char) = string(x)
 
 function object(v::Vector{Any})
     jsa = arraynew(Int32(length(v)))
@@ -40,6 +42,8 @@ function object(v::Vector{Any})
         elseif x isa Box{Int32}
             set(jsa, i, x.x)
         elseif x isa Box{String}
+            set(jsa, i, x.x)
+        elseif x isa Box{Char}
             set(jsa, i, x.x)
         elseif x isa Vector{Any}
             set(jsa, i, object(x))
@@ -62,7 +66,6 @@ using Unrolled
 @inline @generated function object(nt::NamedTuple)
     ks = fieldnames(nt)
     res = Expr(:block)
-    # push!(res.args, Expr(:meta, :inline))
     push!(res.args, :(jso = objectnew()))
     for k in ks
         sk = String(k)
@@ -70,8 +73,22 @@ using Unrolled
         push!(res.args, :(set(jso, $sk, object(getfield(nt, $qk)))))
     end
     push!(res.args, :(return jso))
-    # @show res
     return res
 end
+
+# Simple IO buffer for printing to strings
+struct IOBuff #<: IO      # subtyping IO causes problems for `print` below
+    x::Vector{Any}
+end
+IOBuff() = IOBuff(Any[])
+
+Base.isreadable(io::IOBuff) = false
+Base.iswritable(io::IOBuff) = true
+
+Base.take!(b::IOBuff) = array_to_string(b.x)
+
+@inline Base.print(io::IOBuff, a)  = push!(io.x, a)
+@inline Base.print(io::IOBuff, a, b)  = (push!(io.x, a); push!(io.x, b))
+@inline Base.print(io::IOBuff, a, b, c...)  = (push!(io.x, a); push!(io.x, b); print(io, c...))
 
 end

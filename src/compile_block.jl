@@ -402,6 +402,7 @@ function compile_block(ctx::CompilerContext, cfg::Core.Compiler.CFG, phis, idx)
                 T <: Integer && sizeof(T) == 8 && Tval <: AbstractFloat ? unaryfun(ctx, idx, (BinaryenReinterpretFloat64,), val) :
                 T <: Integer && sizeof(T) == 4 && Tval <: AbstractFloat ? unaryfun(ctx, idx, (BinaryenReinterpretFloat32,), val) :
                 T <: Integer && Tval <: Integer ? setlocal!(ctx, idx, _compile(ctx, val)) :
+                # T <: Integer && Tval :: Char    ? unaryfun(ctx, idx, (BinaryenReinterpretInt32,), val) :
                 error("Unsupported `bitcast` types, ($T, $Tval)")
             end
 
@@ -520,10 +521,13 @@ function compile_block(ctx::CompilerContext, cfg::Core.Compiler.CFG, phis, idx)
                                    _compile(ctx, Int32(-1)))
                 binaryenfun(ctx, idx, BinaryenArrayGet, _compile(ctx, x), Pass(i), gettype(ctx, eltype(T)), Pass(!unsigned))
             elseif index isa Integer
-                eT = Base.datatype_fieldtypes(T)[index]
-                # unsigned = eT <: Unsigned
-                unsigned = true
-                binaryenfun(ctx, idx, BinaryenStructGet, UInt32(index - 1), _compile(ctx, x), gettype(ctx, eT), !unsigned, passall = true)
+                if length(node.args) == 3   # 2-arg version
+                    eT = Base.datatype_fieldtypes(T)[index]
+                    # unsigned = eT <: Unsigned
+                    unsigned = true
+                    binaryenfun(ctx, idx, BinaryenStructGet, UInt32(index - 1), _compile(ctx, x), gettype(ctx, eT), !unsigned, passall = true)
+                else   # 3-arg version
+                end
             else
                 field = index
                 index = UInt32(findfirst(x -> x == field.value, fieldnames(T)) - 1)
