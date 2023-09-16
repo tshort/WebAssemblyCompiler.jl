@@ -28,16 +28,15 @@
 * [x] Julia arrays
   - [x] Basic wrapper type
   - [x] Add ability to grow an array
-  - [ ] Array copy
+  - [x] Array copy
 * [x] Structs
 * [x] Tuples
 * [x] Strings
   - [ ] concatenate
 * [ ] Unions
-* [ ] Symbols
+* [x] Symbols
 * [ ] svec
 * [x] General type generator
-* [ ] Replicate Julia's type tree with Binaryen's TypeBuilder?
 
 
 ### JS integration
@@ -46,7 +45,9 @@
     - [x] Nested arrays
   - [x] Fix string()
   - [x] Make objects
-  - [ ] Named tuples and structs to objects
+  - [x] Typed arrays
+  - [x] Named tuples to objects
+  - [ ] Structs to objects
 
 
 ### libjulia

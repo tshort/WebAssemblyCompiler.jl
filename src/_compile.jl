@@ -22,7 +22,7 @@ _compile(ctx::CompilerContext, x::Ptr{BinaryenExpression}) = x
 _compile(ctx::CompilerContext, x::String) = getglobal(ctx, x, compiledval = BinaryenStringConst(ctx.mod, x))
 _compile(ctx::CompilerContext, x::GlobalRef) = getglobal(ctx, x.mod, x.name)
 _compile(ctx::CompilerContext, x::QuoteNode) = _compile(ctx, x.value)
-_compile(ctx::CompilerContext, x::Symbol) = _compile(ctx, hash(x))
+_compile(ctx::CompilerContext, x::Symbol) = getglobal(ctx, x, compiledval = BinaryenStringConst(ctx.mod, x))
 
 function _compile(ctx::CompilerContext, x::NTuple{N,T}) where {N,T}
     arraytype = BinaryenTypeGetHeapType(gettype(ctx, typeof(x)))

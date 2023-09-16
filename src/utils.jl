@@ -17,10 +17,8 @@ roottype(ctx::CompilerContext, x::Core.SSAValue) = ctx.ci.ssavaluetypes[x.id]
 ## Matches an expression starting with a GlobalRef given by `sym`.
 ## This is common for intrinsics.
 function matchgr(fun, node, sym; combinedargs = false)
-    match = node isa Expr && length(node.args) > 0 && 
-            ((node.args[1] isa GlobalRef && node.args[1].name == sym) ||
-             (node.args[1] isa Core.IntrinsicFunction && nameof(node.args[1]) == sym))
-    if match
+    match = matchgr(node, sym)
+    if match && fun !== Nothing
         if !combinedargs && length(methods(fun)[1].sig.parameters) != length(node.args)
             return false
         end
@@ -33,6 +31,16 @@ function matchgr(fun, node, sym; combinedargs = false)
     end
     return match
 end
+matchgr(node, sym) = 
+    node isa Expr && length(node.args) > 0 && 
+    ((node.args[1] isa GlobalRef && node.args[1].name == sym) ||
+     (node.args[1] isa Core.IntrinsicFunction && nameof(node.args[1]) == sym))
+
+matchcall(node, sym::Symbol) = 
+    node isa Expr && node.head == :call && 
+    node.args[1] isa GlobalRef && node.args[1].name == sym
+    
+matchcall(node, fun) = node isa Expr && node.head == :call && node.args[1] == fun
 
 ## Matches an expression starting with a foreigncall given by `sym`.
 ## This is common for intrinsics.

@@ -507,26 +507,32 @@ function compile_block(ctx::CompilerContext, cfg::Core.Compiler.CFG, phis, idx)
                 setlocal!(ctx, idx, _compile(ctx, args[5]))
             end
 
-        elseif matchgr(node, :getfield) do x, index
-                T = roottype(ctx, x)
-                if T <: NTuple
-                    # unsigned = eltype(T) <: Unsigned
-                    unsigned = true
-                    ## subtract one from i for zero-based indexing in WASM
-                    i = BinaryenBinary(ctx.mod, BinaryenAddInt32(), 
-                                       _compile(ctx, I32(index)), 
-                                       _compile(ctx, Int32(-1)))
-                    binaryenfun(ctx, idx, BinaryenArrayGet, _compile(ctx, x), Pass(i), gettype(ctx, eltype(T)), Pass(!unsigned))
-                else
-                    field = index
-                    index = UInt32(findfirst(x -> x == field.value, fieldnames(T)) - 1)
-                    eT = Base.datatype_fieldtypes(T)[index + 1]
-                    # unsigned = eT <: Unsigned
-                    unsigned = true
-                    binaryenfun(ctx, idx, BinaryenStructGet, index, _compile(ctx, x), gettype(ctx, eT), !unsigned, passall = true)
-                end
+        elseif matchgr(node, :getfield) || matchcall(node, getfield)
+            x = node.args[2]
+            index = node.args[3]
+            T = roottype(ctx, x)
+            if T <: NTuple
+                # unsigned = eltype(T) <: Unsigned
+                unsigned = true
+                ## subtract one from i for zero-based indexing in WASM
+                i = BinaryenBinary(ctx.mod, BinaryenAddInt32(), 
+                                   _compile(ctx, I32(index)), 
+                                   _compile(ctx, Int32(-1)))
+                binaryenfun(ctx, idx, BinaryenArrayGet, _compile(ctx, x), Pass(i), gettype(ctx, eltype(T)), Pass(!unsigned))
+            elseif index isa Integer
+                eT = Base.datatype_fieldtypes(T)[index]
+                # unsigned = eT <: Unsigned
+                unsigned = true
+                binaryenfun(ctx, idx, BinaryenStructGet, UInt32(index - 1), _compile(ctx, x), gettype(ctx, eT), !unsigned, passall = true)
+            else
+                field = index
+                index = UInt32(findfirst(x -> x == field.value, fieldnames(T)) - 1)
+                eT = Base.datatype_fieldtypes(T)[index + 1]
+                # unsigned = eT <: Unsigned
+                unsigned = true
+                binaryenfun(ctx, idx, BinaryenStructGet, index, _compile(ctx, x), gettype(ctx, eT), !unsigned, passall = true)
             end
-        
+    
         ## 3-arg version of getfield for integer field access
         elseif matchgr(node, :getfield) do x, index, bool
                 T = roottype(ctx, x)
@@ -613,7 +619,7 @@ function compile_block(ctx::CompilerContext, cfg::Core.Compiler.CFG, phis, idx)
                     BinaryenAddFunctionImport(ctx.mod, name, "js", jscode, bparams, rettype)
                     ctx.imports[name] = jscode
                 elseif ctx.imports[name] != name
-                    error("Mismatch in llvmcall import for $name: $sig vs. $(ctx.imports[name]).")
+                    # error("Mismatch in llvmcall import for $name: $sig vs. $(ctx.imports[name]).")
                 end
             end
             x = BinaryenCall(ctx.mod, name, args, nargs, rettype)
