@@ -23,8 +23,8 @@ console_log(x::Symbol) = Base.llvmcall("x => console.log(x)", Nothing, Tuple{Str
 console_log(x) = console_log(object(x))
 
 getelementbyid(x) = Base.llvmcall("(x) => document.getElementById(x)", WebAssemblyCompiler.Externref, Tuple{String}, x)
-sethtml(ref::WebAssemblyCompiler.Externref, str) = Base.llvmcall("(x, str) => x.innerHTML = str", Nothing, Tuple{WebAssemblyCompiler.Externref, String}, ref, str)
-sethtml(id::String, str) = sethtml(getelementbyid(id), str)
+sethtml(ref::WebAssemblyCompiler.Externref, str::String) = Base.llvmcall("(x, str) => x.innerHTML = str", Nothing, Tuple{WebAssemblyCompiler.Externref, String}, ref, str)
+sethtml(id::String, str::String) = sethtml(getelementbyid(id), str)
 
 eval(x::String) = Base.llvmcall("(x) => eval(x)", WebAssemblyCompiler.Externref, Tuple{String}, x)
 
@@ -32,7 +32,7 @@ array_to_string(x::WebAssemblyCompiler.Externref) = Base.llvmcall("(x) => x.join
 array_to_string(x::Array) = array_to_string(object(x))
 
 object(x::Union{Int32, Float32, Float64, String, Symbol}) = x
-object(x::Char) = string(x)
+# object(x::Char) = string(x)
 
 function object(v::Vector{Any})
     jsa = arraynew(Int32(length(v)))
@@ -43,8 +43,8 @@ function object(v::Vector{Any})
             set(jsa, i, x.x)
         elseif x isa Box{String}
             set(jsa, i, x.x)
-        elseif x isa Box{Char}
-            set(jsa, i, x.x)
+        # elseif x isa Box{Char}
+            # set(jsa, i, x.x)
         elseif x isa Vector{Any}
             set(jsa, i, object(x))
         end

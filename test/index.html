@@ -4,14 +4,14 @@
 <body>
     <p>hello</p>
     <div id="myid"></div>
-    <script src="fio1.wasm.js"></script> 
+    <script src="fdict1.wasm.js"></script> 
     <script type="module">
       export async function run(x) {
-          const response = await fetch('fio1.wasm');
+          const response = await fetch('fdict1.wasm');
           const bytes = await response.arrayBuffer();
           const { instance } = await WebAssembly.instantiate(bytes, jsexports);
-          const { fio1 } = instance.exports;
-          return fio1(x)
+          const { fdict1 } = instance.exports;
+          return fdict1(x)
       }
       var x = await run(2.0);
       console.log(x);

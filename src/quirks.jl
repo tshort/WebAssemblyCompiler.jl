@@ -2,7 +2,7 @@ using Base.Experimental: @overlay
 
 macro print_and_throw(err)
     quote
-        console_log($err)
+        JS.console_log($err)
     end
 end
 
@@ -60,42 +60,58 @@ end
 
 @overlay MT Base.hash(x::String) = Int(Base.llvmcall("\$hash-string", Int32, Tuple{String}, x))
 
+# @overlay MT Base.:(==)(s1::String, s2::String) = Bool(Base.llvmcall("\$string-eq", Int32, Tuple{String, String}, s1, s2))
+@overlay MT Base.:(==)(s1::String, s2::String) = true
 
-# # math.jl
-# @device_override @noinline Base.Math.throw_complex_domainerror(f::Symbol, x) =
-#     @print_and_throw c"This operation requires a complex input to return a complex result"
-# @device_override @noinline Base.Math.throw_exp_domainerror(f::Symbol, x) =
-#     @print_and_throw c"Exponentiation yielding a complex result requires a complex argument"
 
-# # intfuncs.jl
-# @device_override @noinline Base.throw_domerr_powbysq(::Any, p) =
-#     @print_and_throw c"Cannot raise an integer to a negative power"
-# @device_override @noinline Base.throw_domerr_powbysq(::Integer, p) =
-#     @print_and_throw c"Cannot raise an integer to a negative power"
-# @device_override @noinline Base.throw_domerr_powbysq(::AbstractMatrix, p) =
-#     @print_and_throw c"Cannot raise an integer to a negative power"
-# @device_override @noinline Base.__throw_gcd_overflow(a, b) =
-#     @print_and_throw c"gcd overflow"
+@overlay MT Base.throw(x) = Int(Base.llvmcall("\$hash-string", Int32, Tuple{String}, x))
 
-# # checked.jl
-# @device_override @noinline Base.Checked.throw_overflowerr_binaryop(op, x, y) =
-#     @print_and_throw c"Binary operation overflowed"
-# @device_override @noinline Base.Checked.throw_overflowerr_negation(op, x, y) =
-#     @print_and_throw c"Negation overflowed"
-# @device_override function Base.Checked.checked_abs(x::Base.Checked.SignedInt)
-#     r = ifelse(x < 0, -x, x)
-#     r < 0 && @print_and_throw(c"checked arithmetic: cannot compute |x|")
-#     r
-# end
 
-# # boot.jl
-# @device_override @noinline Core.throw_inexacterror(f::Symbol, ::Type{T}, val) where {T} =
-#     @print_and_throw c"Inexact conversion"
+#### Error handling
 
-# # abstractarray.jl
-# @device_override @noinline Base.throw_boundserror(A, I) =
-#     @print_and_throw c"Out-of-bounds array access"
+@overlay MT @inline Base.throw(err) = JS.console_log(err)
+@overlay MT @inline Base.DomainError(str) = str
+@overlay MT @inline Base.InexactError(str) = str
+@overlay MT @inline Base.ArgumentError(str) = str
+@overlay MT @inline Base.OverflowError(str) = str
+@overlay MT @inline Base.AssertionError(str) = str
 
-# # trig.jl
-# @device_override @noinline Base.Math.sincos_domain_error(x) =
-#     @print_and_throw c"sincos(x) is only defined for finite x."
+# math.jl
+@overlay MT @inline Base.Math.throw_complex_domainerror(f::Symbol, x) =
+    @print_and_throw "This operation requires a complex input to return a complex result"
+@overlay MT @inline Base.Math.throw_exp_domainerror(f::Symbol, x) =
+    @print_and_throw "Exponentiation yielding a complex result requires a complex argument"
+
+# intfuncs.jl
+@overlay MT @inline Base.throw_domerr_powbysq(::Any, p) =
+    @print_and_throw "Cannot raise an integer to a negative power"
+@overlay MT @inline Base.throw_domerr_powbysq(::Integer, p) =
+    @print_and_throw "Cannot raise an integer to a negative power"
+@overlay MT @inline Base.throw_domerr_powbysq(::AbstractMatrix, p) =
+    @print_and_throw "Cannot raise an integer to a negative power"
+@overlay MT @inline Base.__throw_gcd_overflow(a, b) =
+    @print_and_throw "gcd overflow"
+
+# checked.jl
+@overlay MT @inline Base.Checked.throw_overflowerr_binaryop(op, x, y) =
+    @print_and_throw "Binary operation overflowed"
+@overlay MT @inline Base.Checked.throw_overflowerr_negation(op, x, y) =
+    @print_and_throw "Negation overflowed"
+@overlay MT function Base.Checked.checked_abs(x::Base.Checked.SignedInt)
+    r = ifelse(x < 0, -x, x)
+    r < 0 && @print_and_throw("checked arithmetic: cannot compute |x|")
+    r
+end
+
+# boot.jl
+@overlay MT @inline Core.throw_inexacterror(f::Symbol, ::Type{T}, val) where {T} =
+    @print_and_throw "Inexact conversion"
+
+# abstractarray.jl
+@overlay MT @inline Base.throw_boundserror(A, I) =
+    @print_and_throw "Out-of-bounds array access"
+
+# trig.jl
+@overlay MT @inline Base.Math.sincos_domain_error(x) =
+    @print_and_throw "sincos(x) is only defined for finite x."
+

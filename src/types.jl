@@ -49,7 +49,11 @@ const experimentalwat = raw"""
     (param $s stringref) (result i32)
     (return (string.hash (local.get $s))))
 
-) 
+  (func $string-eq
+    (param $s1 stringref) (param $s2 stringref) (result i32)
+    (return 
+      (string.eq (local.get $s1) (local.get $s2))))
+)
 """
 # The approach above is nice, because WAT is easier to write than Binaryen code.
 # But, the one above errors in NodeCall with the older version of V8. 

@@ -637,6 +637,7 @@ function compile_block(ctx::CompilerContext, cfg::Core.Compiler.CFG, phis, idx)
             T = node.args[1].specTypes.parameters[1]
             if isa(DomainError, T) ||
                isa(InexactError, T) ||
+               isa(ArgumentError, T) ||
                isa(OverflowError, T) ||
                isa(AssertionError, T) ||
                isa(Base.throw_domerr_powbysq, T) ||

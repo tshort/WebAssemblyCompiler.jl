@@ -25,11 +25,16 @@ function compile(funs::Tuple...; filepath = "foo.wasm", jspath = filepath * ".js
         compile_method(CompilerContext(ctx, ci), exported = true)
     end
     _DEBUG_ && BinaryenModulePrint(ctx.mod)
+    # _DEBUG_ && BinaryenModulePrintStackIR(ctx.mod, false)
     validate && BinaryenModuleValidate(ctx.mod)
     optimize && BinaryenModuleOptimize(ctx.mod)
+
     out = BinaryenModuleAllocateAndWrite(ctx.mod, C_NULL)
     write(filepath, unsafe_wrap(Vector{UInt8}, Ptr{UInt8}(out.binary), (out.binaryBytes,)))
     Libc.free(out.binary)
+    out = BinaryenModuleAllocateAndWriteText(ctx.mod)
+    write(filepath * ".wat", unsafe_string(out))
+    Libc.free(out)
     BinaryenModuleDispose(ctx.mod)
     jstext = "var jsexports = { js: {} };\n"
     jstext *= join(["jsexports['js']['$v'] = $v;" for (_,v) in ctx.imports], "\n")
