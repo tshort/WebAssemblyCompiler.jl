@@ -1,3 +1,9 @@
+@static if VERSION ≥ v"1.9-"
+    const CCCallInfo = Core.Compiler.CallInfo
+else
+    const CCCallInfo = Any
+end    
+    
 function update!(ctx::CompilerContext, x, localtype = nothing)
     # TODO: check the type of x, compare that with the wasm type of localtype, and if they differ,
     #       convert one to the other. Hopefully, this is mainly Int32 -> Int64. 
@@ -520,14 +526,14 @@ function compile_block(ctx::CompilerContext, cfg::Core.Compiler.CFG, phis, idx)
                                    _compile(ctx, I32(index)), 
                                    _compile(ctx, Int32(-1)))
                 binaryenfun(ctx, idx, BinaryenArrayGet, _compile(ctx, x), Pass(i), gettype(ctx, eltype(T)), Pass(!unsigned))
-            elseif index isa Integer
-                if length(node.args) == 3   # 2-arg version
+            elseif roottype(ctx, index) <: Integer
+                # if length(node.args) == 3   # 2-arg version
                     eT = Base.datatype_fieldtypes(T)[index]
                     # unsigned = eT <: Unsigned
                     unsigned = true
                     binaryenfun(ctx, idx, BinaryenStructGet, UInt32(index - 1), _compile(ctx, x), gettype(ctx, eT), !unsigned, passall = true)
-                else   # 3-arg version
-                end
+                # else   # 3-arg version
+                # end
             else
                 field = index
                 index = UInt32(findfirst(x -> x == field.value, fieldnames(T)) - 1)
@@ -646,21 +652,33 @@ function compile_block(ctx::CompilerContext, cfg::Core.Compiler.CFG, phis, idx)
                 # skip errors
                 continue
             end
-            nargs = length(node.args) - 2
-            sig = node.args[1].specTypes
-            rettype = gettype(ctx, ssatype(ctx, idx))
+            origsig = node.args[1].specTypes
+            argtypes = [roottype(ctx, x) for x in node.args[3:end]]
+            # Get the specialized method for this invocation
+            TT = Tuple{origsig.parameters[1], argtypes...}
+            match = Base._which(TT)
+            mi = Core.Compiler.specialize_method(match; preexisting=true)
+            sig = mi.specTypes
             args = [_compile(ctx, x) for x in node.args[3:end]]
-            if haskey(ctx.names, sig)
-                name = ctx.names[sig]
-            else
-                MI = node.args[1]
-                newci = Base.code_typed_by_type(sig, interp = StaticInterpreter())[1][1]
-                _DEBUG_ && @show newci
-                name = string("julia_", node.args[1].def.name, sig.parameters[2:end]...)
-                ctx.sigs[name] = sig
-                ctx.names[sig] = name
-                compile_method(CompilerContext(ctx, newci))
+            newci = Base.code_typed_by_type(mi.specTypes, interp = StaticInterpreter())[1][1]
+            newsig = newci.parent.specTypes
+            if origsig.parameters[end] isa Core.TypeofVararg
+                n = length(newci.slottypes[end].parameters)
+                np = newsig.parameters
+                newsig = Tuple{np[1:end-n]..., Tuple{np[end-n+1:end]...}}
+                args = [args[1:end-n]..., _compile(ctx, tuple((x for x in node.args[end-n+1:end])...))]
             end
+            rettype = gettype(ctx, ssatype(ctx, idx))
+            if haskey(ctx.names, newsig)
+                name = ctx.names[newsig]
+            else
+                _DEBUG_ && @show newci
+                name = string("julia_", node.args[1].def.name, newsig.parameters[2:end]...)
+                ctx.sigs[name] = newsig
+                ctx.names[newsig] = name
+                compile_method(CompilerContext(ctx, newci), sig = newsig)
+            end
+            nargs = length(args)
             setlocal!(ctx, idx, BinaryenCall(ctx.mod, name, args, nargs, rettype))
 
         elseif node isa Expr && node.head == :call && node.args[1] isa GlobalRef && node.args[1].name == :isa    # val isa T
@@ -710,7 +728,10 @@ function compile_block(ctx::CompilerContext, cfg::Core.Compiler.CFG, phis, idx)
             
         elseif node isa Expr
             # ignore other expressions for now
+            # println("----------------------------------------------------------------")
             # @show idx node
+            # dump(node)
+            # println("----------------------------------------------------------------")
 
         else
             error("Unsupported Julia construct $node")

@@ -1,7 +1,7 @@
 
 function _compile(ctx::CompilerContext, x::Core.Argument)
     BinaryenLocalGet(ctx.mod, x.n - 2,
-                     gettype(ctx, ctx.ci.parent.specTypes.parameters[x.n]))
+                     gettype(ctx, ctx.ci.slottypes[x.n]))
 end
 function _compile(ctx::CompilerContext, x::Core.SSAValue)   # These come after the function arguments.
     BinaryenLocalGet(ctx.mod, ctx.varmap[x.id],
@@ -63,6 +63,12 @@ function _compile(ctx::CompilerContext, x::T) where T <: Array
     buffer = BinaryenArrayNewFixed(ctx.mod, buffertype, values, length(x))
     wrappertype = BinaryenTypeGetHeapType(gettype(ctx, FakeArrayWrapper{elT}))
     return BinaryenStructNew(ctx.mod, [buffer, _compile(ctx, Int32(length(x)))], 2, wrappertype)
+end
+
+function _compile(ctx::CompilerContext, x::T) where T <: Tuple # general tuples
+    type = BinaryenTypeGetHeapType(gettype(ctx, T))
+    args = [_compile(ctx, x[i]) for i in 1:length(x)]
+    return BinaryenStructNew(ctx.mod, args, length(args), type)
 end
 
 function _compile(ctx::CompilerContext, x::T) where T # general version for structs

@@ -41,10 +41,9 @@ function compile(funs::Tuple...; filepath = "foo.wasm", jspath = filepath * ".js
     write(jspath, jstext)
 end
 
-function compile_method(ctx::CompilerContext; exported = false)
-    sig = ctx.ci.parent.specTypes
+function compile_method(ctx::CompilerContext; sig = ctx.ci.parent.specTypes, exported = false)
     funname = ctx.names[sig]
-    jparams = [gettype(ctx, T) for T in [sig.parameters...][2:end]]
+    jparams = [gettype(ctx, T) for T in sig.parameters[2:end]]
     bparams = BinaryenTypeCreate(jparams, length(jparams))
     results = gettype(ctx, ctx.ci.rettype)
     body = compile_method_body(ctx)

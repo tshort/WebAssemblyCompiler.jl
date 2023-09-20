@@ -42,7 +42,7 @@ end
 end
 # @overlay MT Base.size(x::Vector) = length(x)
 @overlay MT Base._copyto_impl!(dest::Array{T, 1}, doffs::Integer, src::Array{T, 1}, soffs::Integer, n::Integer) where {T} =
-    @ccall _jl_array_copyto(dest::Array{T,1}, doffs::Int32, src::Array{T,1}, soffs::Int32, n::Int32)::Array{T,1}
+    @ccall _jl_array_copyto(dest::Array{T,1}, (doffs-1)::Int32, src::Array{T,1}, (soffs-1)::Int32, n::Int32)::Array{T,1}
 
 @overlay MT Base.string(x...) = JS.array_to_string(JS.object(Any[x...]))
 
@@ -63,9 +63,7 @@ end
 # @overlay MT Base.:(==)(s1::String, s2::String) = Bool(Base.llvmcall("\$string-eq", Int32, Tuple{String, String}, s1, s2))
 @overlay MT Base.:(==)(s1::String, s2::String) = true
 
-
-@overlay MT Base.throw(x) = Int(Base.llvmcall("\$hash-string", Int32, Tuple{String}, x))
-
+# @overlay MT JS.array_to_string(x::Array) = JS.array_to_string(object(x))
 
 #### Error handling
 

@@ -2,16 +2,15 @@
 <html>
 
 <body>
-    <p>hello</p>
     <div id="myid"></div>
-    <script src="fdict1.wasm.js"></script> 
+    <script src="fcw1.wasm.js"></script> 
     <script type="module">
       export async function run(x) {
-          const response = await fetch('fdict1.wasm');
+          const response = await fetch('fcw1.wasm');
           const bytes = await response.arrayBuffer();
           const { instance } = await WebAssembly.instantiate(bytes, jsexports);
-          const { fdict1 } = instance.exports;
-          return fdict1(x)
+          const { fcw1 } = instance.exports;
+          return fcw1(x)
       }
       var x = await run(2.0);
       console.log(x);
