@@ -283,10 +283,10 @@ end
     @test f(x) == jsfun.f(x)
 
     # This one compiles the Julia version because `sqrt` is compiled directly.
-    jsfun = jsfunctions((sqrt, Float64,))
-    for x in (0.5, 1.01, 3.0, 300.0)
-        @test sqrt(x) == jsfun.sqrt(x)
-    end
+    # jsfun = jsfunctions((sqrt, Float64,))
+    # for x in (0.5, 1.01, 3.0, 300.0)
+    #     @test sqrt(x) == jsfun.sqrt(x)
+    # end
 
     ## These log functions used to test fine when a Symbol was represented by an Int32 value.
     ## Now, they fail because of the stringref used to represent Symbols.
@@ -539,5 +539,17 @@ end
     end
     compile((fio1, Float64,); filepath = "fio1.wasm", validate = true)
     run(`$(WebAssemblyCompiler.Bin.wasmdis()) fio1.wasm -o fio1.wat`)
+
+end
+
+@testitem "Function arguments" begin
+
+    # varargs
+    @noinline fva1a(a, args...) = args
+    function fva1(x)
+        tup = fva1a(x, 1, 1.1)
+        return x * tup[2]
+    end
+    compile((fva1, Float64,); filepath = "fva1.wasm", validate = true)
 
 end

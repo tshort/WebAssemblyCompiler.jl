@@ -5,7 +5,15 @@ function ssatype(ctx::CompilerContext, idx)
     ctx.ci.ssavaluetypes[idx]
 end
 
+# Found the type of `x`, specifically if it's a global or argument
+basetype(ctx::CompilerContext, x) = typeof(x)
+basetype(ctx::CompilerContext, x::Type{T}) where T = Type{T}
+basetype(ctx::CompilerContext, x::GlobalRef) = basetype(ctx, eval(x))
+basetype(ctx::CompilerContext, x::Core.Argument) = ctx.ci.parent.specTypes.parameters[x.n]
+basetype(ctx::CompilerContext, x::Core.SSAValue) = ctx.ci.ssavaluetypes[x.id]
+basetype(ctx::CompilerContext, x::QuoteNode) = basetype(ctx, x.value)
 
+# same as basetype, but for types, it returns the type
 roottype(ctx::CompilerContext, x) = typeof(x)
 roottype(ctx::CompilerContext, x::Type{T}) where T = T
 roottype(ctx::CompilerContext, x::GlobalRef) = roottype(ctx, eval(x))
@@ -154,6 +162,7 @@ function compile_inline(ctx::CompilerContext, idx, fun, tt, args, meta = nothing
     return compile_method_body(newctx)
 end
 
+# Not used
 function jlinvoke(ctx::CompilerContext, idx, fun, argtypes, args...; meta = nothing)
     nargs = length(args)
     sig = Tuple{typeof(fun), argtypes...}
@@ -197,3 +206,12 @@ end
 arraydefault(x) = zero(x)
 arraydefault(x::Type{Any}) = Ref(0)
 arraydefault(x::Type{String}) = ""
+
+
+# from Cthulhu
+if isdefined(Core, :kwcall)
+    is_kw_dispatch(meth::Method) = meth.name == :kwcall || Base.unwrap_unionall(meth.sig).parameters[1] === typeof(Core.kwcall) || !isempty(Base.kwarg_decl(meth))
+else
+    is_kw_dispatch(meth::Method) = endswith(string(meth.name), "##kw") || !isempty(Base.kwarg_decl(meth))
+end
+

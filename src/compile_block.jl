@@ -653,12 +653,15 @@ function compile_block(ctx::CompilerContext, cfg::Core.Compiler.CFG, phis, idx)
                 continue
             end
             origsig = node.args[1].specTypes
-            argtypes = [roottype(ctx, x) for x in node.args[3:end]]
+            @show node.args
+            argtypes = [basetype(ctx, x) for x in node.args[3:end]]
+            @show [basetype(ctx, x) for x in node.args[2:end]]
             # Get the specialized method for this invocation
             TT = Tuple{origsig.parameters[1], argtypes...}
             match = Base._which(TT)
             mi = Core.Compiler.specialize_method(match; preexisting=true)
             sig = mi.specTypes
+            @show sig
             args = [_compile(ctx, x) for x in node.args[3:end]]
             newci = Base.code_typed_by_type(mi.specTypes, interp = StaticInterpreter())[1][1]
             newsig = newci.parent.specTypes
