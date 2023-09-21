@@ -1,3 +1,50 @@
+@testitem "Function arguments" begin
+
+    # singleton arg
+    @noinline fargs1a(a, b) = 2a
+    function fargs1(x)
+        y = fargs1a(x, sin)
+        return x * y
+    end
+    compile((fargs1, Float64,); filepath = "fargs1.wasm", validate = true)
+
+    # closures and callable structs
+    struct X
+        a::Float64
+    end
+    @noinline (x::X)(w) = w * x.a 
+    function fargs2(x)
+        y = X(2.0)(x)
+        return x * y
+    end
+    compile((fargs2, Float64,); filepath = "fargs2.wasm", validate = true)
+
+    # keyword args
+    @noinline fargs3a(a; b = 2, c = 5) = a + b
+    function fargs3(x)
+        y = fargs3a(x, b = 1)
+        return x * y
+    end
+    compile((fargs3, Float64,); filepath = "fargs3.wasm", validate = true)
+
+    # keyword varargs
+    @noinline fargs4a(a; b = 2, kw...) = a + b + kw[1]
+    function fargs4(x)
+        y = fargs4a(x, b = 1, c = 9)
+        return x * y
+    end
+    compile((fargs4, Float64,); filepath = "fargs4.wasm", validate = true)
+
+    # varargs
+    @noinline fargs5a(a, args...) = args
+    function fargs5(x)
+        tup = fargs5a(x, 1, 1.1)
+        return x * tup[2]
+    end
+    compile((fargs5, Float64,); filepath = "fargs5.wasm", validate = true)
+
+end
+
 @testitem "Misc" begin
     include("setup.jl")   
 
@@ -5,7 +52,7 @@
         y = Core.bitcast(UInt64, x)
         return Core.bitcast(Float64, y)
     end
-    compile((f13, Float64); filepath = "j.wasm")
+    compile((f13, Float64); filepath = "j.wasm", validate = true)
     x = 3.0
     # @show f13(x)
     jsfun = jsfunctions((f13, Float64,))
@@ -542,14 +589,3 @@ end
 
 end
 
-@testitem "Function arguments" begin
-
-    # varargs
-    @noinline fva1a(a, args...) = args
-    function fva1(x)
-        tup = fva1a(x, 1, 1.1)
-        return x * tup[2]
-    end
-    compile((fva1, Float64,); filepath = "fva1.wasm", validate = true)
-
-end

@@ -3,14 +3,14 @@
 
 <body>
     <div id="myid"></div>
-    <script src="fcw1.wasm.js"></script> 
+    <script src="fargs5.wasm.js"></script> 
     <script type="module">
       export async function run(x) {
-          const response = await fetch('fcw1.wasm');
+          const response = await fetch('fargs5.wasm');
           const bytes = await response.arrayBuffer();
           const { instance } = await WebAssembly.instantiate(bytes, jsexports);
-          const { fcw1 } = instance.exports;
-          return fcw1(x)
+          const { fargs5 } = instance.exports;
+          return fargs5(x)
       }
       var x = await run(2.0);
       console.log(x);

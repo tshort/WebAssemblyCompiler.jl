@@ -1,6 +1,6 @@
 
 function _compile(ctx::CompilerContext, x::Core.Argument)
-    BinaryenLocalGet(ctx.mod, x.n - 2,
+    BinaryenLocalGet(ctx.mod, argmap(ctx, x.n) - 1,
                      gettype(ctx, ctx.ci.slottypes[x.n]))
 end
 function _compile(ctx::CompilerContext, x::Core.SSAValue)   # These come after the function arguments.

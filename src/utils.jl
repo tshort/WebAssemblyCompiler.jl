@@ -1,3 +1,18 @@
+# Return the argument that function matches with the n'th slottype.
+# Unused arguments are skipped. 
+# If the 1st and 4th arguments are unused, argmap(3) == 2 and argmap(6) == 4.
+function argmap(ci, n)
+    used = argsused(ci)
+    return sum(used[1:n])
+end
+
+# Number of arguments, accounting for skipped args.
+nargs(ci) = sum(argsused(ci))
+
+# A Vector{Bool} showing whether arguments are used.
+argsused(ci) = [ci.slotflags[i] & 0x08 > 0 for i in 1:length(ci.slotflags)]
+argsused(ctx::CompilerContext) = argsused(ctx.ci)
+
 specialtype(x) = nothing
 specialtype(::Type{T}) where T <: Val = BinaryenTypeInt64()
 

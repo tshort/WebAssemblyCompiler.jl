@@ -615,7 +615,6 @@ function compile_block(ctx::CompilerContext, cfg::Core.Compiler.CFG, phis, idx)
                 node.args[1] == Core.Intrinsics.llvmcall)
             jscode = node.args[2]
             internalfun = jscode[1] == '$'
-            nargs = length(node.args) - 4
             jlrettype = eval(node.args[3])
             rettype = gettype(ctx, jlrettype)
             typeparameters = node.args[4].parameters
@@ -632,7 +631,7 @@ function compile_block(ctx::CompilerContext, cfg::Core.Compiler.CFG, phis, idx)
                     # error("Mismatch in llvmcall import for $name: $sig vs. $(ctx.imports[name]).")
                 end
             end
-            x = BinaryenCall(ctx.mod, name, args, nargs, rettype)
+            x = BinaryenCall(ctx.mod, name, args, length(args), rettype)
             if jlrettype == Nothing
                 push!(ctx.body, x)
             else
@@ -653,23 +652,27 @@ function compile_block(ctx::CompilerContext, cfg::Core.Compiler.CFG, phis, idx)
                 continue
             end
             origsig = node.args[1].specTypes
-            @show node.args
-            argtypes = [basetype(ctx, x) for x in node.args[3:end]]
-            @show [basetype(ctx, x) for x in node.args[2:end]]
+             node.args
+            argtypes = [basetype(ctx, x) for x in node.args[2:end]]
             # Get the specialized method for this invocation
-            TT = Tuple{origsig.parameters[1], argtypes...}
+            TT = Tuple{argtypes...}
             match = Base._which(TT)
             mi = Core.Compiler.specialize_method(match; preexisting=true)
             sig = mi.specTypes
-            @show sig
-            args = [_compile(ctx, x) for x in node.args[3:end]]
             newci = Base.code_typed_by_type(mi.specTypes, interp = StaticInterpreter())[1][1]
             newsig = newci.parent.specTypes
+            # Filter out unused arguments (slotflag & 0x08)
+            used = argsused(newci)
             if origsig.parameters[end] isa Core.TypeofVararg
+                jargs = node.args[2:length(used)][used[1:end-1]]   # up to the last arg which is a vararg
+                args = [_compile(ctx, x) for x in jargs]
                 n = length(newci.slottypes[end].parameters)
+                push!(args, _compile(ctx, tuple((x for x in node.args[end-n+1:end])...)))
                 np = newsig.parameters
                 newsig = Tuple{np[1:end-n]..., Tuple{np[end-n+1:end]...}}
-                args = [args[1:end-n]..., _compile(ctx, tuple((x for x in node.args[end-n+1:end])...))]
+            else
+                jargs = node.args[2:end][used]
+                args = [_compile(ctx, x) for x in jargs]
             end
             rettype = gettype(ctx, ssatype(ctx, idx))
             if haskey(ctx.names, newsig)
@@ -681,8 +684,7 @@ function compile_block(ctx::CompilerContext, cfg::Core.Compiler.CFG, phis, idx)
                 ctx.names[newsig] = name
                 compile_method(CompilerContext(ctx, newci), sig = newsig)
             end
-            nargs = length(args)
-            setlocal!(ctx, idx, BinaryenCall(ctx.mod, name, args, nargs, rettype))
+            setlocal!(ctx, idx, BinaryenCall(ctx.mod, name, args, length(args), rettype))
 
         elseif node isa Expr && node.head == :call && node.args[1] isa GlobalRef && node.args[1].name == :isa    # val isa T
             T = node.args[3]

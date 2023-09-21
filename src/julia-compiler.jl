@@ -43,7 +43,7 @@ end
 
 function compile_method(ctx::CompilerContext; sig = ctx.ci.parent.specTypes, exported = false)
     funname = ctx.names[sig]
-    jparams = [gettype(ctx, T) for T in sig.parameters[2:end]]
+    jparams = [gettype(ctx, T) for T in collect(sig.parameters)[argsused(ctx)]]
     bparams = BinaryenTypeCreate(jparams, length(jparams))
     results = gettype(ctx, ctx.ci.rettype)
     body = compile_method_body(ctx)
@@ -59,7 +59,7 @@ import Core.Compiler: block_for_inst, compute_basic_blocks
 function compile_method_body(ctx::CompilerContext)
     ci = ctx.ci
     code = ci.code
-    ctx.localidx += length(ci.parent.specTypes.parameters) - 1
+    ctx.localidx += nargs(ci)
     cfg = Core.Compiler.compute_basic_blocks(code)
     relooper = RelooperCreate(ctx.mod)
 

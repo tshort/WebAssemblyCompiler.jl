@@ -6,27 +6,7 @@ include("setup.jl")
 const W = WebAssemblyCompiler
 # const WebAssemblyCompiler._DEBUG_ = true
     
-    # # keyword varargs
-    # @noinline fka2a(a; b = 2, kw...) = a + b + kw[1]
-    # function fka2(x)
-    #     y = fka2a(x, b = 1, c = 9)
-    #     return x * y
-    # end
-    # compile((fka2, Float64,); filepath = "fka2.wasm", validate = true)
 
-    # # keyword args
-    # @noinline fka1a(a; b = 2, c = 5) = a + b
-    # function fka1(x)
-    #     y = fka1a(x, b = 1)
-    #     return x * y
-    # end
-    # compile((fka1, Float64,); filepath = "fka1.wasm", validate = true)
-
-    # # closures and callable structs
-    # struct X
-    #     a::Float64
-    # end
-    # (x::X)(w) = w * x.a 
 
 # exit()
    
