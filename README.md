@@ -62,7 +62,7 @@
 ### Other
 
 * [x] Binaryen optimization
-* [ ] Varargs
+* [x] Varargs
 * [x] jl_array_copy
 * [ ] unsafe_copyto! - needs overlay
 * [ ] Split up tests

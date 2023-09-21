@@ -27,7 +27,7 @@
     # BinaryenModulePrint(mod)
     out = BinaryenModuleAllocateAndWrite(mod, C_NULL)
     
-    write("t.wasm", unsafe_wrap(Vector{UInt8}, Ptr{UInt8}(out.binary), (out.binaryBytes,)))
+    write("tmp/t.wasm", unsafe_wrap(Vector{UInt8}, Ptr{UInt8}(out.binary), (out.binaryBytes,)))
     Libc.free(out.binary)  
 
     # Clean up the mod, which owns all the objects we created above
@@ -37,7 +37,7 @@
     var funs = {};
     (async () => {
         const fs = require('fs');
-        const wasmBuffer = fs.readFileSync('t.wasm');
+        const wasmBuffer = fs.readFileSync('tmp/t.wasm');
         const {instance} = await WebAssembly.instantiate(wasmBuffer);
         funs.adder = instance.exports.adder;
     })();
@@ -47,8 +47,8 @@
     @await p
     @test node"funs.adder(5,6)" == 11
 
-    run(`$(WebAssemblyCompiler.Bin.wasmdis()) t.wasm -o t.wat`)
-    wat = read("t.wat", String)
+    run(`$(WebAssemblyCompiler.Bin.wasmdis()) tmp/t.wasm -o tmp/t.wat`)
+    wat = read("tmp/t.wat", String)
     @test contains(wat, raw"func $0 (param $0 i32) (param $1 i32) (result i32)")
 
 end
@@ -101,18 +101,18 @@ end
     # BinaryenModulePrint(mod)
     out = BinaryenModuleAllocateAndWrite(mod, C_NULL)
     
-    write("t2.wasm", unsafe_wrap(Vector{UInt8}, Ptr{UInt8}(out.binary), (out.binaryBytes,)))
+    write("tmp/t2.wasm", unsafe_wrap(Vector{UInt8}, Ptr{UInt8}(out.binary), (out.binaryBytes,)))
     Libc.free(out.binary)  
 
     # Clean up the mod, which owns all the objects we created above
     BinaryenModuleDispose(mod)
-    run(`$(WebAssemblyCompiler.Bin.wasmdis()) t2.wasm -o t2.wat`)
+    run(`$(WebAssemblyCompiler.Bin.wasmdis()) tmp/t2.wasm -o tmp/t2.wat`)
 
     # js = """
     # var funs = {};
     # (async () => {
     #     const fs = require('fs');
-    #     const wasmBuffer = fs.readFileSync('t.wasm');
+    #     const wasmBuffer = fs.readFileSync('tmp/t.wasm');
     #     const {instance} = await WebAssembly.instantiate(wasmBuffer);
     #     funs.adder = instance.exports.adder;
     # })();
@@ -122,7 +122,7 @@ end
     # @await p
     # @test node"funs.adder(5,6)" == 11
 
-    # run(`$(WebAssemblyCompiler.Bin.wasmdis()) t.wasm -o t.wat`)
+    # run(`$(WebAssemblyCompiler.Bin.wasmdis()) tmp/t.wasm -o tmp/t.wat`)
     # wat = read("t.wat", String)
     # @test contains(wat, raw"func $0 (param $0 i32) (param $1 i32) (result i32)")
 
