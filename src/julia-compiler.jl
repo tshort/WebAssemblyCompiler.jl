@@ -24,7 +24,7 @@ function compile(funs::Tuple...; filepath = "foo.wasm", jspath = filepath * ".js
         _DEBUG_ && @show ci
         compile_method(CompilerContext(ctx, ci), exported = true)
     end
-    _DEBUG_ && BinaryenModulePrint(ctx.mod)
+    # _DEBUG_ && BinaryenModulePrint(ctx.mod)
     # _DEBUG_ && BinaryenModulePrintStackIR(ctx.mod, false)
     validate && BinaryenModuleValidate(ctx.mod)
     optimize && BinaryenModuleOptimize(ctx.mod)

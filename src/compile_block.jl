@@ -652,7 +652,6 @@ function compile_block(ctx::CompilerContext, cfg::Core.Compiler.CFG, phis, idx)
                 continue
             end
             origsig = node.args[1].specTypes
-             node.args
             argtypes = [basetype(ctx, x) for x in node.args[2:end]]
             # Get the specialized method for this invocation
             TT = Tuple{argtypes...}
@@ -661,9 +660,11 @@ function compile_block(ctx::CompilerContext, cfg::Core.Compiler.CFG, phis, idx)
             sig = mi.specTypes
             newci = Base.code_typed_by_type(mi.specTypes, interp = StaticInterpreter())[1][1]
             newsig = newci.parent.specTypes
+            global CI = newci
             # Filter out unused arguments (slotflag & 0x08)
             used = argsused(newci)
-            if origsig.parameters[end] isa Core.TypeofVararg
+            s = node.args[1].def.sig
+            if s isa DataType && s.parameters[end] isa Core.TypeofVararg
                 jargs = node.args[2:length(used)][used[1:end-1]]   # up to the last arg which is a vararg
                 args = [_compile(ctx, x) for x in jargs]
                 n = length(newci.slottypes[end].parameters)
@@ -682,7 +683,8 @@ function compile_block(ctx::CompilerContext, cfg::Core.Compiler.CFG, phis, idx)
                 name = string("julia_", node.args[1].def.name, newsig.parameters[2:end]...)
                 ctx.sigs[name] = newsig
                 ctx.names[newsig] = name
-                compile_method(CompilerContext(ctx, newci), sig = newsig)
+                newci.parent.specTypes = newsig
+                compile_method(CompilerContext(ctx, newci))
             end
             setlocal!(ctx, idx, BinaryenCall(ctx.mod, name, args, length(args), rettype))
 

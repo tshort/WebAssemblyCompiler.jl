@@ -44,6 +44,8 @@ function object(v::Vector{Any})
             set(jsa, i, x.x)
         elseif x isa Box{String}
             set(jsa, i, x.x)
+        # elseif x isa Box{Symbol}
+        #     set(jsa, i, x.x)
         # elseif x isa Box{Char}
             # set(jsa, i, x.x)
         elseif x isa Vector{Any}

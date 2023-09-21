@@ -34,6 +34,7 @@ roottype(ctx::CompilerContext, x::Type{T}) where T = T
 roottype(ctx::CompilerContext, x::GlobalRef) = roottype(ctx, eval(x))
 roottype(ctx::CompilerContext, x::Core.Argument) = ctx.ci.parent.specTypes.parameters[x.n]
 roottype(ctx::CompilerContext, x::Core.SSAValue) = ctx.ci.ssavaluetypes[x.id]
+roottype(ctx::CompilerContext, x::QuoteNode) = roottype(ctx, x.value)
 
 ## Matching helpers
 
@@ -211,7 +212,7 @@ function getbuffer(ctx::CompilerContext, arraywrapper)
 end
 
 function box(ctx::CompilerContext, val, valT)
-    if valT <: Union{Int64, Int32, UInt64, UInt32, Float64, Float32, Bool, UInt8, Int8, String}
+    if valT <: Union{Int64, Int32, UInt64, UInt32, Float64, Float32, Bool, UInt8, Int8, String, Symbol}
         boxtype = BinaryenTypeGetHeapType(gettype(ctx, Box{valT}))
         return BinaryenStructNew(ctx.mod, [val], UInt32(1), boxtype)
     end         

@@ -60,8 +60,7 @@ end
 
 @overlay MT Base.hash(x::String) = Int(Base.llvmcall("\$hash-string", Int32, Tuple{String}, x))
 
-# @overlay MT Base.:(==)(s1::String, s2::String) = Bool(Base.llvmcall("\$string-eq", Int32, Tuple{String, String}, s1, s2))
-@overlay MT Base.:(==)(s1::String, s2::String) = true
+@overlay MT Base.:(==)(s1::String, s2::String) = Bool(Base.llvmcall("\$string-eq", Int32, Tuple{String, String}, s1, s2))
 
 # @overlay MT JS.array_to_string(x::Array) = JS.array_to_string(object(x))
 

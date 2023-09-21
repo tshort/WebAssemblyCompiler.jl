@@ -1,4 +1,5 @@
 @testitem "Function arguments" begin
+    include("setup.jl")   
 
     # singleton arg
     @noinline fargs1a(a, b) = 2a
@@ -6,7 +7,7 @@
         y = fargs1a(x, sin)
         return x * y
     end
-    compile((fargs1, Float64,); filepath = "fargs1.wasm", validate = true)
+    compile((fargs1, Float64,); filepath = "tmp/fargs1.wasm", validate = true)
 
     # closures and callable structs
     struct X
@@ -17,7 +18,7 @@
         y = X(2.0)(x)
         return x * y
     end
-    compile((fargs2, Float64,); filepath = "fargs2.wasm", validate = true)
+    compile((fargs2, Float64,); filepath = "tmp/fargs2.wasm", validate = true)
 
     # keyword args
     @noinline fargs3a(a; b = 2, c = 5) = a + b
@@ -25,7 +26,7 @@
         y = fargs3a(x, b = 1)
         return x * y
     end
-    compile((fargs3, Float64,); filepath = "fargs3.wasm", validate = true)
+    compile((fargs3, Float64,); filepath = "tmp/fargs3.wasm", validate = true)
 
     # keyword varargs
     @noinline fargs4a(a; b = 2, kw...) = a + b + kw[1]
@@ -33,7 +34,7 @@
         y = fargs4a(x, b = 1, c = 9)
         return x * y
     end
-    compile((fargs4, Float64,); filepath = "fargs4.wasm", validate = true)
+    compile((fargs4, Float64,); filepath = "tmp/fargs4.wasm", validate = true)
 
     # varargs
     @noinline fargs5a(a, args...) = args
@@ -41,8 +42,33 @@
         tup = fargs5a(x, 1, 1.1)
         return x * tup[2]
     end
-    compile((fargs5, Float64,); filepath = "fargs5.wasm", validate = true)
+    compile((fargs5, Float64,); filepath = "tmp/fargs5.wasm", validate = true)
 
+    # varargs - 1 arg
+    @noinline fargs6a(a, args...) = args
+    function fargs6(x)
+        tup = fargs6a(x, 1.0)
+        return x * tup[1]
+    end
+    compile((fargs6, Float64,); filepath = "tmp/fargs6.wasm", validate = true)
+    
+    # varargs - 1 arg, splice
+    @noinline fargs7a(a, args...) = (a, args...)
+    function fargs7(x)
+        tup = fargs7a(x, 1.0)
+        return x * tup[1]
+    end
+    compile((fargs7, Float64,); filepath = "tmp/fargs7.wasm", validate = true)
+ 
+    # varargs - 0 args
+    @noinline fargs8a(a, args...) = (a, args...)
+    function fargs8(x)
+        tup = fargs8a(x)
+        return x * tup[1]
+    end
+    compile((fargs8, Float64,); filepath = "tmp/fargs8.wasm", validate = true)  # type error in Chrome
+    compile((fargs8, Float64,); filepath = "tmp/fargs8.wasm", validate = true, optimize = true)
+    
 end
 
 @testitem "Misc" begin
@@ -52,7 +78,7 @@ end
         y = Core.bitcast(UInt64, x)
         return Core.bitcast(Float64, y)
     end
-    compile((f13, Float64); filepath = "j.wasm", validate = true)
+    compile((f13, Float64); filepath = "tmp/f13.wasm", validate = true)
     x = 3.0
     # @show f13(x)
     jsfun = jsfunctions((f13, Float64,))
@@ -67,7 +93,7 @@ end
         a = x + y
         a + 1
     end
-    # compile((fb1, Float64,Float64); filepath = "j.wasm")
+    # compile((fb1, Float64,Float64); filepath = "tmp/fb1.wasm")
     jsfun = jsfunctions((fb1, Float64,Float64))
     @test fb1(3.0, 4.0) == jsfun.fb1(3.0, 4.0)
     jsfun = jsfunctions((fb1, Int32,Int32))
@@ -133,8 +159,7 @@ end
     function fb7(x,y)
         x + twox(y)
     end
-    compile((fb7, Float64,Float64); filepath = "j.wasm")
-    # run(`$(WebAssemblyCompiler.Bin.wasmdis()) j.wasm -o j.wat`)
+    compile((fb7, Float64,Float64); filepath = "tmp/fb7.wasm")
     jsfun = jsfunctions((fb7, Float64,Float64))
     @test fb7(3.0, 4.0) == jsfun.fb7(3.0, 4.0)
 
@@ -148,8 +173,7 @@ end
 
     @noinline fb9a(x, ::Type{I}) where {I} = I === Int ? 1.0 * x : 5.0 * x
     fb9(x) = fb9a(x, Float64) * x
-    compile((fb9, Float64); filepath = "fb9.wasm")
-    run(`$(WebAssemblyCompiler.Bin.wasmdis()) fb9.wasm -o fb9.wat`)
+    compile((fb9, Float64); filepath = "tmp/fb9.wasm")
     jsfun = jsfunctions((fb9, Float64))
     @test fb9(3.0) == jsfun.fb9(3.0)
 
@@ -163,8 +187,7 @@ end
         @inbounds a[i] = 3.0
         @inbounds a[i]
     end
-    compile((f8, Int32,); filepath = "j.wasm")
-    run(`$(WebAssemblyCompiler.Bin.wasmdis()) j.wasm -o j.wat`)
+    compile((f8, Int32,); filepath = "tmp/j.wasm")
     jsfun = jsfunctions((f8, Int32,))
     @test f8(Int32(3)) == jsfun.f8(Int32(3))
 
@@ -172,8 +195,7 @@ end
         a = Array{Float64,1}(undef, Int32(i))
         unsafe_trunc(Int32, length(a))
     end
-    compile((f9, Int32,); filepath = "j.wasm")
-    run(`$(WebAssemblyCompiler.Bin.wasmdis()) j.wasm -o j.wat`)
+    compile((f9, Int32,); filepath = "tmp/j.wasm")
     ## BROKEN
     # jsfun = jsfunctions((f9, Int32,))
     # @test f9(Int32(3)) == jsfun.f9(Int32(3))
@@ -186,8 +208,7 @@ end
         a = Array{Float64, 1}(undef, 3)
         f10a(a) + x
     end
-    compile((f10, Float64,); filepath = "j.wasm")
-    run(`$(WebAssemblyCompiler.Bin.wasmdis()) j.wasm -o j.wat`)
+    compile((f10, Float64,); filepath = "tmp/j.wasm")
     jsfun = jsfunctions((f10, Float64,))
     x = 3.0
     @test f10(x) == jsfun.f10(x)
@@ -197,8 +218,7 @@ end
         b = copy(a)
         b[2] * x
     end
-    compile((f11, Float64,); filepath = "arraycopy.wasm", validate = true)
-    run(`$(WebAssemblyCompiler.Bin.wasmdis()) arraycopy.wasm -o arraycopy.wat`)
+    compile((f11, Float64,); filepath = "tmp/arraycopy.wasm", validate = true)
     # In NodeCall: Compiling function #0 failed: invalid array index.
     # Works in the browser.
     # jsfun = jsfunctions((f11, Float64,))
@@ -216,15 +236,13 @@ end
         return @inbounds x * a[6]
     end
     x = 2.0
-    compile((f12, Float64,); filepath = "f12.wasm", validate = true)
-    run(`$(WebAssemblyCompiler.Bin.wasmdis()) f12.wasm -o f12.wat`)
+    compile((f12, Float64,); filepath = "tmp/f12.wasm", validate = true)
 
     # function f13(x)
     #     a = [1.,2.,3.]
     #     a[2] + x
     # end
-    # compile((f13, Float64,); filepath = "f13.wasm")
-    # run(`$(WebAssemblyCompiler.Bin.wasmdis()) f13.wasm -o f13.wat`)
+    # compile((f13, Float64,); filepath = "tmp/f13.wasm")
 
 end
 
@@ -238,57 +256,53 @@ end
         c::C
     end
 
-    @noinline function f11a(y)
+    @noinline function fstructs1a(y)
         X(y, 2y, 3y)
     end
-    function f11(x)
-        x = f11a(x)
+    function fstructs1(x)
+        x = fstructs1a(x)
         x.c + 1
     end
     # x = X(1., 2., 3.)
-    compile((f11, Float64,); filepath = "j.wasm")
-    run(`$(WebAssemblyCompiler.Bin.wasmdis()) j.wasm -o j.wat`)
-    jsfun = jsfunctions((f11, Float64,))
+    compile((fstructs1, Float64,); filepath = "tmp/j.wasm")
+    jsfun = jsfunctions((fstructs1, Float64,))
     x = 3.0
-    @test f11(x) == jsfun.f11(x)
+    @test fstructs1(x) == jsfun.fstructs1(x)
 
-    @noinline function f12a(y)
+    @noinline function fstructs2a(y)
         x = X(y, 2y, 3y)
         x.b = x.c
         x
     end
-    function f12(x)
-        y = f12a(x)
+    function fstructs2(x)
+        y = fstructs2a(x)
         y.c + 1
     end
-    compile((f12, Float64); filepath = "j.wasm")
-    # run(`$(WebAssemblyCompiler.Bin.wasmdis()) j.wasm -o j.wat`)
-    jsfun = jsfunctions((f12, Float64,))
+    compile((fstructs2, Float64); filepath = "tmp/j.wasm")
+    jsfun = jsfunctions((fstructs2, Float64,))
     x = 3.0
-    @test f12(x) == jsfun.f12(x)
+    @test fstructs2(x) == jsfun.fstructs2(x)
 
-    function f13(x)
+    function fstructs3(x)
         a = [1.,2.,x]
         a[2] + x
     end
-    compile((f13, Float64,); filepath = "f13.wasm", validate = true)
-    run(`$(WebAssemblyCompiler.Bin.wasmdis()) f13.wasm -o f13.wat`)
+    compile((fstructs3, Float64,); filepath = "tmp/fstructs3.wasm", validate = true)
     x = 3.0
-    jsfun = jsfunctions((f13, Float64,))
-    @test f13(x) == jsfun.f13(x)
+    jsfun = jsfunctions((fstructs3, Float64,))
+    @test fstructs3(x) == jsfun.fstructs3(x)
 
 end
 
 @testitem "Strings" begin
     include("setup.jl")   
 
-    function f(x)
+    function fstrings1(x)
         a = "hello"
         @ccall console.log(a::String)::Cvoid
         return x
     end
-    compile((f, Float64,); filepath = "string.wasm")
-    run(`$(WebAssemblyCompiler.Bin.wasmdis()) string.wasm -o string.wat`)
+    compile((fstrings1, Float64,); filepath = "tmp/fstrings1.wasm")
     ## NodeCall doesn't work because its version of Node doesn't support stringrefs.
     # jsfun = jsfunctions((f, Float64,))
     # jsfun.f(1.0)
@@ -300,24 +314,16 @@ end
 
     ftwox(x) = Base.llvmcall("(x) => 2*x", Float64, Tuple{Float64}, x)
     x = 0.5
-    # compile((ftwox, Float64,); filepath = "ftwox.wasm")
-    # run(`$(WebAssemblyCompiler.Bin.wasmdis()) ftwox.wasm -o ftwox.wat`)
+    # compile((ftwox, Float64,); filepath = "tmp/ftwox.wasm")
     jsfun = jsfunctions((ftwox, Float64,))
     @test jsfun.ftwox(x) == 2x
     
     mysin(x) = Base.llvmcall("(x) => Math.sin(x)", Float64, Tuple{Float64}, x)
-    # compile((mysin, Float64,); filepath = "mysin.wasm")
-    # run(`$(WebAssemblyCompiler.Bin.wasmdis()) mysin.wasm -o mysin.wat`)
+    # compile((mysin, Float64,); filepath = "tmp/mysin.wasm")
     jsfun = jsfunctions((mysin, Float64,))
     x = 0.5
     @test jsfun.mysin(x) == sin(x)
 
-end
-
-
-@testitem "JavaScript interop" begin
-    include("setup.jl")   
-   
 end
 
 @testitem "Math" begin
@@ -365,14 +371,13 @@ end
     include("setup.jl")   
 
     const tpl = (1.,2.,3.)
-    function f1(x)
+    function ftuples1(x)
         @inbounds tpl[x]
     end
-    compile((f1, Int32,); filepath = "j.wasm")
-    run(`$(WebAssemblyCompiler.Bin.wasmdis()) j.wasm -o j.wat`)
-    jsfun = jsfunctions((f1, Int32,))
+    compile((ftuples1, Int32,); filepath = "tmp/j.wasm")
+    jsfun = jsfunctions((ftuples1, Int32,))
     x = Int32(1)
-    @test f1(x) == jsfun.f1(x)
+    @test ftuples1(x) == jsfun.ftuples1(x)
 
 end
 
@@ -380,18 +385,16 @@ end
     include("setup.jl")   
 
     const a = [1.,2.,3.,4.]
-    f1(i) = @inbounds length(a)
-    compile((f1, Int32,); filepath = "globalarray.wasm", validate = true)
-    run(`$(WebAssemblyCompiler.Bin.wasmdis()) globalarray.wasm -o globalarray.wat`)
+    fglobals1(i) = @inbounds length(a)
+    compile((fglobals1, Int32,); filepath = "tmp/fglobals1.wasm", validate = true)
     # works in browser!
-    # jsfun = jsfunctions((f1, Int32,))
-    # @test jsfun.f1(1) == f1(1)
+    # jsfun = jsfunctions((fglobals1, Int32,))
+    # @test jsfun.fglobals1(1) == fglobals1(1)
 
-    f2(i) = @inbounds a[i]
-    compile((f2, Int32,); filepath = "globalarray2.wasm", validate = true, optimize = true)
-    run(`$(WebAssemblyCompiler.Bin.wasmdis()) globalarray2.wasm -o globalarray2.wat`)
-    jsfun = jsfunctions((f2, Int32,))
-    @test jsfun.f2(1) == f2(1)
+    fglobals2(i) = @inbounds a[i]
+    compile((fglobals2, Int32,); filepath = "tmp/fglobals2.wasm", validate = true, optimize = true)
+    jsfun = jsfunctions((fglobals2, Int32,))
+    @test jsfun.fglobals2(1) == fglobals2(1)
     
     struct Y
         a::Float64
@@ -403,8 +406,7 @@ end
     end
     const x = Z(Y(1.,2.), 3.)
     g1(i) = x.a.a
-    compile((g1, Int32,); filepath = "globalcombo.wasm")
-    run(`$(WebAssemblyCompiler.Bin.wasmdis()) globalcombo.wasm -o globalcombo.wat`)
+    compile((g1, Int32,); filepath = "tmp/globalcombo.wasm")
     jsfun = jsfunctions((g1, Int32,))
     @test jsfun.g1(1) == g1(1)
 
@@ -416,15 +418,13 @@ end
     end
     const xx = X([1.,2.], [5., 6.], 3.)
     g1(i) = xx.b[i]
-    compile((g1, Int32,); filepath = "globalcombo2.wasm")
-    run(`$(WebAssemblyCompiler.Bin.wasmdis()) globalcombo2.wasm -o globalcombo2.wat`)
+    compile((g1, Int32,); filepath = "tmp/globalcombo2.wasm")
     jsfun = jsfunctions((g1, Int32,))
     @test jsfun.g1(1) == g1(1)
     # @show jsfun.g1(2)
 
     g2(i) = xx.b[i] + length(xx.a)
-    compile((g2, Int32,); filepath = "globalcombo3.wasm")
-    run(`$(WebAssemblyCompiler.Bin.wasmdis()) globalcombo3.wasm -o globalcombo3.wat`)
+    compile((g2, Int32,); filepath = "tmp/globalcombo3.wasm")
     # jsfun = jsfunctions((g2, Int32,))
     # @test jsfun.g2(1) == g2(1)
     # @show jsfun.g2(2)
@@ -432,8 +432,7 @@ end
 
     const d = Dict{Int32,Int32}(1 => 10, 2 => 20, 3 => 30, 4 => 40)
     f(i) = get(d, i, Int32(-1))
-    compile((f, Int32,); filepath = "dict.wasm")
-    run(`$(WebAssemblyCompiler.Bin.wasmdis()) dict.wasm -o dict.wat`)
+    compile((f, Int32,); filepath = "tmp/dict.wasm")
     # works in browser!
     # jsfun = jsfunctions((f, Int32,))
     # @show jsfun.f(1)
@@ -441,20 +440,13 @@ end
 end
  
 
-@testitem "Test" begin
-    ccall((:set_verbose, :libccalltest), Cvoid, (Int32,), false)
-    x = false
-    @ccall :libccalltest.set_verbose(x::Int32)::Cvoid
-end
-
 @testitem "Dictionaries" begin
     using Dictionaries
     function fdict1(x)
         d = Dictionary{Int32, Float64}(Int32[Int32(1),Int32(2),Int32(3)], [10.,20.,30.])
         get(d, 2, -1.0) + x
     end
-    compile((fdict1, Float64,); filepath = "fdict1.wasm", validate = true)
-    run(`$(WebAssemblyCompiler.Bin.wasmdis()) fdict1.wasm -o fdict1.wat`)
+    compile((fdict1, Float64,); filepath = "tmp/fdict1.wasm", validate = true)
 end
  
 @testitem "JavaScript interop" begin
@@ -467,8 +459,7 @@ end
         JS.console_log(jsa)
         return x
     end
-    compile((fjs10, Float64,); filepath = "fjs10.wasm", validate = true)
-    run(`$(WebAssemblyCompiler.Bin.wasmdis()) fjs10.wasm -o fjs10.wat`)
+    compile((fjs10, Float64,); filepath = "tmp/fjs10.wasm", validate = true)
 
     function fjs11(x)
         a = Any[1.5, Int32(2), "hello"]
@@ -476,47 +467,40 @@ end
         JS.console_log(jsa)
         return x
     end
-    compile((fjs11, Float64,); filepath = "fjs11.wasm", validate = true)
-    run(`$(WebAssemblyCompiler.Bin.wasmdis()) fjs11.wasm -o fjs11.wat`)
-    compile((fjs11, Float64,); filepath = "fjs11o.wasm", optimize = true)
-    run(`$(WebAssemblyCompiler.Bin.wasmdis()) fjs11o.wasm -o fjs11o.wat`)
+    compile((fjs11, Float64,); filepath = "tmp/fjs11.wasm", validate = true)
+    compile((fjs11, Float64,); filepath = "tmp/fjs11o.wasm", optimize = true)
      
     function fjs12(x)
         JS.console_log(string("hello", "world"))
         return x
     end
-    compile((fjs12, Float64,); filepath = "fjs12.wasm", validate = true)
-    run(`$(WebAssemblyCompiler.Bin.wasmdis()) fjs12.wasm -o fjs12.wat`)
+    compile((fjs12, Float64,); filepath = "tmp/fjs12.wasm", validate = true)
 
 
     function fjs13(x)
         JS.eval("console.log('hello world')")
         return x
     end
-    compile((fjs13, Float64,); filepath = "fjs13.wasm", validate = true)
-    run(`$(WebAssemblyCompiler.Bin.wasmdis()) fjs13.wasm -o fjs13.wat`)
+    compile((fjs13, Float64,); filepath = "tmp/fjs13.wasm", validate = true)
 
     function fjs14(x)
         y = hash("hello")
         return Float64(y) + x
     end
-    compile((fjs14, Float64,); filepath = "fjs14.wasm", validate = true)
-    run(`$(WebAssemblyCompiler.Bin.wasmdis()) fjs14.wasm -o fjs14.wat`)
+    compile((fjs14, Float64,); filepath = "tmp/fjs14.wasm", validate = true)
 
     function fjs15(x)
         y = JS.getelementbyid("myid")
         JS.sethtml(y, "hello <strong>world</strong>")
         return x
     end
-    compile((fjs15, Float64,); filepath = "fjs15.wasm", validate = true)
-    run(`$(WebAssemblyCompiler.Bin.wasmdis()) fjs15.wasm -o fjs15.wat`)
+    compile((fjs15, Float64,); filepath = "tmp/fjs15.wasm", validate = true)
 
     function fjs16(x)
         JS.sethtml("myid", "hello <strong>world</strong>")
         return x
     end
-    compile((fjs16, Float64,); filepath = "fjs16.wasm", validate = true)
-    run(`$(WebAssemblyCompiler.Bin.wasmdis()) fjs16.wasm -o fjs16.wat`)
+    compile((fjs16, Float64,); filepath = "tmp/fjs16.wasm", validate = true)
 
     function fjs17(x)
         a = Any[1.5, Int32(2), "hello", Any[1.5, "world"]]
@@ -524,8 +508,7 @@ end
         JS.console_log(jsa)
         return x
     end
-    compile((fjs17, Float64,); filepath = "fjs17.wasm", validate = true)
-    run(`$(WebAssemblyCompiler.Bin.wasmdis()) fjs17.wasm -o fjs17.wat`)
+    compile((fjs17, Float64,); filepath = "tmp/fjs17.wasm", validate = true)
 
     function fjs18(x)
         a = [1.5, 3.0]
@@ -533,8 +516,7 @@ end
         JS.console_log(jsa)
         return x
     end
-    compile((fjs18, Float64,); filepath = "fjs18.wasm", validate = true)
-    run(`$(WebAssemblyCompiler.Bin.wasmdis()) fjs18.wasm -o fjs18.wat`)
+    compile((fjs18, Float64,); filepath = "tmp/fjs18.wasm", validate = true)
 
     function fjs19(x)
         a = :Hello
@@ -542,8 +524,7 @@ end
         JS.console_log(jso)
         return x
     end
-    compile((fjs19, Float64,); filepath = "fjs19.wasm", validate = true)
-    run(`$(WebAssemblyCompiler.Bin.wasmdis()) fjs19.wasm -o fjs19.wat`)
+    compile((fjs19, Float64,); filepath = "tmp/fjs19.wasm", validate = true)
 
     function fjs20(x)
         a = 1.3
@@ -551,15 +532,13 @@ end
         JS.console_log(jso)
         return x
     end
-    compile((fjs20, Float64,); filepath = "fjs20.wasm", validate = true)
-    run(`$(WebAssemblyCompiler.Bin.wasmdis()) fjs20.wasm -o fjs20.wat`)
+    compile((fjs20, Float64,); filepath = "tmp/fjs20.wasm", validate = true)
 
     function fjs21(x)
         JS.console_log(:Cheers)
         return x
     end
-    compile((fjs21, Float64,); filepath = "fjs21.wasm", validate = true)
-    run(`$(WebAssemblyCompiler.Bin.wasmdis()) fjs21.wasm -o fjs21.wat`)
+    compile((fjs21, Float64,); filepath = "tmp/fjs21.wasm", validate = true)
 
     function fjs22(x)
         a = (a = 1.5, b = Int32(3), c = "hello", d = (x = x, y = 22.0))
@@ -567,9 +546,7 @@ end
         JS.console_log(jso)
         return x
     end
-    compile((fjs22, Float64,); filepath = "fjs22.wasm", validate = true)
-    # compile((fjs22, Float64,); filepath = "fjs22.wasm", validate = true)
-    run(`$(WebAssemblyCompiler.Bin.wasmdis()) fjs22.wasm -o fjs22.wat`)
+    compile((fjs22, Float64,); filepath = "tmp/fjs22.wasm", validate = true)
 
 end
 
@@ -584,8 +561,52 @@ end
         JS.console_log(take!(io))
         return x
     end
-    compile((fio1, Float64,); filepath = "fio1.wasm", validate = true)
-    run(`$(WebAssemblyCompiler.Bin.wasmdis()) fio1.wasm -o fio1.wat`)
+    compile((fio1, Float64,); filepath = "tmp/fio1.wasm", validate = true)
 
 end
 
+@testitem "Cobweb" begin
+    # ## Commented out because it won't work with the released Cobweb
+    # using Cobweb: h, Node
+    # using Cobweb
+
+    # function JS.sethtml(id, n::Cobweb.Node)
+    #     io = JS.IOBuff()
+    #     print(io, n)
+    #     str = take!(io)
+    #     JS.sethtml(id, str)
+    #     nothing
+    # end
+
+    # function tostring(n::Cobweb.Node)
+    #     io = JS.IOBuff()
+    #     print(io, n)
+    #     take!(io)
+    # end
+    # @inline Base.print(io::JS.IOBuff, a::Node) = show(io, a)
+
+    # function fcw1(x)
+    #     n = h("div", "jkl", h("strong", "!!!!!", "xxxx"), class = "myclass")
+    #     n = h("div", "hi", "abc", x, n, class = "myclass2")
+    #     JS.sethtml("myid", tostring(n))
+    #     return x
+    # end
+    # # ## This version crashes Julia:
+    # # function fcw1(_x)
+    # #     n = h("div", "jkl", h("strong", "!!!!!", "xxxx"), class = "myclass")
+    # #     n = h("div", "hi", "abc", _x, n, class = "myclass2")
+    # #     JS.sethtml("myid", n)
+    # #     return _x
+    # # end
+    # compile((fcw1, Float64,); filepath = "tmp/fcw1.wasm", validate = true)
+    # function fcw2(x)
+    #     snip = h("div",
+    #              h.h1("Hello there"),
+    #              h.p("This is some ", h.strong("strong text")),
+    #              h.p("more text", class = "myclass"))
+    #     JS.sethtml("myid", tostring(snip))
+    #     return x
+    # end
+    # compile((fcw2, Float64,); filepath = "tmp/fcw2.wasm", validate = true)
+
+end

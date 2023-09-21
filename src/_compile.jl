@@ -66,7 +66,8 @@ function _compile(ctx::CompilerContext, x::T) where T <: Array
 end
 
 function _compile(ctx::CompilerContext, x::T) where T <: Tuple # general tuples
-    type = BinaryenTypeGetHeapType(gettype(ctx, T))
+    TT = Tuple{(roottype(ctx, v) for v in x)...}
+    type = BinaryenTypeGetHeapType(gettype(ctx, TT))
     args = [_compile(ctx, x[i]) for i in 1:length(x)]
     return BinaryenStructNew(ctx.mod, args, length(args), type)
 end
