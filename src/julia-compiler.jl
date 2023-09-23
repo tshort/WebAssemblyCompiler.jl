@@ -37,7 +37,8 @@ function compile(funs::Tuple...; filepath = "foo.wasm", jspath = filepath * ".js
     Libc.free(out)
     BinaryenModuleDispose(ctx.mod)
     jstext = "var jsexports = { js: {} };\n"
-    jstext *= join(["jsexports['js']['$v'] = $v;" for (_,v) in ctx.imports], "\n")
+    imports = unique(values(ctx.imports))
+    jstext *= join(["jsexports['js']['$v'] = $v;" for v in imports], "\n")
     write(jspath, jstext)
 end
 

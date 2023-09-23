@@ -20,7 +20,7 @@ function ssatype(ctx::CompilerContext, idx)
     ctx.ci.ssavaluetypes[idx]
 end
 
-# Found the type of `x`, specifically if it's a global or argument
+# Find the type of `x`, specifically if it's a global or argument
 basetype(ctx::CompilerContext, x) = typeof(x)
 basetype(ctx::CompilerContext, x::Type{T}) where T = Type{T}
 basetype(ctx::CompilerContext, x::GlobalRef) = basetype(ctx, eval(x))

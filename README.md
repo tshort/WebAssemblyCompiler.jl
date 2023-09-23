@@ -2,7 +2,24 @@
 
 [![Build Status](https://github.com/tshort/WebAssemblyCompiler.jl/actions/workflows/CI.yml/badge.svg?branch=main)](https://github.com/tshort/WebAssemblyCompiler.jl/actions/workflows/CI.yml?query=branch%3Amain)
 
+## API
 
+* `compile`
+
+## API for Browser/Javascript Interoperability
+
+* `@jscall`
+* `JS.object()`
+* `JS.eval()`
+* `JS.console_log()`
+
+### Experimental API's
+
+* `JS.sethtml`
+* `JS.getelementbyid`
+* `JS.h`
+* `JS.escape`
+* `JS.@esc_str`
 
 ## TODO
 
@@ -121,10 +138,10 @@ The downsides of this approach are:
 
 ## Notes
 
-* WebAssembly's Tuples and Structs cannot be indexed dynamically. Only fixed integer indexing works. One strategy is to map Tuples as follows:
+* WebAssembly's Tuples and Structs cannot be indexed dynamically. Only fixed integer indexing works. So, Tuples are mapped as follows:
   - NTuple -> WebAssembly's Fixed Array
-  - Tuple -> WebAssembly's Tuple or Struct. Struct will GC. Tuple is more for handling multiple return values. The only option for dynamic indexing is some sort of table lookup.  
+  - Tuple -> WebAssembly's Tuple or Struct. The Struct will GC. WebAssembly's Tuple is more for handling multiple return values. The only option for dynamic indexing is some sort of table lookup.  
 
-* There is no equivalent of Tuples for StaticArrays. There are Fixed Arrays that are heap allocated. Maybe the browser can convert some of those to stack values. Something like [Bumper](https://github.com/MasonProtter/Bumper.jl) could substitute for stack allocation.
+* There is no equivalent of stack-allocated Tuples for StaticArrays. There are Fixed Arrays that are heap allocated. Maybe the browser can convert some of those to stack values. Something like [Bumper](https://github.com/MasonProtter/Bumper.jl) could substitute for stack allocation.
 
-* You can't get a pointer from GC heap-allocated arrays. No reinterpretation or pointer operations. You can have a buffer and pull in individual values and reinterpret those.
+* You can't get a pointer from GC heap-allocated arrays. You can't reinterpret or use pointer operations. You can have a buffer and pull in individual values and reinterpret those.

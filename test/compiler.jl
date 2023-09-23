@@ -376,7 +376,7 @@ end
     function ftuples1(x)
         @inbounds tpl[x]
     end
-    compile((ftuples1, Int32,); filepath = "tmp/j.wasm")
+    compile((ftuples1, Int32,); filepath = "tmp/ftuples1.wasm")
     jsfun = jsfunctions((ftuples1, Int32,))
     x = Int32(1)
     @test ftuples1(x) == jsfun.ftuples1(x)
@@ -573,7 +573,7 @@ end
 @testitem "Cobweb / Hyperscript" begin
     include("setup.jl")   
 
-    using .JS: h
+    const h = JS.h
 
     function fcw1(x)
         n = h("div", "jkl", h("strong", "!!!!!", "xxxx"), class = "myclass")
