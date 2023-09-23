@@ -1,38 +1,38 @@
 export JS
 
 module JS
-using ..WebAssemblyCompiler: WebAssemblyCompiler, Box
+using ..WebAssemblyCompiler: Externref, Box
 
-arraynew(n) = Base.llvmcall("n => Array(n)", WebAssemblyCompiler.Externref, Tuple{Int32}, n)
+arraynew(n) = Base.llvmcall("n => Array(n)", Externref, Tuple{Int32}, n)
 ## Use setindex! instead?? If so, need an ArrayRef type?
-set(jsa::WebAssemblyCompiler.Externref, i::Integer, x::T) where T = Base.llvmcall("(v, i, x) => v[i] = x", Nothing, Tuple{WebAssemblyCompiler.Externref, Int32, T}, jsa, Int32(i - 1), x)
-set(jsa::WebAssemblyCompiler.Externref, str::String, x::T) where T = Base.llvmcall("(v, i, x) => v[i] = x", Nothing, Tuple{WebAssemblyCompiler.Externref, String, T}, jsa, str, x)
-get(jsa::WebAssemblyCompiler.Externref, i::Integer, ::Type{T}) where T = Base.llvmcall("(v, i) => v[i]", T, Tuple{WebAssemblyCompiler.Externref, Int32}, jsa, Int32(i - 1))
-get(jsa::WebAssemblyCompiler.Externref, str::String, ::Type{T}) where T = Base.llvmcall("(v, i) => v[i]", T, Tuple{WebAssemblyCompiler.Externref, String}, jsa, str)
+set(jsa::Externref, i::Integer, x::T) where T = Base.llvmcall("(v, i, x) => v[i] = x", Nothing, Tuple{Externref, Int32, T}, jsa, Int32(i - 1), x)
+set(jsa::Externref, str::String, x::T) where T = Base.llvmcall("(v, i, x) => v[i] = x", Nothing, Tuple{Externref, String, T}, jsa, str, x)
+get(jsa::Externref, i::Integer, ::Type{T}) where T = Base.llvmcall("(v, i) => v[i]", T, Tuple{Externref, Int32}, jsa, Int32(i - 1))
+get(jsa::Externref, str::String, ::Type{T}) where T = Base.llvmcall("(v, i) => v[i]", T, Tuple{Externref, String}, jsa, str)
 
 struct TypedArray{T} end
 
-TypedArray{Float64}(n) = Base.llvmcall("n => new Float64Array(n)", WebAssemblyCompiler.Externref, Tuple{Int32}, n)
-TypedArray{Float32}(n) = Base.llvmcall("n => new Float32Array(n)", WebAssemblyCompiler.Externref, Tuple{Int32}, n)
+TypedArray{Float64}(n) = Base.llvmcall("n => new Float64Array(n)", Externref, Tuple{Int32}, n)
+TypedArray{Float32}(n) = Base.llvmcall("n => new Float32Array(n)", Externref, Tuple{Int32}, n)
 
-objectnew() = Base.llvmcall("() => ({})", WebAssemblyCompiler.Externref, Tuple{})
+objectnew() = Base.llvmcall("() => ({})", Externref, Tuple{})
 
-console_log(x::WebAssemblyCompiler.Externref) = Base.llvmcall("(x) => console.log(x)", Nothing, Tuple{WebAssemblyCompiler.Externref}, x)
+console_log(x::Externref) = Base.llvmcall("(x) => console.log(x)", Nothing, Tuple{Externref}, x)
 console_log(x::T) where {T <: Union{Int32, Float32, Float64, String}} = Base.llvmcall("x => console.log(x)", Nothing, Tuple{T}, x)
 console_log(x::Symbol) = Base.llvmcall("x => console.log(x)", Nothing, Tuple{String}, x)
 console_log(x) = console_log(object(x))
 
-getelementbyid(x) = Base.llvmcall("(x) => document.getElementById(x)", WebAssemblyCompiler.Externref, Tuple{String}, x)
-sethtml(ref::WebAssemblyCompiler.Externref, str::String) = Base.llvmcall("(x, str) => x.innerHTML = str", Nothing, Tuple{WebAssemblyCompiler.Externref, String}, ref, str)
+getelementbyid(x) = Base.llvmcall("(x) => document.getElementById(x)", Externref, Tuple{String}, x)
+sethtml(ref::Externref, str::String) = Base.llvmcall("(x, str) => x.innerHTML = str", Nothing, Tuple{Externref, String}, ref, str)
 sethtml(id::String, str::String) = sethtml(getelementbyid(id), str)
 
-eval(x::String) = Base.llvmcall("(x) => eval(x)", WebAssemblyCompiler.Externref, Tuple{String}, x)
+eval(x::String) = Base.llvmcall("(x) => eval(x)", Externref, Tuple{String}, x)
 
-array_to_string(x::WebAssemblyCompiler.Externref) = Base.llvmcall("(x) => x.join(\"\")", String, Tuple{WebAssemblyCompiler.Externref}, x)
+array_to_string(x::Externref) = Base.llvmcall("(x) => x.join(\"\")", String, Tuple{Externref}, x)
 # array_to_string(x::Array) = join(x, "")
 array_to_string(x::Vector) = array_to_string(object(x))
 
-object(x::Union{Int32, Float32, Float64, String, Symbol}) = x
+object(x::Union{Int32, Float32, Float64, String, Symbol, Externref}) = x
 # object(x::Char) = string(x)
 
 function object(v::Vector{Any})
@@ -77,6 +77,20 @@ using Unrolled
     end
     push!(res.args, :(return jso))
     return res
+end
+
+function object(tpl::Tuple)
+    n = length(tpl)
+    jsa = arraynew(Int32(n))
+    _setjsa(jsa, 1, tpl...)
+    return jsa
+end
+
+@inline _setjsa(jsa, i) = nothing
+@inline _setjsa(jsa, i, x) = set(jsa, i, x)
+@inline function _setjsa(jsa, i, x, xs...)
+    _setjsa(jsa, i, x)
+    _setjsa(jsa, i + 1, xs...)
 end
 
 # Simple IO buffer for printing to strings

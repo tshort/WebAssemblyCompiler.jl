@@ -182,50 +182,52 @@ end
 @testitem "Arrays" begin
     include("setup.jl")   
 
-    function f8(i)
+    function fa1(i)
         a = Array{Float64,1}(undef, Int32(3))
         @inbounds a[i] = 3.0
         @inbounds a[i]
     end
-    compile((f8, Int32,); filepath = "tmp/j.wasm")
-    jsfun = jsfunctions((f8, Int32,))
-    @test f8(Int32(3)) == jsfun.f8(Int32(3))
+    compile((fa1, Int32,); filepath = "tmp/fa1.wasm")
+    compile((fa1, Int32,); filepath = "tmp/fa1o.wasm", optimize = true)
+    jsfun = jsfunctions((fa1, Int32,))
+    @test fa1(Int32(3)) == jsfun.fa1(Int32(3))
 
-    function f9(i)
+    function fa2(i)
         a = Array{Float64,1}(undef, Int32(i))
         unsafe_trunc(Int32, length(a))
     end
-    compile((f9, Int32,); filepath = "tmp/j.wasm")
+    compile((fa2, Int32,); filepath = "tmp/fa2.wasm")
+    # compile((fa2, Int32,); filepath = "tmp/fa2o.wasm", optimize = true)   # crashes
     ## BROKEN
-    # jsfun = jsfunctions((f9, Int32,))
-    # @test f9(Int32(3)) == jsfun.f9(Int32(3))
+    # jsfun = jsfunctions((fa2, Int32,))
+    # @test fa2(Int32(3)) == jsfun.fa2(Int32(3))
 
-    @noinline function f10a(x)
+    @noinline function fa3a(x)
         @inbounds x[2]
     end
-    function f10(x)
+    function fa3(x)
         # a = [1.,2.,3.]
         a = Array{Float64, 1}(undef, 3)
-        f10a(a) + x
+        fa3a(a) + x
     end
-    compile((f10, Float64,); filepath = "tmp/j.wasm")
-    jsfun = jsfunctions((f10, Float64,))
+    compile((fa3, Float64,); filepath = "tmp/fa3.wasm")
+    jsfun = jsfunctions((fa3, Float64,))
     x = 3.0
-    @test f10(x) == jsfun.f10(x)
+    @test fa3(x) == jsfun.fa3(x)
 
-    function f11(x)
+    function fa4(x)
         a = ones(5)
         b = copy(a)
         b[2] * x
     end
-    compile((f11, Float64,); filepath = "tmp/arraycopy.wasm", validate = true)
+    compile((fa4, Float64,); filepath = "tmp/fa4.wasm", validate = true)
     # In NodeCall: Compiling function #0 failed: invalid array index.
     # Works in the browser.
     # jsfun = jsfunctions((f11, Float64,))
     # x = 2.0
     # @test jsfun.f11(x) == f11(x)
 
-    function f12(x)
+    function fa5(x)
         a = Array{Float64, 1}(undef, 0)
         push!(a, x)
         push!(a, x)
@@ -236,13 +238,13 @@ end
         return @inbounds x * a[6]
     end
     x = 2.0
-    compile((f12, Float64,); filepath = "tmp/f12.wasm", validate = true)
+    compile((fa5, Float64,); filepath = "tmp/fa5.wasm", validate = true)
 
-    # function f13(x)
+    # function fa6(x)
     #     a = [1.,2.,3.]
     #     a[2] + x
     # end
-    # compile((f13, Float64,); filepath = "tmp/f13.wasm")
+    # compile((fa6, Float64,); filepath = "tmp/fa6.wasm")
 
 end
 
@@ -264,7 +266,7 @@ end
         x.c + 1
     end
     # x = X(1., 2., 3.)
-    compile((fstructs1, Float64,); filepath = "tmp/j.wasm")
+    compile((fstructs1, Float64,); filepath = "tmp/fstructs1.wasm")
     jsfun = jsfunctions((fstructs1, Float64,))
     x = 3.0
     @test fstructs1(x) == jsfun.fstructs1(x)
@@ -278,7 +280,7 @@ end
         y = fstructs2a(x)
         y.c + 1
     end
-    compile((fstructs2, Float64); filepath = "tmp/j.wasm")
+    compile((fstructs2, Float64); filepath = "tmp/fstructs2.wasm")
     jsfun = jsfunctions((fstructs2, Float64,))
     x = 3.0
     @test fstructs2(x) == jsfun.fstructs2(x)

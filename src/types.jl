@@ -1,4 +1,7 @@
-struct Externref end
+struct Externref 
+    dummy::Int32
+end
+Externref() = Int32(-1)
 
 struct Box{T}
     x::T

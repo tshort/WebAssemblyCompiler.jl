@@ -2,7 +2,7 @@
 export compile
 # compile(fun, tt; filepath = "foo.wasm", validate = false, optimize = false) = compile(((fun, tt...),); filepath, validate, optimize)
 
-function compile(funs::Tuple...; filepath = "foo.wasm", jspath = filepath * ".js", validate = false, optimize = false, experimental = true)
+function compile(funs::Tuple...; filepath = "foo.wasm", jspath = filepath * ".js", validate = true, optimize = false, experimental = true)
     cis = Core.CodeInfo[]
     dummyci = code_typed(() -> nothing, Tuple{})[1].first
     ctx = CompilerContext(dummyci; experimental)
@@ -24,7 +24,7 @@ function compile(funs::Tuple...; filepath = "foo.wasm", jspath = filepath * ".js
         _DEBUG_ && @show ci
         compile_method(CompilerContext(ctx, ci), exported = true)
     end
-    # _DEBUG_ && BinaryenModulePrint(ctx.mod)
+    _DEBUG_ && BinaryenModulePrint(ctx.mod)
     # _DEBUG_ && BinaryenModulePrintStackIR(ctx.mod, false)
     validate && BinaryenModuleValidate(ctx.mod)
     optimize && BinaryenModuleOptimize(ctx.mod)

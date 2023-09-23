@@ -584,6 +584,7 @@ function compile_block(ctx::CompilerContext, cfg::Core.Compiler.CFG, phis, idx)
                 jtype = jtype.mod.eval(jtype.name)
             end
             type = BinaryenTypeGetHeapType(gettype(ctx, jtype))
+            # BinaryenModuleSetTypeName(ctx.mod, type, string(jtype))
             if jtype <: NTuple
                 values = [_compile(ctx, v) for v in node.args[2:end]]
                 N = Int32(length(node.args) - 1)
@@ -591,6 +592,9 @@ function compile_block(ctx::CompilerContext, cfg::Core.Compiler.CFG, phis, idx)
             else
                 x = BinaryenStructNew(ctx.mod, args, nargs, type)
                 binaryenfun(ctx, idx, BinaryenStructNew, args, nargs, type; passall = true)
+                for (i,name) in enumerate(fieldnames(jtype))
+                    BinaryenModuleSetFieldName(ctx.mod, type, i - 1, string(name))
+                end
             end
 
         elseif node isa Expr && node.head == :call && node.args[1] isa GlobalRef && node.args[1].name == :tuple
@@ -656,7 +660,8 @@ function compile_block(ctx::CompilerContext, cfg::Core.Compiler.CFG, phis, idx)
             # Get the specialized method for this invocation
             TT = Tuple{argtypes...}
             match = Base._which(TT)
-            mi = Core.Compiler.specialize_method(match; preexisting=true)
+            # mi = Core.Compiler.specialize_method(match; preexisting=true)
+            mi = Core.Compiler.specialize_method(match)
             sig = mi.specTypes
             newci = Base.code_typed_by_type(mi.specTypes, interp = StaticInterpreter())[1][1]
             newsig = newci.parent.specTypes

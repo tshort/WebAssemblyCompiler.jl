@@ -1,6 +1,8 @@
 using Test
 using WebAssemblyCompiler
 
+mkpath("tmp")
+
 using NodeCall
 # NodeCall.initialize(node_args = ["--experimental-wasm-gc", "--experimental-wasm-stringref"]);
 NodeCall.initialize(node_args = ["--experimental-wasm-gc"]);
@@ -10,7 +12,7 @@ NodeCall.initialize(node_args = ["--experimental-wasm-gc"]);
 function jsfunctions(funs...)
     wpath = tempname() * ".wasm"
     jspath = wpath * ".js"
-    compile(funs..., filepath = wpath, experimental = false)
+    compile(funs..., filepath = wpath, experimental = false, optimize = false)
     jsexports = read(jspath, String)
     js = """
     $jsexports

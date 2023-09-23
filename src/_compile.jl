@@ -24,14 +24,20 @@ _compile(ctx::CompilerContext, x::GlobalRef) = getglobal(ctx, x.mod, x.name)
 _compile(ctx::CompilerContext, x::QuoteNode) = _compile(ctx, x.value)
 _compile(ctx::CompilerContext, x::Symbol) = getglobal(ctx, x, compiledval = BinaryenStringConst(ctx.mod, x))
 
+function _compile(ctx::CompilerContext, x::Tuple{})
+    arraytype = BinaryenTypeGetHeapType(gettype(ctx, Tuple{}))
+    values = []
+    return BinaryenArrayNewFixed(ctx.mod, arraytype, values, 0)
+end
+
 function _compile(ctx::CompilerContext, x::NTuple{N,T}) where {N,T}
-    arraytype = BinaryenTypeGetHeapType(gettype(ctx, typeof(x)))
+    arraytype = BinaryenTypeGetHeapType(gettype(ctx, NTuple{N, roottype(ctx, x[1])}))
     values = [_compile(ctx, v) for v in x]
     return BinaryenArrayNewFixed(ctx.mod, arraytype, values, N)
 end
 function _compile(ctx::CompilerContext, x::Val)
     return _compile(ctx, hash(x))
-    type = BinaryenTypeGetHeapType(gettype(ctx, typeof(x)))
+    type = BinaryenTypeGetHeapType(gettype(ctx, roottype(ctx, x)))
     nargs = nfields(x)
     args = [_compile(ctx, getfield(x, i)) for i in 1:nargs]
     return BinaryenStructNew(ctx.mod, args, nargs, type)
