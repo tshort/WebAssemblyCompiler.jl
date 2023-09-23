@@ -6,7 +6,6 @@ version = "1.0.0-DEV"
 [deps]
 Binaryen_jll = "a54ac8ab-712d-5a0e-8e11-9296c0d3c20e"
 CEnum = "fa961155-64e5-5f13-b03f-caf6b980ea82"
-Cobweb = "ec354790-cf28-43e8-bb59-b484409b7bad"
 CodeInfoTools = "bc773b8a-8374-437a-b9f2-0e9785855863"
 Dictionaries = "85a47980-9c8c-11e8-2b9f-f7ca1fa99fb4"
 GPUCompiler = "61eb1bfa-7361-4325-ad38-22787b887f55"

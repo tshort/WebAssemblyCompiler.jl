@@ -443,6 +443,7 @@ end
  
 
 @testitem "Dictionaries" begin
+    include("setup.jl")   
     using Dictionaries
     function fdict1(x)
         d = Dictionary{Int32, Float64}(Int32[Int32(1),Int32(2),Int32(3)], [10.,20.,30.])
@@ -452,6 +453,7 @@ end
 end
  
 @testitem "JavaScript interop" begin
+    include("setup.jl")   
 
     function fjs10(x)
         a = Vector{Any}(undef, 3)
@@ -553,6 +555,7 @@ end
 end
 
 @testitem "IO" begin
+    include("setup.jl")   
 
     function fio1(x)
         io = JS.IOBuff()
@@ -567,48 +570,96 @@ end
 
 end
 
-@testitem "Cobweb" begin
-    # ## Commented out because it won't work with the released Cobweb
-    # using Cobweb: h, Node
-    # using Cobweb
+@testitem "Cobweb / Hyperscript" begin
+    include("setup.jl")   
 
-    # function JS.sethtml(id, n::Cobweb.Node)
-    #     io = JS.IOBuff()
-    #     print(io, n)
-    #     str = take!(io)
-    #     JS.sethtml(id, str)
-    #     nothing
-    # end
+    using .JS: h
 
-    # function tostring(n::Cobweb.Node)
-    #     io = JS.IOBuff()
-    #     print(io, n)
-    #     take!(io)
-    # end
-    # @inline Base.print(io::JS.IOBuff, a::Node) = show(io, a)
-
-    # function fcw1(x)
+    function fcw1(x)
+        n = h("div", "jkl", h("strong", "!!!!!", "xxxx"), class = "myclass")
+        n = h("div", "hi", "abc", x, n, class = "myclass2")
+        JS.sethtml("myid", string(n))
+        return x
+    end
+    # ## This version crashes Julia:
+    # function fcw1(_x)
     #     n = h("div", "jkl", h("strong", "!!!!!", "xxxx"), class = "myclass")
-    #     n = h("div", "hi", "abc", x, n, class = "myclass2")
-    #     JS.sethtml("myid", tostring(n))
-    #     return x
+        # n = h("div", "hi", "abc", _x, n, class = "myclass2")
+    #     JS.sethtml("myid", n)
+    #     return _x
     # end
-    # # ## This version crashes Julia:
-    # # function fcw1(_x)
-    # #     n = h("div", "jkl", h("strong", "!!!!!", "xxxx"), class = "myclass")
-    # #     n = h("div", "hi", "abc", _x, n, class = "myclass2")
-    # #     JS.sethtml("myid", n)
-    # #     return _x
-    # # end
-    # compile((fcw1, Float64,); filepath = "tmp/fcw1.wasm", validate = true)
-    # function fcw2(x)
-    #     snip = h("div",
-    #              h.h1("Hello there"),
-    #              h.p("This is some ", h.strong("strong text")),
-    #              h.p("more text", class = "myclass"))
-    #     JS.sethtml("myid", tostring(snip))
-    #     return x
-    # end
-    # compile((fcw2, Float64,); filepath = "tmp/fcw2.wasm", validate = true)
+    compile((fcw1, Float64,); filepath = "tmp/fcw1.wasm", validate = true)
+    function fcw2(x)
+        snip = h("div",
+                 h.h1("Hello there"),
+                 h.p("This is some ", h.strong("strong text")),
+                 h.p("more text", class = "myclass"))
+        JS.sethtml("myid", string(snip))
+        return x
+    end
+    compile((fcw2, Float64,); filepath = "tmp/fcw2.wasm", validate = true)
+
+    const obj = JS.object
+    const Ext = WebAssemblyCompiler.Externref
+    @inline _mithril(n::JS.Node) = mithril(n)
+    @inline _mithril(x) = obj(x)
+    @inline _mithril(x, xs::Tuple...) = (x, _mithril(xs...)...)
+    @inline _mithril(x, y) = (x, y)
+
+    mithril(tag::String, attrs::Ext, content::Ext) =    
+        Base.llvmcall("(tag, attrs, content) => m(tag, attrs, content)", 
+            Ext, 
+            Tuple{String, Ext, Ext}, 
+            tag, attrs, content)
+    mithril(tag::String, attrs::Ext, content::String) =    
+        Base.llvmcall("(tag, attrs, content) => m(tag, attrs, content)", 
+            Ext, 
+            Tuple{String, Ext, String}, 
+            tag, attrs, content)
+    
+    mithril(n::JS.Node) =
+        mithril(JS.tag(n), obj(JS.attrs(n)), obj(_mithril(JS.children(n)...)))
+  
+
+    function fcw3(x)
+        snip = h("div",
+                 h("p", h("strong", "strong text"), " text"))
+        JS.console_log(mithril(snip))
+        return x
+    end
+    compile((fcw3, Float64,); filepath = "tmp/fcw3.wasm", validate = true)
+
+    # Here's a more direct approach to convert to mithril objects as you go.
+    m(tag, attrs::Ext, content::Ext) =
+        Base.llvmcall("(tag, attrs, content) => m(tag, attrs, content)", 
+            Ext, 
+            Tuple{String, Ext, Ext}, 
+            tag, attrs, content)
+    m(tag, attrs::Ext, content::String) =
+        Base.llvmcall("(tag, attrs, content) => m(tag, attrs, content)", 
+            Ext, 
+            Tuple{String, Ext, String}, 
+            tag, attrs, content)
+    m(tag, attrs, content) =
+        m(tag, JS.object(attrs), content)
+    m(tag, attrs::Ext, content) =
+        m(tag, attrs, JS.object(content))
+    m(tag, attrs::Ext, content...) =
+        m(tag, attrs, _m(content...))
+    m(tag, content::String="") = m(tag, (;), content)
+    
+    @inline _m() = ()
+    @inline _m(x) = (x,)
+    @inline _m(x, xs::Tuple...) = (x, _m(xs...)...)
+    @inline _m(x, y) = (x, y)
+
+    function fcw4(x)
+        snip = m("div",
+                 m("h1", (class = "myclass",), "Hello there"),
+                 m("p", m("strong", "strong text")))
+        JS.console_log(snip)
+        return x
+    end
+    compile((fcw4, Float64,); filepath = "tmp/fcw4.wasm", validate = true)
 
 end
