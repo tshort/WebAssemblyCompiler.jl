@@ -8,29 +8,29 @@ end
 
 # @overlay MT Base.sqrt(x::Float64) = @ccall BinaryenUnary.BinaryenSqrtFloat32(x::Float64)::Float64
 
-@overlay MT Base.sin(x::Float64) = Base.llvmcall("(x) => Math.sin(x)", Float64, Tuple{Float64}, x)
-@overlay MT Base.cos(x::Float64) = Base.llvmcall("(x) => Math.cos(x)", Float64, Tuple{Float64}, x)
-@overlay MT Base.tan(x::Float64) = Base.llvmcall("(x) => Math.tan(x)", Float64, Tuple{Float64}, x)
-@overlay MT Base.asin(x::Float64) = Base.llvmcall("(x) => Math.asin(x)", Float64, Tuple{Float64}, x)
-@overlay MT Base.acos(x::Float64) = Base.llvmcall("(x) => Math.acos(x)", Float64, Tuple{Float64}, x)
-@overlay MT Base.atan(x::Float64) = Base.llvmcall("(x) => Math.atan(x)", Float64, Tuple{Float64}, x)
-@overlay MT Base.sinh(x::Float64) = Base.llvmcall("(x) => Math.sinh(x)", Float64, Tuple{Float64}, x)
-@overlay MT Base.cosh(x::Float64) = Base.llvmcall("(x) => Math.cosh(x)", Float64, Tuple{Float64}, x)
-@overlay MT Base.tanh(x::Float64) = Base.llvmcall("(x) => Math.tanh(x)", Float64, Tuple{Float64}, x)
-@overlay MT Base.asinh(x::Float64) = Base.llvmcall("(x) => Math.asinh(x)", Float64, Tuple{Float64}, x)
-@overlay MT Base.acosh(x::Float64) = Base.llvmcall("(x) => Math.acosh(x)", Float64, Tuple{Float64}, x)
-@overlay MT Base.atanh(x::Float64) = Base.llvmcall("(x) => Math.atanh(x)", Float64, Tuple{Float64}, x)
-@overlay MT Base.log(x::Float64) = Base.llvmcall("(x) => Math.log(x)", Float64, Tuple{Float64}, x)
-@overlay MT Base.log2(x::Float64) = Base.llvmcall("(x) => Math.log2(x)", Float64, Tuple{Float64}, x)
-@overlay MT Base.log10(x::Float64) = Base.llvmcall("(x) => Math.log10(x)", Float64, Tuple{Float64}, x)
-@overlay MT Base.log1p(x::Float64) = Base.llvmcall("(x) => Math.log1p(x)", Float64, Tuple{Float64}, x)
-@overlay MT Base.exp(x::Float64) = Base.llvmcall("(x) => Math.exp(x)", Float64, Tuple{Float64}, x)
-@overlay MT Base.expm1(x::Float64) = Base.llvmcall("(x) => Math.expm1(x)", Float64, Tuple{Float64}, x)
-@overlay MT Base.cbrt(x::Float64) = Base.llvmcall("(x) => Math.cbrt(x)", Float64, Tuple{Float64}, x)
-@overlay MT Base.sign(x::Float64) = Base.llvmcall("(x) => Math.sign(x)", Float64, Tuple{Float64}, x)
-@overlay MT Base.rand() = Base.llvmcall("() => Math.random()", Float64, Tuple{})
-@overlay MT Base.:^(x::Float64, y::Float64) = Base.llvmcall("(x, y) => Math.pow(x)", Float64, Tuple{Float64, Float64}, x, y)
-@overlay MT Base.atan(x::Float64, y::Float64) = Base.llvmcall("(x, y) => Math.atan2(x, y)", Float64, Tuple{Float64, Float64}, x, y)
+@overlay MT Base.sin(x::Float64) = @jscall("(x) => Math.sin(x)", Float64, Tuple{Float64}, x)
+@overlay MT Base.cos(x::Float64) = @jscall("(x) => Math.cos(x)", Float64, Tuple{Float64}, x)
+@overlay MT Base.tan(x::Float64) = @jscall("(x) => Math.tan(x)", Float64, Tuple{Float64}, x)
+@overlay MT Base.asin(x::Float64) = @jscall("(x) => Math.asin(x)", Float64, Tuple{Float64}, x)
+@overlay MT Base.acos(x::Float64) = @jscall("(x) => Math.acos(x)", Float64, Tuple{Float64}, x)
+@overlay MT Base.atan(x::Float64) = @jscall("(x) => Math.atan(x)", Float64, Tuple{Float64}, x)
+@overlay MT Base.sinh(x::Float64) = @jscall("(x) => Math.sinh(x)", Float64, Tuple{Float64}, x)
+@overlay MT Base.cosh(x::Float64) = @jscall("(x) => Math.cosh(x)", Float64, Tuple{Float64}, x)
+@overlay MT Base.tanh(x::Float64) = @jscall("(x) => Math.tanh(x)", Float64, Tuple{Float64}, x)
+@overlay MT Base.asinh(x::Float64) = @jscall("(x) => Math.asinh(x)", Float64, Tuple{Float64}, x)
+@overlay MT Base.acosh(x::Float64) = @jscall("(x) => Math.acosh(x)", Float64, Tuple{Float64}, x)
+@overlay MT Base.atanh(x::Float64) = @jscall("(x) => Math.atanh(x)", Float64, Tuple{Float64}, x)
+@overlay MT Base.log(x::Float64) = @jscall("(x) => Math.log(x)", Float64, Tuple{Float64}, x)
+@overlay MT Base.log2(x::Float64) = @jscall("(x) => Math.log2(x)", Float64, Tuple{Float64}, x)
+@overlay MT Base.log10(x::Float64) = @jscall("(x) => Math.log10(x)", Float64, Tuple{Float64}, x)
+@overlay MT Base.log1p(x::Float64) = @jscall("(x) => Math.log1p(x)", Float64, Tuple{Float64}, x)
+@overlay MT Base.exp(x::Float64) = @jscall("(x) => Math.exp(x)", Float64, Tuple{Float64}, x)
+@overlay MT Base.expm1(x::Float64) = @jscall("(x) => Math.expm1(x)", Float64, Tuple{Float64}, x)
+@overlay MT Base.cbrt(x::Float64) = @jscall("(x) => Math.cbrt(x)", Float64, Tuple{Float64}, x)
+@overlay MT Base.sign(x::Float64) = @jscall("(x) => Math.sign(x)", Float64, Tuple{Float64}, x)
+@overlay MT Base.rand() = @jscall("() => Math.random()", Float64, Tuple{})
+@overlay MT Base.:^(x::Float64, y::Float64) = @jscall("(x, y) => Math.pow(x)", Float64, Tuple{Float64, Float64}, x, y)
+@overlay MT Base.atan(x::Float64, y::Float64) = @jscall("(x, y) => Math.atan2(x, y)", Float64, Tuple{Float64, Float64}, x, y)
 
 @overlay MT Base.cconvert(::Type{String}, x::String) = x
 @overlay MT Base.unsafe_convert(::Type{String}, x::String) = x
@@ -58,9 +58,9 @@ using Unrolled
     return a
 end
 
-@overlay MT Base.hash(x::String) = Int(Base.llvmcall("\$hash-string", Int32, Tuple{String}, x))
+@overlay MT Base.hash(x::String) = Int(@jscall("\$hash-string", Int32, Tuple{String}, x))
 
-@overlay MT Base.:(==)(s1::String, s2::String) = Bool(Base.llvmcall("\$string-eq", Int32, Tuple{String, String}, s1, s2))
+@overlay MT Base.:(==)(s1::String, s2::String) = Bool(@jscall("\$string-eq", Int32, Tuple{String, String}, s1, s2))
 
 # @overlay MT JS.array_to_string(x::Array) = JS.array_to_string(object(x))
 
