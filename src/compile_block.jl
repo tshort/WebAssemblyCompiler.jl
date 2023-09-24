@@ -18,7 +18,8 @@ end
 
 function setlocal!(ctx, idx, x)
     T = ssatype(ctx, idx)
-    if T != Union{}
+    @show T
+    if T != Union{} # && T != Nothing
         ctx.varmap[idx] = ctx.localidx
         x = BinaryenLocalSet(ctx.mod, ctx.localidx, x)
         update!(ctx, x, ssatype(ctx, idx))
@@ -74,7 +75,8 @@ function compile_block(ctx::CompilerContext, cfg::Core.Compiler.CFG, phis, idx)
             update!(ctx, BinaryenUnreachable(ctx.mod))
 
         elseif node isa Core.ReturnNode
-            update!(ctx, BinaryenReturn(ctx.mod, node.val isa Nothing ? C_NULL : _compile(ctx, node.val)))
+            val = node.val isa GlobalRef ? node.val.mod.eval(node.val.name) : node.val
+            update!(ctx, BinaryenReturn(ctx.mod, roottype(ctx, val) == Nothing ? C_NULL : _compile(ctx, val)))
 
         elseif node isa Core.PiNode
             fromT = roottype(ctx, node.val)
@@ -109,11 +111,19 @@ function compile_block(ctx::CompilerContext, cfg::Core.Compiler.CFG, phis, idx)
             end
 
         elseif matchgr(node, :sdiv_int) do a, b
-                binaryfun(ctx, idx, (BinaryenDivS64, BinaryenDivS32), a, b)
+                binaryfun(ctx, idx, (BinaryenDivSInt64, BinaryenDivSInt32), a, b)
+            end
+
+        elseif matchgr(node, :checked_sdiv_int) do a, b
+                binaryfun(ctx, idx, (BinaryenDivSInt64, BinaryenDivSInt32), a, b)
             end
 
         elseif matchgr(node, :udiv_int) do a, b
-                binaryfun(ctx, idx, (BinaryenDivU64, BinaryenDivU32), a, b)
+                binaryfun(ctx, idx, (BinaryenDivUInt64, BinaryenDivUInt32), a, b)
+            end
+
+        elseif matchgr(node, :checked_udiv_int) do a, b
+                binaryfun(ctx, idx, (BinaryenDivUInt64, BinaryenDivUInt32), a, b)
             end
 
         elseif matchgr(node, :srem_int) do a, b
@@ -129,6 +139,10 @@ function compile_block(ctx::CompilerContext, cfg::Core.Compiler.CFG, phis, idx)
             end
 
         elseif matchgr(node, :add_float) do a, b
+                binaryfun(ctx, idx, (BinaryenAddFloat64, BinaryenAddFloat32), a, b)
+            end
+
+        elseif matchgr(node, :add_float_fast) do a, b
                 binaryfun(ctx, idx, (BinaryenAddFloat64, BinaryenAddFloat32), a, b)
             end
 
@@ -157,6 +171,10 @@ function compile_block(ctx::CompilerContext, cfg::Core.Compiler.CFG, phis, idx)
             end
 
         elseif matchgr(node, :div_float) do a, b
+                binaryfun(ctx, idx, (BinaryenDivFloat64, BinaryenDivFloat32), a, b)
+            end
+
+        elseif matchgr(node, :div_float_fast) do a, b
                 binaryfun(ctx, idx, (BinaryenDivFloat64, BinaryenDivFloat32), a, b)
             end
 
@@ -584,7 +602,7 @@ function compile_block(ctx::CompilerContext, cfg::Core.Compiler.CFG, phis, idx)
                 jtype = jtype.mod.eval(jtype.name)
             end
             type = BinaryenTypeGetHeapType(gettype(ctx, jtype))
-            # BinaryenModuleSetTypeName(ctx.mod, type, string(jtype))
+            BinaryenModuleSetTypeName(ctx.mod, type, string(jtype))
             if jtype <: NTuple
                 values = [_compile(ctx, v) for v in node.args[2:end]]
                 N = Int32(length(node.args) - 1)
@@ -659,25 +677,30 @@ function compile_block(ctx::CompilerContext, cfg::Core.Compiler.CFG, phis, idx)
             argtypes = [basetype(ctx, x) for x in node.args[2:end]]
             # Get the specialized method for this invocation
             TT = Tuple{argtypes...}
+            @show TT
             match = Base._which(TT)
             # mi = Core.Compiler.specialize_method(match; preexisting=true)
             mi = Core.Compiler.specialize_method(match)
             sig = mi.specTypes
             newci = Base.code_typed_by_type(mi.specTypes, interp = StaticInterpreter())[1][1]
+            @show newci
             newsig = newci.parent.specTypes
-            global CI = newci
             # Filter out unused arguments (slotflag & 0x08)
             used = argsused(newci)
             s = node.args[1].def.sig
-            if s isa DataType && s.parameters[end] isa Core.TypeofVararg
+            @show s
+            ## TODO: figure out proper way to identify varargs
+            if s isa DataType && s.parameters[end] isa Core.TypeofVararg # && newci.slottypes[end] isa Tuple
                 jargs = node.args[2:length(used)][used[1:end-1]]   # up to the last arg which is a vararg
                 args = [_compile(ctx, x) for x in jargs]
                 n = length(newci.slottypes[end].parameters)
                 push!(args, _compile(ctx, tuple((x for x in node.args[end-n+1:end])...)))
                 np = newsig.parameters
                 newsig = Tuple{np[1:end-n]..., Tuple{np[end-n+1:end]...}}
+                @show newsig
             else
                 jargs = node.args[2:end][used]
+                @show jargs
                 args = [_compile(ctx, x) for x in jargs]
             end
             rettype = gettype(ctx, ssatype(ctx, idx))
@@ -685,10 +708,11 @@ function compile_block(ctx::CompilerContext, cfg::Core.Compiler.CFG, phis, idx)
                 name = ctx.names[newsig]
             else
                 _DEBUG_ && @show newci
-                name = string("julia_", node.args[1].def.name, newsig.parameters[2:end]...)
+                name = string("julia_", node.args[1].def.name, newsig.parameters[2:end]...)  # [1:min(end,25)]
                 ctx.sigs[name] = newsig
                 ctx.names[newsig] = name
                 newci.parent.specTypes = newsig
+                @show newsig
                 compile_method(CompilerContext(ctx, newci))
             end
             setlocal!(ctx, idx, BinaryenCall(ctx.mod, name, args, length(args), rettype))

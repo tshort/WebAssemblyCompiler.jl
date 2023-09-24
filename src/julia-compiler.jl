@@ -8,13 +8,14 @@ function compile(funs::Tuple...; filepath = "foo.wasm", jspath = filepath * ".js
     ctx = CompilerContext(dummyci; experimental)
     # BinaryenModuleSetFeatures(ctx.mod, BinaryenFeatureReferenceTypes() | BinaryenFeatureGC() | BinaryenFeatureStrings())
     BinaryenModuleSetFeatures(ctx.mod, BinaryenFeatureAll())
+    BinaryenModuleAutoDrop(ctx.mod)
     # Create CodeInfo's, and fill in names first
     for funtpl in funs
         tt = length(funtpl) > 1 ? Base.to_tuple_type(funtpl[2:end]) : Tuple{}
         # isconcretetype(tt) || error("input type signature $tt for $(funtpl[1]) is not concrete")
         ci = code_typed(funtpl[1], tt, interp = StaticInterpreter())[1].first
         push!(cis, ci)
-        name = string(funtpl[1])
+        name = string(funtpl[1])   # [1:min(end,20)]
         sig = ci.parent.specTypes
         ctx.sigs[name] = sig
         ctx.names[sig] = name
@@ -27,7 +28,9 @@ function compile(funs::Tuple...; filepath = "foo.wasm", jspath = filepath * ".js
     _DEBUG_ && BinaryenModulePrint(ctx.mod)
     # _DEBUG_ && BinaryenModulePrintStackIR(ctx.mod, false)
     validate && BinaryenModuleValidate(ctx.mod)
+    @show "after validation"
     optimize && BinaryenModuleOptimize(ctx.mod)
+    @show "after opt"
 
     out = BinaryenModuleAllocateAndWrite(ctx.mod, C_NULL)
     write(filepath, unsafe_wrap(Vector{UInt8}, Ptr{UInt8}(out.binary), (out.binaryBytes,)))

@@ -50,6 +50,8 @@ function object(v::Vector{Any})
             set(jsa, i, x.x)
         elseif x isa Box{String}
             set(jsa, i, x.x)
+        elseif x isa Box{Int64}
+            set(jsa, i, Int32(x.x))
         # elseif x isa Box{Symbol}
         #     set(jsa, i, x.x)
         # elseif x isa Box{Char}
@@ -114,6 +116,10 @@ Base.take!(b::IOBuff) = array_to_string(b.x)
 @inline Base.print(io::IOBuff, a)  = push!(io.x, a)
 @inline Base.print(io::IOBuff, a, b)  = (push!(io.x, a); push!(io.x, b))
 @inline Base.print(io::IOBuff, a, b, c...)  = (push!(io.x, a); push!(io.x, b); print(io, c...))
+
+string(x...) = array_to_string(JS.object(Any[x...]))
+string(x) = x
+
 
 """
     Node(tag::String, attrs::Dictionary{String,String}, children::Vector)
@@ -253,7 +259,7 @@ function sethtml(id, n::Node)
     nothing
 end
 
-function Base.string(n::Node)
+function string(n::Node)   # Base.string won't work because we override it
     io = IOBuff()
     print(io, n)
     take!(io)

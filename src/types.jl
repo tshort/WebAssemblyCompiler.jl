@@ -22,7 +22,7 @@ wtypes() = Dict{Any, BinaryenType}(
     Any => BinaryenTypeEqref(),
     Core.TypeofBottom => BinaryenTypeNone(),
     Union{} => BinaryenTypeNone(),
-    Nothing => BinaryenTypeNone(),
+    # Nothing => BinaryenTypeNone(),
 )
 
 const basictypes = [Int64, Int32, UInt64, UInt32, UInt8, Bool, Float64, Float32]

@@ -44,7 +44,8 @@ end
 @overlay MT Base._copyto_impl!(dest::Array{T, 1}, doffs::Integer, src::Array{T, 1}, soffs::Integer, n::Integer) where {T} =
     @ccall _jl_array_copyto(dest::Array{T,1}, (doffs-1)::Int32, src::Array{T,1}, (soffs-1)::Int32, n::Int32)::Array{T,1}
 
-@overlay MT Base.string(x...) = JS.array_to_string(JS.object(Any[x...]))
+# @overlay MT Base.string(x...) = JS.array_to_string(JS.object(Any[x...]))
+@overlay MT Base.string(x...) = JS.string(x...)
 
 @overlay MT Base.getindex(::Type{Any}, @nospecialize vals...) = unrolledgetindex(vals)
 
@@ -63,6 +64,9 @@ end
 @overlay MT Base.:(==)(s1::String, s2::String) = Bool(@jscall("\$string-eq", Int32, Tuple{String, String}, s1, s2))
 
 # @overlay MT JS.array_to_string(x::Array) = JS.array_to_string(object(x))
+
+@overlay MT @inline Base.FastMath.div_float_fast(a, b) = a / b
+@overlay MT @inline Base.FastMath.add_float_fast(a, b) = a + b
 
 #### Error handling
 
@@ -112,3 +116,5 @@ end
 @overlay MT @inline Base.Math.sincos_domain_error(x) =
     @print_and_throw "sincos(x) is only defined for finite x."
 
+@overlay MT @inline Base.throw_eachindex_mismatch_indices(x...) =
+    @print_and_throw "all inputs to eachindex must have the same indices."
