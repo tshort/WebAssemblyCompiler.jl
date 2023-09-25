@@ -1,7 +1,12 @@
 
 function _compile(ctx::CompilerContext, x::Core.Argument)
+    if ctx.ci.slottypes[x.n] isa Core.Const 
+        type = typeof(ctx.ci.slottypes[x.n].val)
+    else
+        type = ctx.ci.slottypes[x.n]
+    end
     BinaryenLocalGet(ctx.mod, argmap(ctx, x.n) - 1,
-                     gettype(ctx, ctx.ci.slottypes[x.n]))
+                     gettype(ctx, type))
 end
 function _compile(ctx::CompilerContext, x::Core.SSAValue)   # These come after the function arguments.
     BinaryenLocalGet(ctx.mod, ctx.varmap[x.id],

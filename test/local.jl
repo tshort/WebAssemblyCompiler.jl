@@ -3,6 +3,7 @@ using WebAssemblyCompiler
 
 const W = WebAssemblyCompiler
 const WebAssemblyCompiler._DEBUG_ = true
+const WebAssemblyCompiler._DEBUG_ = false
     
     const h = JS.h
 

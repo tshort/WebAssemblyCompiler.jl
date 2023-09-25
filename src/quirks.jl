@@ -63,6 +63,10 @@ end
 
 @overlay MT Base.:(==)(s1::String, s2::String) = Bool(@jscall("\$string-eq", Int32, Tuple{String, String}, s1, s2))
 
+@overlay MT Base.:(==)(s1::String, s2::String) = Bool(@jscall("\$string-eq", Int32, Tuple{String, String}, s1, s2))
+
+@overlay MT Base.CoreLogging.current_logger_for_env(x...) = nothing
+
 # @overlay MT JS.array_to_string(x::Array) = JS.array_to_string(object(x))
 
 @overlay MT @inline Base.FastMath.div_float_fast(a, b) = a / b

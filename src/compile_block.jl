@@ -18,8 +18,7 @@ end
 
 function setlocal!(ctx, idx, x)
     T = ssatype(ctx, idx)
-    @show T
-    if T != Union{} # && T != Nothing
+    if T != Union{} && T != Nothing
         ctx.varmap[idx] = ctx.localidx
         x = BinaryenLocalSet(ctx.mod, ctx.localidx, x)
         update!(ctx, x, ssatype(ctx, idx))
@@ -75,7 +74,9 @@ function compile_block(ctx::CompilerContext, cfg::Core.Compiler.CFG, phis, idx)
             update!(ctx, BinaryenUnreachable(ctx.mod))
 
         elseif node isa Core.ReturnNode
-            val = node.val isa GlobalRef ? node.val.mod.eval(node.val.name) : node.val
+            val = node.val isa GlobalRef ? node.val.mod.eval(node.val.name) : 
+                  node.val isa Core.Const ? node.val.val :
+                  node.val
             update!(ctx, BinaryenReturn(ctx.mod, roottype(ctx, val) == Nothing ? C_NULL : _compile(ctx, val)))
 
         elseif node isa Core.PiNode
@@ -289,6 +290,7 @@ function compile_block(ctx::CompilerContext, cfg::Core.Compiler.CFG, phis, idx)
         ## I'm not sure these are right
         elseif matchgr(node, :sext_int) do a, b
                 t = (roottype(ctx, a), roottype(ctx, b))
+                sizeof(t[1]) == 8 && sizeof(t[2]) == 1 ? unaryfun(ctx, idx, (BinaryenExtendS8Int64,), b) :
                 sizeof(t[1]) == 8 && sizeof(t[2]) == 2 ? unaryfun(ctx, idx, (BinaryenExtendS16Int64,), b) :
                 sizeof(t[1]) == 8 && sizeof(t[2]) == 4 ? unaryfun(ctx, idx, (BinaryenExtendSInt32,), b) :
                 sizeof(t[1]) == 4 && sizeof(t[2]) == 1 ? unaryfun(ctx, idx, (BinaryenExtendS8Int32,), b) :
@@ -298,10 +300,8 @@ function compile_block(ctx::CompilerContext, cfg::Core.Compiler.CFG, phis, idx)
 
         elseif matchgr(node, :zext_int) do a, b
                 t = (roottype(ctx, a), roottype(ctx, b))
-                sizeof(t[1]) == 8 && sizeof(t[2]) == 2 ? unaryfun(ctx, idx, (BinaryenExtendU16Int64,), b) :
-                sizeof(t[1]) == 8 && sizeof(t[2]) == 4 ? unaryfun(ctx, idx, (BinaryenExtendUInt32,), b) :
-                sizeof(t[1]) == 4 && sizeof(t[2]) == 1 ? unaryfun(ctx, idx, (BinaryenExtendU8Int32,), b) :
-                sizeof(t[1]) == 4 && sizeof(t[2]) == 2 ? unaryfun(ctx, idx, (BinaryenExtendU16Int32,), b) :
+                sizeof(t[1]) == 4 && sizeof(t[2]) <= 4 ? b :
+                sizeof(t[1]) == 8 && sizeof(t[2]) <= 4 ? unaryfun(ctx, idx, (BinaryenExtendUInt32,), b) :
                 error("Unsupported `zext_int` types $t")
             end
 
@@ -639,8 +639,11 @@ function compile_block(ctx::CompilerContext, cfg::Core.Compiler.CFG, phis, idx)
             internalfun = jscode[1] == '$'
             jlrettype = eval(node.args[3])
             rettype = gettype(ctx, jlrettype)
+            if jlrettype == Nothing
+                rettype = gettype(ctx, Union{})
+            end
             typeparameters = node.args[4].parameters
-            name = internalfun ? jscode[2:end] : string(jscode, rettype, typeparameters...)
+            name = internalfun ? jscode[2:end] : string(jscode, jlrettype, typeparameters...)
             sig = node.args[5:end]
             jparams = [gettype(ctx, T) for T in typeparameters]
             bparams = BinaryenTypeCreate(jparams, length(jparams))
@@ -677,33 +680,30 @@ function compile_block(ctx::CompilerContext, cfg::Core.Compiler.CFG, phis, idx)
             argtypes = [basetype(ctx, x) for x in node.args[2:end]]
             # Get the specialized method for this invocation
             TT = Tuple{argtypes...}
-            @show TT
             match = Base._which(TT)
             # mi = Core.Compiler.specialize_method(match; preexisting=true)
             mi = Core.Compiler.specialize_method(match)
             sig = mi.specTypes
             newci = Base.code_typed_by_type(mi.specTypes, interp = StaticInterpreter())[1][1]
-            @show newci
             newsig = newci.parent.specTypes
             # Filter out unused arguments (slotflag & 0x08)
             used = argsused(newci)
             s = node.args[1].def.sig
-            @show s
             ## TODO: figure out proper way to identify varargs
             if s isa DataType && s.parameters[end] isa Core.TypeofVararg # && newci.slottypes[end] isa Tuple
+            # if s isa DataType && s.parameters[end] isa Core.TypeofVararg && newci.slottypes[end] isa Tuple
                 jargs = node.args[2:length(used)][used[1:end-1]]   # up to the last arg which is a vararg
                 args = [_compile(ctx, x) for x in jargs]
                 n = length(newci.slottypes[end].parameters)
                 push!(args, _compile(ctx, tuple((x for x in node.args[end-n+1:end])...)))
                 np = newsig.parameters
                 newsig = Tuple{np[1:end-n]..., Tuple{np[end-n+1:end]...}}
-                @show newsig
             else
                 jargs = node.args[2:end][used]
-                @show jargs
                 args = [_compile(ctx, x) for x in jargs]
             end
-            rettype = gettype(ctx, ssatype(ctx, idx))
+            jlrettype = ssatype(ctx, idx)
+            rettype = gettype(ctx, jlrettype == Nothing ? Union{} : jlrettype)
             if haskey(ctx.names, newsig)
                 name = ctx.names[newsig]
             else
@@ -712,7 +712,6 @@ function compile_block(ctx::CompilerContext, cfg::Core.Compiler.CFG, phis, idx)
                 ctx.sigs[name] = newsig
                 ctx.names[newsig] = name
                 newci.parent.specTypes = newsig
-                @show newsig
                 compile_method(CompilerContext(ctx, newci))
             end
             setlocal!(ctx, idx, BinaryenCall(ctx.mod, name, args, length(args), rettype))

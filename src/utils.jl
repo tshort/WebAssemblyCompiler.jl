@@ -133,6 +133,7 @@ function gettype(ctx, type)
     end
     TypeBuilderBuildAndDispose(tb, builtheaptypes, C_NULL, C_NULL)
     newtype = BinaryenTypeFromHeapType(builtheaptypes[1], true)
+    BinaryenModuleSetTypeName(ctx.mod, builtheaptypes[1], sizeof(type) > 0 ? string(type) : "Singleton")
     # BinaryenExpressionPrint( BinaryenLocalSet(ctx.mod, 100, BinaryenLocalGet(ctx.mod, 99, newtype)))
     ctx.wtypes[type] = newtype
     return newtype
@@ -158,7 +159,7 @@ function getglobal(ctx, gval; compiledval = nothing)
     ctx.globals[id] = gv
     return gv
 end
-getglobal(ctx, mod, name; compiledval = nothing) = getglobal(ctx, mod.eval(name); compiledval)
+getglobal(ctx, mod, name; compiledval = nothing) = getglobal(ctx, Core.eval(mod, name); compiledval)
 hasglobal(ctx, gval) = haskey(ctx.globals, objectid(gval))
 hasglobal(ctx, mod, name) = hasglobal(ctx, mod.eval(name))
 
@@ -222,6 +223,7 @@ end
 arraydefault(x) = zero(x)
 arraydefault(x::Type{Any}) = Ref(0)
 arraydefault(x::Type{String}) = ""
+arraydefault(x::Type{Vector{T}}) where T = T[]
 
 
 # from Cthulhu

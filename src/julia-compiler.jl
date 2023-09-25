@@ -28,9 +28,7 @@ function compile(funs::Tuple...; filepath = "foo.wasm", jspath = filepath * ".js
     _DEBUG_ && BinaryenModulePrint(ctx.mod)
     # _DEBUG_ && BinaryenModulePrintStackIR(ctx.mod, false)
     validate && BinaryenModuleValidate(ctx.mod)
-    @show "after validation"
     optimize && BinaryenModuleOptimize(ctx.mod)
-    @show "after opt"
 
     out = BinaryenModuleAllocateAndWrite(ctx.mod, C_NULL)
     write(filepath, unsafe_wrap(Vector{UInt8}, Ptr{UInt8}(out.binary), (out.binaryBytes,)))
@@ -49,9 +47,9 @@ function compile_method(ctx::CompilerContext; sig = ctx.ci.parent.specTypes, exp
     funname = ctx.names[sig]
     jparams = [gettype(ctx, T) for T in collect(sig.parameters)[argsused(ctx)]]
     bparams = BinaryenTypeCreate(jparams, length(jparams))
-    results = gettype(ctx, ctx.ci.rettype)
+    rettype = gettype(ctx, ctx.ci.rettype == Nothing ? Union{} : ctx.ci.rettype)
     body = compile_method_body(ctx)
-    BinaryenAddFunction(ctx.mod, funname, bparams, results, ctx.locals, length(ctx.locals), body)
+    BinaryenAddFunction(ctx.mod, funname, bparams, rettype, ctx.locals, length(ctx.locals), body)
     if exported
         BinaryenAddFunctionExport(ctx.mod, funname, funname)
     end
