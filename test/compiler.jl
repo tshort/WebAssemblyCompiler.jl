@@ -552,6 +552,12 @@ end
     end
     compile((fjs22, Float64,); filepath = "tmp/fjs22.wasm", validate = true)
 
+    function fjs23(x)
+        JS.console_log(Float64[1.1, 2.2])
+        return x
+    end
+    compile((fjs23, Float64,); filepath = "tmp/fjs23.wasm", validate = true)
+
 end
 
 @testitem "IO" begin

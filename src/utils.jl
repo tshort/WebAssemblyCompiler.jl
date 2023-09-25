@@ -15,6 +15,7 @@ argsused(ctx::CompilerContext) = argsused(ctx.ci)
 
 specialtype(x) = nothing
 specialtype(::Type{T}) where T <: Val = BinaryenTypeInt64()
+# specialtype(::Module) = DummyModule
 
 function ssatype(ctx::CompilerContext, idx)
     ctx.ci.ssavaluetypes[idx]
@@ -133,7 +134,9 @@ function gettype(ctx, type)
     end
     TypeBuilderBuildAndDispose(tb, builtheaptypes, C_NULL, C_NULL)
     newtype = BinaryenTypeFromHeapType(builtheaptypes[1], true)
-    BinaryenModuleSetTypeName(ctx.mod, builtheaptypes[1], sizeof(type) > 0 ? string(type) : "Singleton")
+    if isconcretetype(type) && sizeof(type) > 0
+        BinaryenModuleSetTypeName(ctx.mod, builtheaptypes[1], string(type))
+    end
     # BinaryenExpressionPrint( BinaryenLocalSet(ctx.mod, 100, BinaryenLocalGet(ctx.mod, 99, newtype)))
     ctx.wtypes[type] = newtype
     return newtype

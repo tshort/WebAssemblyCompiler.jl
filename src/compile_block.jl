@@ -16,23 +16,24 @@ function update!(ctx::CompilerContext, x, localtype = nothing)
     return nothing
 end
 
-function setlocal!(ctx, idx, x)
+function setlocal!(ctx, idx, x, set = true)
     T = ssatype(ctx, idx)
-    if T != Union{} && T != Nothing
+    if T != Union{} && T != Nothing && set # && T != Any
         ctx.varmap[idx] = ctx.localidx
         x = BinaryenLocalSet(ctx.mod, ctx.localidx, x)
-        update!(ctx, x, ssatype(ctx, idx))
+        update!(ctx, x, T)
     else
+        _DEBUG_ && BinaryenExpressionPrint(x)
         push!(ctx.body, x)
     end
 end
-function binaryfun(ctx, idx, bfuns, a, b)
+function binaryfun(ctx, idx, bfuns, a, b; adjustsizes = true)
     ctx.varmap[idx] = ctx.localidx
     Ta = roottype(ctx, a)
     Tb = roottype(ctx, b)
     _a = _compile(ctx, a)
     _b = _compile(ctx, b)
-    if sizeof(Ta) !== sizeof(Tb)   # try to make the sizes the same, at least for Integers
+    if adjustsizes && sizeof(Ta) !== sizeof(Tb)   # try to make the sizes the same, at least for Integers
         if sizeof(Ta) == 4
             _b = BinaryenUnary(ctx.mod, BinaryenWrapInt64(), _b)
         elseif sizeof(Ta) == 8
@@ -74,7 +75,7 @@ function compile_block(ctx::CompilerContext, cfg::Core.Compiler.CFG, phis, idx)
             update!(ctx, BinaryenUnreachable(ctx.mod))
 
         elseif node isa Core.ReturnNode
-            val = node.val isa GlobalRef ? node.val.mod.eval(node.val.name) : 
+            val = node.val isa GlobalRef ? Core.eval(node.val.mod, node.val.name) : 
                   node.val isa Core.Const ? node.val.val :
                   node.val
             update!(ctx, BinaryenReturn(ctx.mod, roottype(ctx, val) == Nothing ? C_NULL : _compile(ctx, val)))
@@ -155,12 +156,16 @@ function compile_block(ctx::CompilerContext, cfg::Core.Compiler.CFG, phis, idx)
                 binaryfun(ctx, idx, (BinaryenMulFloat64, BinaryenMulFloat32), a, b)
             end
 
+        elseif matchgr(node, :mul_float_fast) do a, b
+                binaryfun(ctx, idx, (BinaryenMulFloat64, BinaryenMulFloat32), a, b)
+            end
+
         elseif matchgr(node, :muladd_float) do a, b, c
                 ab = BinaryenBinary(ctx.mod,
                                     sizeof(roottype(ctx, a)) < 8 ? BinaryenMulFloat32() : BinaryenMulFloat64(),
                                     _compile(ctx, a),
                                     _compile(ctx, b))
-                binaryfun(ctx, idx, (BinaryenAddFloat64, BinaryenAddFloat32), Pass(ab), c)
+                binaryfun(ctx, idx, (BinaryenAddFloat64, BinaryenAddFloat32), c, Pass(ab), adjustsizes = false)
             end
 
         elseif matchgr(node, :fma_float) do a, b, c
@@ -184,7 +189,14 @@ function compile_block(ctx::CompilerContext, cfg::Core.Compiler.CFG, phis, idx)
             end
 
         elseif matchgr(node, :(===)) do a, b
-                binaryfun(ctx, idx, (BinaryenEqInt64, BinaryenEqInt32), a, b)
+                if roottype(ctx, a) <: Integer
+                    binaryfun(ctx, idx, (BinaryenEqInt64, BinaryenEqInt32), a, b)
+                elseif roottype(ctx, a) <: AbstractFloat
+                    binaryfun(ctx, idx, (BinaryenEqFloat64, BinaryenEqFloat32), a, b)
+                else
+                    x = BinaryenRefEq(ctx.mod, _compile(ctx, a), _compile(ctx, b))
+                    setlocal!(ctx, idx, x)
+                end    
             end
 
         elseif matchgr(node, :ne_int) do a, b
@@ -372,7 +384,7 @@ function compile_block(ctx::CompilerContext, cfg::Core.Compiler.CFG, phis, idx)
 
         elseif matchgr(node, :fptrunc) do a, b
                 t = (roottype(ctx, a), roottype(ctx, b))
-                t == (Float32, Float64) ? unaryfun(ctx, idx, (BinaryenTruncFloat32,), b) :
+                t == (Float32, Float64) ? unaryfun(ctx, idx, (BinaryenDemoteFloat64,), b) :
                 error("Unsupported `fptrunc` types")
             end
 
@@ -535,7 +547,7 @@ function compile_block(ctx::CompilerContext, cfg::Core.Compiler.CFG, phis, idx)
         elseif matchgr(node, :getfield) || matchcall(node, getfield)
             x = node.args[2]
             index = node.args[3]
-            T = roottype(ctx, x)
+            T = basetype(ctx, x)
             if T <: NTuple
                 # unsigned = eltype(T) <: Unsigned
                 unsigned = true
@@ -554,8 +566,9 @@ function compile_block(ctx::CompilerContext, cfg::Core.Compiler.CFG, phis, idx)
                 # end
             else
                 field = index
-                index = UInt32(findfirst(x -> x == field.value, fieldnames(T)) - 1)
-                eT = Base.datatype_fieldtypes(T)[index + 1]
+                nT = T <: Type ? DataType : T     # handle Types
+                index = UInt32(findfirst(x -> x == field.value, fieldnames(nT)) - 1)
+                eT = Base.datatype_fieldtypes(nT)[index + 1]
                 # unsigned = eT <: Unsigned
                 unsigned = true
                 binaryenfun(ctx, idx, BinaryenStructGet, index, _compile(ctx, x), gettype(ctx, eT), !unsigned, passall = true)
@@ -689,9 +702,7 @@ function compile_block(ctx::CompilerContext, cfg::Core.Compiler.CFG, phis, idx)
             # Filter out unused arguments (slotflag & 0x08)
             used = argsused(newci)
             s = node.args[1].def.sig
-            ## TODO: figure out proper way to identify varargs
-            if s isa DataType && s.parameters[end] isa Core.TypeofVararg # && newci.slottypes[end] isa Tuple
-            # if s isa DataType && s.parameters[end] isa Core.TypeofVararg && newci.slottypes[end] isa Tuple
+            if newci.parent.def.isva     # varargs
                 jargs = node.args[2:length(used)][used[1:end-1]]   # up to the last arg which is a vararg
                 args = [_compile(ctx, x) for x in jargs]
                 n = length(newci.slottypes[end].parameters)
@@ -702,8 +713,8 @@ function compile_block(ctx::CompilerContext, cfg::Core.Compiler.CFG, phis, idx)
                 jargs = node.args[2:end][used]
                 args = [_compile(ctx, x) for x in jargs]
             end
-            jlrettype = ssatype(ctx, idx)
-            rettype = gettype(ctx, jlrettype == Nothing ? Union{} : jlrettype)
+            ssarettype = ssatype(ctx, idx)
+            rettype = gettype(ctx, ssarettype == Nothing || ssarettype == Any ? Union{} : ssarettype)
             if haskey(ctx.names, newsig)
                 name = ctx.names[newsig]
             else
@@ -714,7 +725,12 @@ function compile_block(ctx::CompilerContext, cfg::Core.Compiler.CFG, phis, idx)
                 newci.parent.specTypes = newsig
                 compile_method(CompilerContext(ctx, newci))
             end
-            setlocal!(ctx, idx, BinaryenCall(ctx.mod, name, args, length(args), rettype))
+            # `set` controls whether a local variable is set to the return value.
+            # ssarettype == Any normally means that the return type isn't used.
+            # It can sometimes be Any if the method really does return Any, 
+            # so compare against the real return type. 
+            set = ssarettype != Any || ssarettype == newci.rettype
+            setlocal!(ctx, idx, BinaryenCall(ctx.mod, name, args, length(args), rettype), set)
 
         elseif node isa Expr && node.head == :call && node.args[1] isa GlobalRef && node.args[1].name == :isa    # val isa T
             T = node.args[3]

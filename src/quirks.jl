@@ -69,11 +69,14 @@ end
 
 # @overlay MT JS.array_to_string(x::Array) = JS.array_to_string(object(x))
 
+# I'm not sure this works:
+@overlay MT @inline Base.FastMath.mul_float_fast(a, b) = a * b
 @overlay MT @inline Base.FastMath.div_float_fast(a, b) = a / b
 @overlay MT @inline Base.FastMath.add_float_fast(a, b) = a + b
 
 #### Error handling
 
+@overlay MT @inline Base.error(err) = JS.console_log(err)
 @overlay MT @inline Base.throw(err) = JS.console_log(err)
 @overlay MT @inline Base.DomainError(str) = str
 @overlay MT @inline Base.InexactError(str) = str
