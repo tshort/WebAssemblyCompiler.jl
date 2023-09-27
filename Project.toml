@@ -17,7 +17,7 @@ libjlnode_jll = "e3ef64f0-f261-50ad-b884-29c8a26457f8"
 libnode_jll = "76d26698-d9ba-5ca1-ae24-4ac9393d02a0"
 
 [compat]
-Binaryen_jll = "0.114"
+Binaryen_jll = "0.116"
 CEnum = "0.4"
 Reexport = "1.2"
 julia = "1.7"

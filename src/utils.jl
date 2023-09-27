@@ -108,9 +108,11 @@ function gettype(ctx, type)
     if haskey(ctx.wtypes, type)
         return ctx.wtypes[type]
     end
-    if specialtype(type) !== nothing
-        return specialtype(type)
-    end
+    # if specialtype(type) !== nothing
+    #     @show type
+    #     @show specialtype(type)
+    #     return specialtype(type)
+    # end
     if type <: Array && !haskey(ctx.meta, :arraypass)
         wrappertype = gettype(ctx, FakeArrayWrapper{eltype(type)})
         ctx.wtypes[type] = wrappertype
@@ -124,6 +126,9 @@ function gettype(ctx, type)
     builtheaptypes = Array{BinaryenHeapType}(undef, 1)
     if type <: Buffer || type <: Array || type <: NTuple
         elt = eltype(type)
+        if elt == Union{}
+            elt = Int32
+        end
         TypeBuilderSetArrayType(tb, 0, gettype(ctx, elt), isbitstype(elt) && sizeof(elt) == 1 ? BinaryenPackedTypeInt8() : BinaryenPackedTypeNotPacked(), type <: Buffer)
     else  # Structs
         fieldtypes = [gettype(ctx, T) for T in Base.datatype_fieldtypes(type)]
@@ -134,9 +139,9 @@ function gettype(ctx, type)
     end
     TypeBuilderBuildAndDispose(tb, builtheaptypes, C_NULL, C_NULL)
     newtype = BinaryenTypeFromHeapType(builtheaptypes[1], true)
-    if isconcretetype(type) && sizeof(type) > 0
-        BinaryenModuleSetTypeName(ctx.mod, builtheaptypes[1], string(type))
-    end
+    # if isconcretetype(type) && sizeof(type) > 0
+    #     BinaryenModuleSetTypeName(ctx.mod, builtheaptypes[1], string(type))
+    # end
     # BinaryenExpressionPrint( BinaryenLocalSet(ctx.mod, 100, BinaryenLocalGet(ctx.mod, 99, newtype)))
     ctx.wtypes[type] = newtype
     return newtype
@@ -236,3 +241,4 @@ else
     is_kw_dispatch(meth::Method) = endswith(string(meth.name), "##kw") || !isempty(Base.kwarg_decl(meth))
 end
 
+validname(s::String) = replace(s, r"\W" => "_")

@@ -603,7 +603,8 @@ function compile_block(ctx::CompilerContext, cfg::Core.Compiler.CFG, phis, idx)
                 else
                     error("setfield! indexing with $field is not supported in $node.")
                 end
-                BinaryenStructSet(ctx.mod, index, _compile(ctx, x), _compile(ctx, value))
+                x = BinaryenStructSet(ctx.mod, index, _compile(ctx, x), _compile(ctx, value))
+                update!(ctx, x)
             end
         
 
@@ -615,7 +616,7 @@ function compile_block(ctx::CompilerContext, cfg::Core.Compiler.CFG, phis, idx)
                 jtype = jtype.mod.eval(jtype.name)
             end
             type = BinaryenTypeGetHeapType(gettype(ctx, jtype))
-            BinaryenModuleSetTypeName(ctx.mod, type, string(jtype))
+            # BinaryenModuleSetTypeName(ctx.mod, type, string(jtype))
             if jtype <: NTuple
                 values = [_compile(ctx, v) for v in node.args[2:end]]
                 N = Int32(length(node.args) - 1)
@@ -623,9 +624,9 @@ function compile_block(ctx::CompilerContext, cfg::Core.Compiler.CFG, phis, idx)
             else
                 x = BinaryenStructNew(ctx.mod, args, nargs, type)
                 binaryenfun(ctx, idx, BinaryenStructNew, args, nargs, type; passall = true)
-                for (i,name) in enumerate(fieldnames(jtype))
-                    BinaryenModuleSetFieldName(ctx.mod, type, i - 1, string(name))
-                end
+                # for (i,name) in enumerate(fieldnames(jtype))
+                #     BinaryenModuleSetFieldName(ctx.mod, type, i - 1, string(name))
+                # end
             end
 
         elseif node isa Expr && node.head == :call && node.args[1] isa GlobalRef && node.args[1].name == :tuple
@@ -656,7 +657,7 @@ function compile_block(ctx::CompilerContext, cfg::Core.Compiler.CFG, phis, idx)
                 rettype = gettype(ctx, Union{})
             end
             typeparameters = node.args[4].parameters
-            name = internalfun ? jscode[2:end] : string(jscode, jlrettype, typeparameters...)
+            name = internalfun ? jscode[2:end] : validname(string(jscode, jlrettype, typeparameters...))
             sig = node.args[5:end]
             jparams = [gettype(ctx, T) for T in typeparameters]
             bparams = BinaryenTypeCreate(jparams, length(jparams))
@@ -719,7 +720,7 @@ function compile_block(ctx::CompilerContext, cfg::Core.Compiler.CFG, phis, idx)
                 name = ctx.names[newsig]
             else
                 _DEBUG_ && @show newci
-                name = string("julia_", node.args[1].def.name, newsig.parameters[2:end]...)  # [1:min(end,25)]
+                name = validname(string("julia_", node.args[1].def.name, newsig.parameters[2:end]...))[1:min(end,255)]
                 ctx.sigs[name] = newsig
                 ctx.names[newsig] = name
                 newci.parent.specTypes = newsig

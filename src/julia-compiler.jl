@@ -1,8 +1,27 @@
 
 export compile
-# compile(fun, tt; filepath = "foo.wasm", validate = false, optimize = false) = compile(((fun, tt...),); filepath, validate, optimize)
 
+"""
+    compile(funs::Tuple...; filepath = "foo.wasm", jspath = filepath * ".js", validate = true, optimize = false, experimental = true)
+
+Compile the methods defined by `funs`.
+Each function definition to be compiled is a tuple with the first entry as the function followed by argument types.
+Keyword arguments include:
+
+* `filepath`--File path for the WebAssembly binary. The path will be created if it doesn't exist.
+* `jspath`--File path for the extra JavaScript file that defines `jsexports` which are the JS functions imported into WebAssembly (those normally defined by [`@jscall`](@ref)). 
+* `validate`--Apply Binaryen's validation tests.
+* `optimize`--Apply Binaryen's default optimization passes (still shaky).
+* `experimental`--Use experimental WebAssembly features.
+
+Examples:
+
+    compile((exp, Float64), filepath = "exp.wasm", optimize = true)   
+    compile((acos, Float64), (asin, Float64), filepath = "trigs.wasm", optimize = true)   
+
+"""
 function compile(funs::Tuple...; filepath = "foo.wasm", jspath = filepath * ".js", validate = true, optimize = false, experimental = true)
+    mkpath(dirname(filepath))
     cis = Core.CodeInfo[]
     dummyci = code_typed(() -> nothing, Tuple{})[1].first
     ctx = CompilerContext(dummyci; experimental)
@@ -42,6 +61,7 @@ function compile(funs::Tuple...; filepath = "foo.wasm", jspath = filepath * ".js
     imports = unique(values(ctx.imports))
     jstext *= join(["jsexports['js']['$v'] = $v;" for v in imports], "\n")
     write(jspath, jstext)
+    nothing
 end
 
 function compile_method(ctx::CompilerContext; sig = ctx.ci.parent.specTypes, exported = false)

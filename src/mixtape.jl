@@ -22,7 +22,7 @@ struct NoContext <: CompilationContext end
 """
     abstract type CompilationContext end
 
-Parametrize the Mixtape pipeline by inheriting from `CompilationContext`. Similar to the context objects in [Cassette.jl](https://julia.mit.edu/Cassette.jl/stable/contextualdispatch.html). By using the interface methods [`transform`](@ref) and [`optimize!`](@ref) -- the user can control different parts of the compilation pipeline.
+Parametrize the Mixtape pipeline by inheriting from `CompilationContext`. Similar to the context objects in [Cassette.jl](https://julia.mit.edu/Cassette.jl/stable/contextualdispatch.html). By using the interface methods [`transform`](@ref) -- the user can control different parts of the compilation pipeline.
 """, CompilationContext)
 
 transform(ctx::CompilationContext, b) = b
@@ -60,7 +60,7 @@ end
 """
     allow(f::CompilationContext, args...)::Bool
 
-Determines whether the user-defined [`transform`](@ref) and [`optimize!`](@ref) are allowed to look at a lowered `Core.CodeInfo` or `Core.Compiler.IRCode` instance.
+Determines whether the user-defined [`transform`](@ref) is allowed to look at a lowered `Core.CodeInfo` or `Core.Compiler.IRCode` instance.
 
 The user is allowed to greenlight modules:
 

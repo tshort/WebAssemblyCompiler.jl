@@ -398,6 +398,13 @@ end
     jsfun = jsfunctions((fglobals2, Int32,))
     @test jsfun.fglobals2(1) == fglobals2(1)
     
+    function fglobals3(x)
+        xx.b[2] = 4.
+        xx.c = 5.
+        return x + xx.c
+    end
+    compile((fglobals3, Float64,); filepath = "tmp/fglobals3.wasm")
+
     struct Y
         a::Float64
         b::Float64

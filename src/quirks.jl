@@ -45,7 +45,7 @@ end
     @ccall _jl_array_copyto(dest::Array{T,1}, (doffs-1)::Int32, src::Array{T,1}, (soffs-1)::Int32, n::Int32)::Array{T,1}
 
 # @overlay MT Base.string(x...) = JS.array_to_string(JS.object(Any[x...]))
-@overlay MT Base.string(x...) = JS.string(x...)
+@overlay MT Base.string(x...) = JS._string(x...)
 
 @overlay MT Base.getindex(::Type{Any}, @nospecialize vals...) = unrolledgetindex(vals)
 
@@ -68,6 +68,8 @@ end
 @overlay MT Base.CoreLogging.current_logger_for_env(x...) = nothing
 
 # @overlay MT JS.array_to_string(x::Array) = JS.array_to_string(object(x))
+
+@overlay MT Base.display(x) = JS.console_log(x)
 
 # I'm not sure this works:
 @overlay MT @inline Base.FastMath.mul_float_fast(a, b) = a * b
