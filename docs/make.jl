@@ -11,7 +11,7 @@ Documenter.post_status(deployconfig; type="pending", repo="github.com/tshort/Web
 using Literate
 
 Literate.markdown("../examples/basics/basics.jl", "src/examples", credit = false, execute = true)
-# Literate.markdown("../examples/lorentz/lorentz.jl", "src/examples", credit = false, execute = true)
+Literate.markdown("../examples/lorentz/lorentz.jl", "src/examples", credit = false, execute = true)
 
 makedocs(
     sitename = "WebAssemblyCompiler",

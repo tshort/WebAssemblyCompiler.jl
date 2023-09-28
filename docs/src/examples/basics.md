@@ -40,7 +40,7 @@ basics (generic function with 1 method)
 Compile it using:
 
 ````julia
-# compile((basics, Float64); filepath = "basics/basics.wasm", validate = true, optimize = false)
+compile((basics, Float64); filepath = "basics/basics.wasm", validate = true, optimize = false)
 ````
 
 ```@raw html
