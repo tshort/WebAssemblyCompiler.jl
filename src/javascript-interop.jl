@@ -156,7 +156,7 @@ Base.take!(b::IOBuff) = array_to_string(b.x)
 
 
 _string(x...) = array_to_string(JS.object(Any[x...]))
-_string(x) = x
+_string(x::String) = x
 
 
 """
@@ -192,7 +192,7 @@ Base.keys(o::Node) = keys(attrs(o))
 
 # append classes
 Base.getproperty(o::Node, class::String) = o(class = string(Base.get(o, :class, ""), " ", class))
-Base.getproperty(o::Node, class::Symbol) = o(class = string(Base.get(o, :class, ""), " ", class))
+Base.getproperty(o::Node, class::Symbol) = o(class = string(Base.get(o, :class, ""), " ", String(class)))
 
 # methods that pass through to children(o)
 Base.lastindex(o::Node) = lastindex(children(o))

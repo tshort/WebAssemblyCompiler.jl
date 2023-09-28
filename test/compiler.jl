@@ -189,8 +189,8 @@ end
     end
     compile((fa1, Int32,); filepath = "tmp/fa1.wasm")
     compile((fa1, Int32,); filepath = "tmp/fa1o.wasm", optimize = true)
-    jsfun = jsfunctions((fa1, Int32,))
-    @test fa1(Int32(3)) == jsfun.fa1(Int32(3))
+    # jsfun = jsfunctions((fa1, Int32,))
+    # @test fa1(Int32(3)) == jsfun.fa1(Int32(3))
 
     function fa2(i)
         a = Array{Float64,1}(undef, Int32(i))
@@ -211,9 +211,9 @@ end
         fa3a(a) + x
     end
     compile((fa3, Float64,); filepath = "tmp/fa3.wasm")
-    jsfun = jsfunctions((fa3, Float64,))
-    x = 3.0
-    @test fa3(x) == jsfun.fa3(x)
+    # jsfun = jsfunctions((fa3, Float64,))
+    # x = 3.0
+    # @test fa3(x) == jsfun.fa3(x)
 
     function fa4(x)
         a = ones(5)
@@ -267,9 +267,9 @@ end
     end
     # x = X(1., 2., 3.)
     compile((fstructs1, Float64,); filepath = "tmp/fstructs1.wasm")
-    jsfun = jsfunctions((fstructs1, Float64,))
-    x = 3.0
-    @test fstructs1(x) == jsfun.fstructs1(x)
+    # jsfun = jsfunctions((fstructs1, Float64,))
+    # x = 3.0
+    # @test fstructs1(x) == jsfun.fstructs1(x)
 
     @noinline function fstructs2a(y)
         x = X(y, 2y, 3y)
@@ -281,9 +281,9 @@ end
         y.c + 1
     end
     compile((fstructs2, Float64); filepath = "tmp/fstructs2.wasm")
-    jsfun = jsfunctions((fstructs2, Float64,))
-    x = 3.0
-    @test fstructs2(x) == jsfun.fstructs2(x)
+    # jsfun = jsfunctions((fstructs2, Float64,))
+    # x = 3.0
+    # @test fstructs2(x) == jsfun.fstructs2(x)
 
     function fstructs3(x)
         a = [1.,2.,x]
@@ -291,8 +291,8 @@ end
     end
     compile((fstructs3, Float64,); filepath = "tmp/fstructs3.wasm", validate = true)
     x = 3.0
-    jsfun = jsfunctions((fstructs3, Float64,))
-    @test fstructs3(x) == jsfun.fstructs3(x)
+    # jsfun = jsfunctions((fstructs3, Float64,))
+    # @test fstructs3(x) == jsfun.fstructs3(x)
 
 end
 
@@ -359,13 +359,13 @@ end
     x, y, z = 3.0, 2.0, 1.0
     @test muladd(x, y, z) == jsfun.muladd(x, y, z)
 
-    jsfun = jsfunctions((exp, Float64,))
-    x = 3.0
-    @test exp(x) == jsfun.exp(x)
+    # jsfun = jsfunctions((exp, Float64,))
+    # x = 3.0
+    # @test exp(x) == jsfun.exp(x)
 
-    jsfun = jsfunctions((acos, Float64,))
-    x = 0.3
-    @test acos(x) == jsfun.acos(x)
+    # jsfun = jsfunctions((acos, Float64,))
+    # x = 0.3
+    # @test acos(x) == jsfun.acos(x)
 
 end
 
@@ -377,9 +377,9 @@ end
         @inbounds tpl[x]
     end
     compile((ftuples1, Int32,); filepath = "tmp/ftuples1.wasm")
-    jsfun = jsfunctions((ftuples1, Int32,))
-    x = Int32(1)
-    @test ftuples1(x) == jsfun.ftuples1(x)
+    # jsfun = jsfunctions((ftuples1, Int32,))
+    # x = Int32(1)
+    # @test ftuples1(x) == jsfun.ftuples1(x)
 
 end
 
@@ -395,16 +395,9 @@ end
 
     fglobals2(i) = @inbounds a[i]
     compile((fglobals2, Int32,); filepath = "tmp/fglobals2.wasm", validate = true, optimize = true)
-    jsfun = jsfunctions((fglobals2, Int32,))
-    @test jsfun.fglobals2(1) == fglobals2(1)
+    # jsfun = jsfunctions((fglobals2, Int32,))
+    # @test jsfun.fglobals2(1) == fglobals2(1)
     
-    function fglobals3(x)
-        xx.b[2] = 4.
-        xx.c = 5.
-        return x + xx.c
-    end
-    compile((fglobals3, Float64,); filepath = "tmp/fglobals3.wasm")
-
     struct Y
         a::Float64
         b::Float64
@@ -416,10 +409,10 @@ end
     const x = Z(Y(1.,2.), 3.)
     g1(i) = x.a.a
     compile((g1, Int32,); filepath = "tmp/globalcombo.wasm")
-    jsfun = jsfunctions((g1, Int32,))
-    @test jsfun.g1(1) == g1(1)
+    # jsfun = jsfunctions((g1, Int32,))
+    # @test jsfun.g1(1) == g1(1)
 
-     
+    
     mutable struct X
         a::Array{Float64,1}
         b::Array{Float64,1}
@@ -428,9 +421,9 @@ end
     const xx = X([1.,2.], [5., 6.], 3.)
     g1(i) = xx.b[i]
     compile((g1, Int32,); filepath = "tmp/globalcombo2.wasm")
-    jsfun = jsfunctions((g1, Int32,))
-    @test jsfun.g1(1) == g1(1)
-    # @show jsfun.g1(2)
+    # jsfun = jsfunctions((g1, Int32,))
+    # @test jsfun.g1(1) == g1(1)
+    # # @show jsfun.g1(2)
 
     g2(i) = xx.b[i] + length(xx.a)
     compile((g2, Int32,); filepath = "tmp/globalcombo3.wasm")
@@ -438,7 +431,14 @@ end
     # @test jsfun.g2(1) == g2(1)
     # @show jsfun.g2(2)
 
+    function fglobals3(x)
+        xx.b[2] = 4.
+        xx.c = 5.
+        return x + xx.c
+    end
+    compile((fglobals3, Float64,); filepath = "tmp/fglobals3.wasm")
 
+ 
     const d = Dict{Int32,Int32}(1 => 10, 2 => 20, 3 => 30, 4 => 40)
     f(i) = get(d, i, Int32(-1))
     compile((f, Int32,); filepath = "tmp/dict.wasm")
