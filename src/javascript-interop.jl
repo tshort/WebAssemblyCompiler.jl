@@ -155,8 +155,9 @@ Base.take!(b::IOBuff) = array_to_string(b.x)
 @inline Base.print(io::IOBuff, a, b, c...)  = (push!(io.x, a); push!(io.x, b); print(io, c...))
 
 
-_string(x...) = array_to_string(JS.object(Any[x...]))
-_string(x::String) = x
+@inline _string(x...) = array_to_string(JS.object(Any[x...]))
+@inline _string(x) = x
+@inline _string(x::Symbol) = string("", x)  # cheating here, but how do we make this better?
 
 
 """
@@ -192,7 +193,7 @@ Base.keys(o::Node) = keys(attrs(o))
 
 # append classes
 Base.getproperty(o::Node, class::String) = o(class = string(Base.get(o, :class, ""), " ", class))
-Base.getproperty(o::Node, class::Symbol) = o(class = string(Base.get(o, :class, ""), " ", String(class)))
+Base.getproperty(o::Node, class::Symbol) = o(class = string(Base.get(o, :class, ""), " ", class))
 
 # methods that pass through to children(o)
 Base.lastindex(o::Node) = lastindex(children(o))
@@ -228,11 +229,11 @@ For `WebAssemblyCompiler.h`, the following are equivalent:
     h.div.myclass("content")
 
 """
-@noinline h(tag, children...; attrs...) = Node(tag, NamedTuple(attrs), children)
+@inline h(tag, children...; attrs...) = Node(tag, NamedTuple(attrs), children)
 
 
-Base.getproperty(::typeof(h), tag::Symbol) = h(String(tag))
-Base.getproperty(::typeof(h), tag::String) = h(tag)
+@inline Base.getproperty(::typeof(h), tag::Symbol) = h(_string(tag))
+@inline Base.getproperty(::typeof(h), tag::String) = h(tag)
 Base.propertynames(::typeof(h)) = HTML5_TAGS
 
 #-----------------------------------------------------------------------------# @h
@@ -268,8 +269,8 @@ end
     nothing
 end
 
-_printattrs(io) = nothing
-function _printattrs(io, x)
+@inline _printattrs(io) = nothing
+@inline function _printattrs(io, x)
     # k = string(x[1])
     k = x[1]
     v = x[2]

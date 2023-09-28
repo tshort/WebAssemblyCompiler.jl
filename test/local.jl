@@ -7,12 +7,12 @@ const WebAssemblyCompiler._DEBUG_ = true
     
     const h = JS.h
 
-    function fcw1(x)
-        n = h("div", "hello") 
-        # n = h("div", "jkl", n)
-        # n = h("div", "jkl", h("strong", "!!!!!", "xxxx"), class = "myclass")
-        # n = h("div", "hi", "abc", x, n, class = "myclass2")
-        JS.sethtml("myid", n)
+    function fcw2(x)
+        snip = h("div",
+                 h.h1("Hello there"),
+                 h.p("This is some ", h.strong("strong text")),
+                 h.p("more text", class = "myclass"))
+        JS.sethtml("myid", string(snip))
         return x
     end
-    compile((fcw1, Float64,); filepath = "tmp/fcw1.wasm", validate = true)
+    compile((fcw2, Float64,); filepath = "tmp/fcw2.wasm", validate = true)
