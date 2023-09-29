@@ -1,5 +1,5 @@
 #=
-# JS interop
+# Basic JavaScript interop
 
 This example generates HTML from Julia and inserts the contents here:
 
@@ -29,6 +29,7 @@ function basics(x)
     JS.console_log((arr = [1., 2., 3.], str = "hello", num = 2.0, tp = (3, 3.)))
     return x
 end
+nothing #hide
 
 # Compile it using:
 

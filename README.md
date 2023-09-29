@@ -21,69 +21,6 @@
 * `JS.escape`
 * `JS.@esc_str`
 
-## TODO
-
-### SSA IR
-
-* [ ] PhiC nodes
-* [ ] Upsilon nodes
-
-### Intrinsics / Builtins
-
-* [ ] Several
-
-### Important
-
-* [x] Recursively compile calls to `invoke`
-* [x] foreigncall
-* [x] Global variables
-* [x] Multiple functions
-
-### Types
-
-* [x] WASM arrays (more like buffers)
-* [x] Julia arrays
-  - [x] Basic wrapper type
-  - [x] Add ability to grow an array
-  - [x] Array copy
-* [x] Structs
-* [x] Tuples
-* [x] Strings
-  - [ ] concatenate
-* [ ] Unions
-* [x] Symbols
-* [ ] svec
-* [x] General type generator
-
-
-### JS integration
-  - [x] Any arrays
-    - [x] Box values
-    - [x] Nested arrays
-  - [x] Fix string()
-  - [x] Make objects
-  - [x] Typed arrays
-  - [x] Named tuples to objects
-  - [ ] Structs to objects
-
-
-### libjulia
-
-* [ ] IO
-
-### Tests
-
-* [ ] Integrate some of Julia's tests
-* [x] Get `@test` to work
-
-### Other
-
-* [x] Binaryen optimization
-* [x] Varargs
-* [x] jl_array_copy
-* [ ] unsafe_copyto! - needs overlay
-* [ ] Split up tests
-
 ### Things Working and Things Broken
 
 Working:
@@ -111,37 +48,3 @@ Broken and hard:
 * [ ] Pick a DiffEq example to try
 
 
-## Approaches to Generating WebAssembly
-
-[StaticCompiler](https://github.com/tshort/StaticCompiler.jl) can also generate WebAssembly from Julia code. Some of the advantages of that approach include:
-* LLVM generates fast code.
-* The package is simple (GPUCompiler and Julia's compiler does all the work).
-
-The main disadvantages of StaticCompiler are:
-* No GC built in.
-* No clear path to include libjulia capability, so no GC, and everything must be manually allocated ([StaticTools](https://github.com/brenhinkeller/StaticTools.jl)).
-* The Julia compiler doesn't make a good cross compiler. For example indexes into structs sometimes use the host index and sometimes the target index.
-
-The compiler in this project is better in some ways, including:
-* Support for WebAssembly GC (structs, strings, arrays, ...).
-* Good interop with JavaScript.
-* Can tailor compilation to WebAssembly better.
-* Hacking the compiler is easier.
-
-The downsides of this approach are:
-* Code isn't as good as LLVM's. The biggest issue may be no autovectorization.
-* WebAssembly's type system is limited. This should improve in the future.
-  * No nested structs or arrays of structs; nesting boxes everything; use [StructArrays](https://github.com/JuliaArrays/StructArrays.jl), [ComponentArrays](https://github.com/jonniedie/ComponentArrays.jl), [ValueShapes](https://github.com/oschulz/ValueShapes.jl), or other Julia packages to organize nested data using flat arrays.
-  * All structs are boxed.
-* Browser support for WASM-GC is just beginning.
-* More bugs.
-
-## Notes
-
-* WebAssembly's Tuples and Structs cannot be indexed dynamically. Only fixed integer indexing works. So, Tuples are mapped as follows:
-  - NTuple -> WebAssembly's Fixed Array
-  - Tuple -> WebAssembly's Tuple or Struct. The Struct will GC. WebAssembly's Tuple is more for handling multiple return values. The only option for dynamic indexing is some sort of table lookup.  
-
-* There is no equivalent of stack-allocated Tuples for StaticArrays. There are Fixed Arrays that are heap allocated. Maybe the browser can convert some of those to stack values. Something like [Bumper](https://github.com/MasonProtter/Bumper.jl) could substitute for stack allocation.
-
-* You can't get a pointer from GC heap-allocated arrays. You can't reinterpret or use pointer operations. You can have a buffer and pull in individual values and reinterpret those.

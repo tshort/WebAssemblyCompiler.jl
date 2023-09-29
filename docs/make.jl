@@ -10,8 +10,31 @@ deployconfig = Documenter.auto_detect_deploy_system()
 Documenter.post_status(deployconfig; type="pending", repo="github.com/tshort/WebAssemblyCompiler.jl.git")
 using Literate
 
-Literate.markdown("../examples/basics/basics.jl", "src/examples", credit = false, execute = true)
-Literate.markdown("../examples/lorentz/lorentz.jl", "src/examples", credit = false, execute = true)
+# hide example blocks with "#hideall" 
+function hideall(input)
+    lines = split(input, "\n")
+    inexample = false
+    shouldhide = false
+    for (i,s) in enumerate(lines)
+        if occursin(r"^````@example", s)
+            inexample = true
+        end
+        if inexample && occursin(r"\#hideall", s)
+            shouldhide = true
+        end
+        if occursin(r"^````", s) && !occursin("@", s)
+            inexample = false
+            shouldhide = false
+        end
+        if inexample && shouldhide
+            lines[i] *= "   #hide"
+        end
+    end
+    return join(lines, "\n")
+end
+
+Literate.markdown("../examples/basics/basics.jl", "src/examples", credit = false, postprocess = hideall)
+Literate.markdown("../examples/lorentz/lorentz.jl", "src/examples", credit = false, postprocess = hideall)
 
 makedocs(
     sitename = "WebAssemblyCompiler",
@@ -22,12 +45,14 @@ makedocs(
         canonical = "https://fredrikekre.github.io/Literate.jl/v2",
     ),
     pages = Any[
-        "index.md",
+        "Introduction" => "index.md",
         "Examples" => Any[
-           "examples/basics.md",
-           "examples/lorentz.md",
+           "JS interop"    => "examples/basics.md",
+           "Lorentz model" => "examples/lorentz.md",
         ],
-        "api.md"])
+        "api.md",
+        "notes.md"
+    ])
 
 # Documenter can also automatically deploy documentation to gh-pages.
 # See "Hosting Documentation" and deploydocs() in the Documenter manual

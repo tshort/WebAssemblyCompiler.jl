@@ -17,7 +17,7 @@ compile
 
 ```@autodocs
 Modules = [WebAssemblyCompiler.JS]
-Order   = [:function, :type]
+Order   = [:function, :macro, :type]
 ```
 
 ## Overlays

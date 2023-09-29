@@ -5,14 +5,11 @@ const W = WebAssemblyCompiler
 const WebAssemblyCompiler._DEBUG_ = true
 # const WebAssemblyCompiler._DEBUG_ = false
     
-    const h = JS.h
 
-    function fcw2(x)
-        snip = h("div",
-                 h.h1("Hello there"),
-                 h.p("This is some ", h.strong("strong text")),
-                 h.p("more text", class = "myclass"))
-        JS.sethtml("myid", string(snip))
+    function fxxx(x)
+        y = (ss = true, a = Int32(1), b = 2.0, x = [1.,2.], c = (3.0, 4.0, "hello"))
+        y = (1.0, 2.0, (ss = true, a = Int32(1)), (3., 4.))
+        display(y)
         return x
     end
-    compile((fcw2, Float64,); filepath = "tmp/fcw2.wasm", validate = true)
+    compile((fxxx, Float64,); filepath = "tmp/fxxx.wasm", validate = true)

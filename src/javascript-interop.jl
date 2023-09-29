@@ -75,7 +75,7 @@ array_to_string(x::Vector) = array_to_string(object(x))
 Return a JavaScript object representing the Julia object `x`.
 This is useful for transfering arrays, named tuples, and other objects to JavaScript.
 """
-object(x::Union{Int32, Float32, Float64, String, Symbol, Externref}) = x
+object(x::Union{Int32, Float32, Float64, Bool, String, Symbol, Externref}) = x
 # object(x::Char) = string(x)
 
 function object(v::Vector{Any})
@@ -89,6 +89,8 @@ function object(v::Vector{Any})
             _set(jsa, i, x.x)
         elseif x isa Box{Int64}
             _set(jsa, i, Int32(x.x))
+        elseif x isa Box{Bool}
+            _set(jsa, i, x.x)
         # elseif x isa Box{Symbol}
         #     _set(jsa, i, x.x)
         # elseif x isa Box{Char}
@@ -132,7 +134,9 @@ function object(tpl::Tuple)
 end
 
 @inline _setjsa(jsa, i) = nothing
-@inline _setjsa(jsa, i, x) = _set(jsa, i, x)
+@inline _setjsa(jsa, i, x::T) where {T <: Union{Int64, Int32, UInt64, UInt32, Float64, Float32, Char, Bool, UInt8, Int8}} = 
+    _set(jsa, i, x)
+@inline _setjsa(jsa, i, x) = _set(jsa, i, object(x)) 
 @inline function _setjsa(jsa, i, x, xs...)
     _setjsa(jsa, i, x)
     _setjsa(jsa, i + 1, xs...)
@@ -163,7 +167,7 @@ Base.take!(b::IOBuff) = array_to_string(b.x)
 """
     Node(tag::String, attrs::NamedTuple, children::Tuple)
 
-Should not often be used directly.  See `?JS.h`.
+Should not often be used directly.  See [`h`](@ref).
 """
 struct Node{A <: NamedTuple, C <: Tuple}
     tag::String
@@ -228,6 +232,8 @@ For `WebAssemblyCompiler.h`, the following are equivalent:
     h.div."myclass"("content")
     h.div.myclass("content")
 
+Note that strings are not encoded, so be sure not to include problematic HTML characters like `<`. 
+Use [`escape`](@ref) or [`esc"..."`](@ref @esc_str) to fix strings with problematic characters.
 """
 @inline h(tag, children...; attrs...) = Node(tag, NamedTuple(attrs), children)
 
@@ -242,6 +248,12 @@ const HTML5_TAGS = [:a,:abbr,:address,:area,:article,:aside,:audio,:b,:base,:bdi
 #-----------------------------------------------------------------------------# escape
 escape_chars = ['&' => "&amp;", '"' => "&quot;", ''' => "&#39;", '<' => "&lt;", '>' => "&gt;"]
 
+"""
+    escape(x)
+
+Replaces HTML-specific characters in the string `x` with encoded versions.
+It converts '&', '"', ''', '<', and '>'. 
+"""
 function escape(x; patterns = escape_chars)
     for pat in patterns
         x = replace(x, pat)
@@ -251,6 +263,15 @@ end
 
 unescape(x::AbstractString) = escape(x; patterns = reverse.(escape_chars))
 
+"""
+    esc"..."
+
+Uses [`escape`](@ref) to fix up an HTML string.
+
+Example
+
+    esc"An HTML string with problematic characters, including ', >, and &"
+"""
 macro esc_str(str)
     escape(str)
 end
