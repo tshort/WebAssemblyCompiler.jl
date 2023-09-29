@@ -12,6 +12,7 @@ compile
 
 ```@docs
 @jscall
+Externref
 ```
 
 

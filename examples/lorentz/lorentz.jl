@@ -153,8 +153,8 @@ nothing #hide
 end
 plotly(id, data, layout, config) = 
     @jscall("(id, data, layout, config) => Plotly.newPlot(id, data, layout, config)",
-        Nothing, Tuple{String, W.Externref, W.Externref, W.Externref},
-        id, JS.object(data), JS.object(layout), JS.object(config))
+        Nothing, Tuple{String, Externref, Externref, Externref},
+        id, data, layout, config)
 
 # Before compiling, we need to override some error checks that caused failures.
 

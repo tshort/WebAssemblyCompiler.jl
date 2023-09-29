@@ -1,3 +1,13 @@
+export Externref
+
+"""
+    Externref()
+
+A type representing an external object in the host system (JavaScript).
+This object can be passed around, but no direct operations are supported.
+The object can be passed back to JavaScript methods. 
+To convert a Julia object to and `Externref`, use [`JS.object`](@ref). 
+"""
 struct Externref 
     dummy::Int32
 end

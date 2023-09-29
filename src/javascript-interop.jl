@@ -11,15 +11,24 @@ All `@jscall` definitions are imported from JavaScript.
 `rettype`, `tt`, ang `args...` all follow the `Base.llvmcall` format.
 `tt` is a Tuple type (not a regular Tuple).
 
+Arguments are converted to the types specified in `tt`.
+Allowable types include: [`Externref`](@ref), `String`, `Int64`, `Int32`, `UInt64`, 
+`UInt32`, `Float64`, `Float32`, `Char`, `Bool`, `UInt8`, and `Int8`.
+[`Externref`](@ref) types are converted with [`JS.object`](@ref).
+
 Examples:
-    
+    @jscall("x => alert(x)", Nothing, Tuple{String}, x)
+    d = @jscall("() => getElementById('someid')", Externref, Tuple{})
+    @jscall("d => d.innerHTML = 'hello world'", Nothing, Tuple{Externref}, d)
 
 `@jscall` is used extensively in [quirks.jl](https://github.com/tshort/WebAssemblyCompiler.jl/blob/main/src/javascript-interop.jl) and 
 [javascript-interop.jl](https://github.com/tshort/WebAssemblyCompiler.jl/blob/main/src/javascript-interop.jl).
 
 """
 macro jscall(fun, rettype, tt, args...)
-    esc(:(Base.llvmcall($fun, $rettype, $tt, $(args...))))
+    tp = tt.args[2:end]
+    convertedargs = (:(convert($(tp[i]), $a)) for (i,a) in enumerate(args))
+    esc(:(Base.llvmcall($fun, $rettype, $tt, $(convertedargs...))))
 end
 
 export JS
@@ -141,6 +150,7 @@ end
     _setjsa(jsa, i, x)
     _setjsa(jsa, i + 1, xs...)
 end
+Base.convert(::Type{Externref}, x) = object(x)
 
 # Simple IO buffer for printing to strings
 struct IOBuff <: IO
