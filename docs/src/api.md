@@ -39,7 +39,7 @@ These are unlikely to change, though.
 
 ## LibBinaryen
 
-The C interface is provided through `WebAssemblyCompiler.LibBinaryen`. 
+The C interface to Binaryen is provided through `WebAssemblyCompiler.LibBinaryen`. 
 
 This is not official API in terms of semver. 
 Each release of WebAssemblyCompiler targets a specific version of Binaryen. 

@@ -6,7 +6,7 @@ export Externref
 A type representing an external object in the host system (JavaScript).
 This object can be passed around, but no direct operations are supported.
 The object can be passed back to JavaScript methods. 
-To convert a Julia object to and `Externref`, use [`JS.object`](@ref). 
+To convert a Julia object to an `Externref`, use [`JS.object`](@ref). 
 """
 struct Externref 
     dummy::Int32
@@ -18,21 +18,20 @@ struct Box{T}
 end
 
 wtypes() = Dict{Any, BinaryenType}(
-    Int64 => BinaryenTypeInt64(),
-    Int32 => BinaryenTypeInt32(),
-    UInt64 => BinaryenTypeInt64(),
-    UInt32 => BinaryenTypeInt32(),
-    UInt8 => BinaryenTypeInt32(),
-    Bool  => BinaryenTypeInt32(),
-    Float64 => BinaryenTypeFloat64(),
-    Float32 => BinaryenTypeFloat32(),
-    Symbol => BinaryenTypeStringref(),
-    String => BinaryenTypeStringref(),
+    Int64     => BinaryenTypeInt64(),
+    Int32     => BinaryenTypeInt32(),
+    UInt64    => BinaryenTypeInt64(),
+    UInt32    => BinaryenTypeInt32(),
+    UInt8     => BinaryenTypeInt32(),
+    Bool      => BinaryenTypeInt32(),
+    Float64   => BinaryenTypeFloat64(),
+    Float32   => BinaryenTypeFloat32(),
+    Symbol    => BinaryenTypeStringref(),
+    String    => BinaryenTypeStringref(),
     Externref => BinaryenTypeExternref(),
-    Any => BinaryenTypeEqref(),
+    Any       => BinaryenTypeEqref(),
+    Union{}   => BinaryenTypeNone(),
     Core.TypeofBottom => BinaryenTypeNone(),
-    Union{} => BinaryenTypeNone(),
-    # Nothing => BinaryenTypeNone(),
 )
 
 const basictypes = [Int64, Int32, UInt64, UInt32, UInt8, Bool, Float64, Float32]

@@ -51,7 +51,7 @@ end
 
 u0 = [1.0,0.0,0.0]
 tspan = (0.0,100.0)
-p = (10,28,8/3)
+p = (10.0,28.0,8/3)
 prob = ODEProblem{true, SciMLBase.FullSpecialize}(lorenz!,u0,tspan,p)  # try to avoid FunctionWrappers with FullSpecialize
 
 const integ = init(prob, Tsit5())
