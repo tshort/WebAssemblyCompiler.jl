@@ -140,13 +140,15 @@ nothing #hide
 # This function plots the results.
 
 @inline function update_output(t, u1, u2, u3)
+    xydata = ((x = u1, y = u2, type = "line", name = "x"),) 
+    xylayout = (width = 400.0, height = 400.0, margin = (t = 20., b = 20., l = 20., r = 20.))
+    config = (responsive = true,)
+    plotly("xyplot", xydata, xylayout, config)
     tdata = ((x = t, y = u1, type = "line", name = "x"), 
              (x = t, y = u2, type = "line", name = "y"), 
              (x = t, y = u3, type = "line", name = "z")) 
-    layout = (width = 900, height = 300, margin = (t = 20, b = 20))
-    layout = (width = 900.0, height = 300.0, margin = (t = 20., b = 20.))
-    config = (responsive = true,)
-    tplot = plotly("timeplot", tdata, layout, config)
+    tlayout = (width = 900.0, height = 300.0, margin = (t = 20., b = 20.))
+    plotly("timeplot", tdata, tlayout, config)
     nothing
 end
 plotly(id, data, layout, config) = 
@@ -169,20 +171,21 @@ compile((update,); filepath = "lorentz/lorentz.wasm", validate = true)
 
 
 ```@raw html
-// Weird hack to load Plotly: https://stackoverflow.com/a/33635881
-    <script>
-        window.__define = window.define;
-        window.__require = window.require;
-        window.define = undefined;
-        window.require = undefined;
-    </script>
+// Weird hack to load Plotly: https://stackoverflow.com/a/3363588
+// https://github.com/JuliaDocs/Documenter.jl/issues/12471
+<script>
+    window.__define = window.define;
+    window.__require = window.require;
+    window.define = undefined;
+    window.require = undefined;
+</script>
 <script src="https://cdn.plot.ly/plotly-2.26.0.min.js" charset="utf-8"></script>
-    <script>
-        window.define = window.__define;
-        window.require = window.__require;
-        window.__define = undefined;
-        window.__require = undefined;
-    </script>
+<script>
+    window.define = window.__define;
+    window.require = window.__require;
+    window.__define = undefined;
+    window.__require = undefined;
+</script>
 <script src="/js/mdpad.js" ></script>
 <script src="lorentz.wasm.js"></script>
 <script>
