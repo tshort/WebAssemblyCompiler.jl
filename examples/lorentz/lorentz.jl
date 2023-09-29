@@ -18,7 +18,7 @@ numform(name; mdpad = "name", step = 1, value = 1) =
        ),
      )
  h.div(
-     h.div."columns"(
+     h.div."columns is-vcentered"(
          h.div."column"(
              h.form(
                  numform("σ", mdpad = "p1", step = 0.2, value = 10.0),
@@ -67,7 +67,7 @@ WebAssembly stores that as a global variable.
 function update()
     reinit!(integ)
     integ.p = update_params()
-    integ.dt = 0.001
+    integ.dt = 0.005
     n = 10000
     tres = zeros(n)
     u1 = zeros(n)
@@ -171,9 +171,9 @@ compile((update,); filepath = "lorentz/lorentz.wasm", validate = true)
 
 
 ```@raw html
-// Weird hack to load Plotly: https://stackoverflow.com/a/3363588
-// https://github.com/JuliaDocs/Documenter.jl/issues/12471
 <script>
+    // Weird hack to load Plotly: https://stackoverflow.com/a/3363588
+    // https://github.com/JuliaDocs/Documenter.jl/issues/12471
     window.__define = window.define;
     window.__require = window.require;
     window.define = undefined;
