@@ -41,8 +41,8 @@ Literate.markdown(joinpath(@__DIR__, "../examples/lorenz/lorenz.jl"),
 makedocs(
     sitename = "WebAssemblyCompiler",
     # modules = [WebAssemblyCompiler],
-    repo="https://github.com/tshort/WebAssemblyCompiler.jl/blob/{commit}{path}#L{line}",
-    linkcheck = true,
+    repo="https://github.com/tshort/WebAssemblyCompiler.jl.git",
+    # linkcheck = true,
     format = Documenter.HTML(
         assets = ["assets/custom.css", "assets/favicon.ico"],
         prettyurls = true, # haskey(ENV, "GITHUB_ACTIONS"),
