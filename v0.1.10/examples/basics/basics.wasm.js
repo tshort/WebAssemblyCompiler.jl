@@ -1,0 +1,10 @@
+var jsexports = { js: {} };
+jsexports['js']['(v, i, x) => v[i] = x'] = (v, i, x) => v[i] = x;
+jsexports['js']['x => console.log(x)'] = x => console.log(x);
+jsexports['js']['n => Array(n)'] = n => Array(n);
+jsexports['js']['(x) => console.log(x)'] = (x) => console.log(x);
+jsexports['js']['n => new Float64Array(n)'] = n => new Float64Array(n);
+jsexports['js']['(x, str) => x.innerHTML = str'] = (x, str) => x.innerHTML = str;
+jsexports['js']['(x) => x.join("")'] = (x) => x.join("");
+jsexports['js']['(x) => document.getElementById(x)'] = (x) => document.getElementById(x);
+jsexports['js']['() => ({})'] = () => ({});
