@@ -61,7 +61,7 @@ makedocs(
     ])
 
 deploydocs(
-    repo = "github.com/tshort/WebAssemblyCompiler.jl"),
+    repo = "github.com/tshort/WebAssemblyCompiler.jl",
     target = "build",
     branch = "gh-pages",
     devbranch = "main", 
