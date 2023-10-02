@@ -1,0 +1,4 @@
+Manifest.toml
+*.wasm
+*.wat
+*.wasm.js

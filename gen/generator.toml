@@ -1,0 +1,7 @@
+[general]
+library_name = "libbinaryen"
+output_file_path = "./LibBinaryen.jl"
+module_name = "LibBinaryen"
+jll_pkg_name = "Binaryen_jll"
+export_symbol_prefixes = ["Binaryen", "Relooper", "ExpressionRunner", "TypeBuilder"]
+extract_c_comment_style = "raw"
