@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/><title>Lorenz model · WebAssemblyCompiler</title><meta name="title" content="Lorenz model · WebAssemblyCompiler"/><meta property="og:title" content="Lorenz model · WebAssemblyCompiler"/><meta property="twitter:title" content="Lorenz model · WebAssemblyCompiler"/><meta name="description" content="Documentation for WebAssemblyCompiler."/><meta property="og:description" content="Documentation for WebAssemblyCompiler."/><meta property="twitter:description" content="Documentation for WebAssemblyCompiler."/><meta property="og:url" content="https://tshort.github.io/WebAssemblyCompiler.jl/examples/lorenz/"/><meta property="twitter:url" content="https://tshort.github.io/WebAssemblyCompiler.jl/examples/lorenz/"/><link rel="canonical" href="https://tshort.github.io/WebAssemblyCompiler.jl/examples/lorenz/"/><script data-outdated-warner src="../../assets/warner.js"></script><link href="https://cdnjs.cloudflare.com/ajax/libs/lato-font/3.0.0/css/lato-font.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/juliamono/0.050/juliamono.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/fontawesome.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/solid.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/brands.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.8/katex.min.css" rel="stylesheet" type="text/css"/><script>documenterBaseURL="../.."</script><script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.6/require.min.js" data-main="../../assets/documenter.js"></script><script src="../../search_index.js"></script><script src="../../siteinfo.js"></script><script src="../../../versions.js"></script><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/documenter-dark.css" data-theme-name="documenter-dark" data-theme-primary-dark/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/documenter-light.css" data-theme-name="documenter-light" data-theme-primary/><script src="../../assets/themeswap.js"></script><link href="../../assets/custom.css" rel="stylesheet" type="text/css"/><link href="../../assets/favicon.ico" rel="icon" type="image/x-icon"/></head><body><div id="documenter"><nav class="docs-sidebar"><div class="docs-package-name"><span class="docs-autofit"><a href="../../">WebAssemblyCompiler</a></span></div><button class="docs-search-query input is-rounded is-small is-clickable my-2 mx-auto py-1 px-2" id="documenter-search-query">Search docs (Ctrl + /)</button><ul class="docs-menu"><li><a class="tocitem" href="../../">Introduction</a></li><li><span class="tocitem">Examples</span><ul><li><a class="tocitem" href="../basics/">JS interop</a></li><li class="is-active"><a class="tocitem" href>Lorenz model</a><ul class="internal"><li><a class="tocitem" href="#Making-the-app"><span>Making the app</span></a></li></ul></li></ul></li><li><a class="tocitem" href="../../api/">API</a></li><li><a class="tocitem" href="../../notes/">Notes</a></li></ul><div class="docs-version-selector field has-addons"><div class="control"><span class="docs-label button is-static is-size-7">Version</span></div><div class="docs-selector control is-expanded"><div class="select is-fullwidth is-size-7"><select id="documenter-version-selector"></select></div></div></div></nav><div class="docs-main"><header class="docs-navbar"><a class="docs-sidebar-button docs-navbar-link fa-solid fa-bars is-hidden-desktop" id="documenter-sidebar-button" href="#"></a><nav class="breadcrumb"><ul class="is-hidden-mobile"><li><a class="is-disabled">Examples</a></li><li class="is-active"><a href>Lorenz model</a></li></ul><ul class="is-hidden-tablet"><li class="is-active"><a href>Lorenz model</a></li></ul></nav><div class="docs-right"><a class="docs-settings-button docs-navbar-link fa-solid fa-gear" id="documenter-settings-button" href="#" title="Settings"></a><a class="docs-article-toggle-button fa-solid fa-chevron-up" id="documenter-article-toggle-button" href="javascript:;" title="Collapse all docstrings"></a></div></header><article class="content" id="documenter-page"><h1 id="Lorenz-model-using-OrdinaryDiffEq"><a class="docs-heading-anchor" href="#Lorenz-model-using-OrdinaryDiffEq">Lorenz model using OrdinaryDiffEq</a><a id="Lorenz-model-using-OrdinaryDiffEq-1"></a><a class="docs-heading-anchor-permalink" href="#Lorenz-model-using-OrdinaryDiffEq" title="Permalink"></a></h1><div><div class=" columns is-vcentered"><div class=" column"><form><div class=" field has-addons"><p class=" control"><a class=" button is-static">σ</a></p><p class=" control"><input class=" input" type="number" mdpad="p1" step="0.2" value="10.0"></input></p></div><div class=" field has-addons"><p class=" control"><a class=" button is-static">ρ</a></p><p class=" control"><input class=" input" type="number" mdpad="p2" step="1.0" value="28.0"></input></p></div><div class=" field has-addons"><p class=" control"><a class=" button is-static">β</a></p><p class=" control"><input class=" input" type="number" mdpad="p3" step="0.1" value="2.6666666666666665"></input></p></div></form></div><div class=" column"><div id="xyplot"></div></div></div><div id="timeplot"></div></div><h2 id="Making-the-app"><a class="docs-heading-anchor" href="#Making-the-app">Making the app</a><a id="Making-the-app-1"></a><a class="docs-heading-anchor-permalink" href="#Making-the-app" title="Permalink"></a></h2><p>Here is the model that we&#39;ll compile.</p><pre><code class="language-julia hljs">using OrdinaryDiffEq
+using WebAssemblyCompiler
+
+function lorenz!(du,u,p,t)
+    σ,ρ,β = p
+    du[1] = σ*(u[2]-u[1])
+    du[2] = u[1]*(ρ-u[3]) - u[2]
+    du[3] = u[1]*u[2] - β*u[3]
+end
+
+u0 = [1.0,0.0,0.0]
+tspan = (0.0,100.0)
+p = (10.0,28.0,8/3)
+prob = ODEProblem{true, SciMLBase.FullSpecialize}(lorenz!,u0,tspan,p)  # try to avoid FunctionWrappers with FullSpecialize
+
+const integ = init(prob, Tsit5())
+integ.opts.adaptive = false</code></pre><p>Here&#39;s a simple solver function. It references <code>integ</code>, a predefined integrator. WebAssembly stores that as a global variable.</p><pre><code class="language-julia hljs">function update()
+    reinit!(integ)
+    integ.p = update_params()
+    integ.dt = 0.005
+    n = 10000
+    tres = zeros(n)
+    u1 = zeros(n)
+    u2 = zeros(n)
+    u3 = zeros(n)
+    u1[5] = 99.0
+    for i in 1:n
+        ret = OrdinaryDiffEq.perform_step!(integ, integ.cache)
+        OrdinaryDiffEq.recursivecopy!(integ.uprev, integ.u)
+        OrdinaryDiffEq.recursivecopy!(integ.fsalfirst, integ.fsallast)
+        integ.t = integ.t + integ.dt
+        integ.tprev = integ.t
+        tres[i] = integ.t
+        u1[i] = integ.u[1]
+        u2[i] = integ.u[2]
+        u3[i] = integ.u[3]
+    end
+    update_output(tres, u1, u2, u3)
+    nothing
+end</code></pre><p>The following include simpler versions of <code>OrdinaryDiffEq.reinit!</code> and <code>OrdinaryDiffEq.initialize!</code>.</p><pre><code class="language-julia hljs">function reinit!(integrator::OrdinaryDiffEq.ODEIntegrator, u0 = integrator.sol.prob.u0;
+    t0 = integrator.sol.prob.tspan[1],
+    tf = integrator.sol.prob.tspan[2],
+    )
+
+    OrdinaryDiffEq.recursivecopy!(integrator.u, u0)
+    OrdinaryDiffEq.recursivecopy!(integrator.uprev, integrator.u)
+
+    integrator.t = t0
+    integrator.tprev = t0
+
+    tspan = (t0, tf)
+
+    integrator.iter = 0
+    integrator.success_iter = 0
+    integrator.u_modified = false
+
+    initialize!(integrator, integrator.cache)
+end
+
+function initialize!(integrator, cache)
+    integrator.kshortsize = 7
+    integrator.fsalfirst = cache.k1
+    integrator.fsallast = cache.k7 # setup pointers
+    resize!(integrator.k, integrator.kshortsize)
+    integrator.k[1] = cache.k1
+    integrator.k[2] = cache.k2
+    integrator.k[3] = cache.k3
+    integrator.k[4] = cache.k4
+    integrator.k[5] = cache.k5
+    integrator.k[6] = cache.k6
+    integrator.k[7] = cache.k7
+    integrator.f(integrator.fsalfirst, integrator.uprev, integrator.p, integrator.t) # Pre-start fsal
+    integrator.stats.nf += 1
+    nothing
+end</code></pre><p>These utilities update the page inputs.</p><pre><code class="language-julia hljs">mdpadnum(x) = @jscall(&quot;x =&gt; mdpad[x]&quot;, Float64, Tuple{String}, x)
+update_params() = (mdpadnum(&quot;p1&quot;), mdpadnum(&quot;p2&quot;), mdpadnum(&quot;p3&quot;))</code></pre><p>This function plots the results.</p><pre><code class="language-julia hljs">@inline function update_output(t, u1, u2, u3)
+    xydata = ((x = u1, y = u2, type = &quot;line&quot;, name = &quot;x&quot;),)
+    xylayout = (width = 400.0, height = 400.0, margin = (t = 20., b = 20., l = 20., r = 20.))
+    config = (responsive = true,)
+    plotly(&quot;xyplot&quot;, xydata, xylayout, config)
+    tdata = ((x = t, y = u1, type = &quot;line&quot;, name = &quot;x&quot;),
+             (x = t, y = u2, type = &quot;line&quot;, name = &quot;y&quot;),
+             (x = t, y = u3, type = &quot;line&quot;, name = &quot;z&quot;))
+    tlayout = (width = 900.0, height = 300.0, margin = (t = 20., b = 20.))
+    plotly(&quot;timeplot&quot;, tdata, tlayout, config)
+    nothing
+end
+plotly(id, data, layout, config) =
+    @jscall(&quot;(id, data, layout, config) =&gt; Plotly.newPlot(id, data, layout, config)&quot;,
+        Nothing, Tuple{String, Externref, Externref, Externref},
+        id, data, layout, config)</code></pre><p>Before compiling, we need to override some error checks that caused failures.</p><pre><code class="language-julia hljs">using Base.Experimental: @overlay
+@overlay WebAssemblyCompiler.MT @inline SciMLBase.check_error(integrator::SciMLBase.DEIntegrator) = SciMLBase.ReturnCode.Success</code></pre><p>Compile <code>update</code> to WebAssembly:</p><pre><code class="language-julia hljs">compile((update,); filepath = &quot;lorenz/lorenz.wasm&quot;, validate = true)</code></pre><p><code>update()</code> runs automatically whenever inputs are changed.</p><p><a href="https://github.com/tshort/WebAssemblyCompiler.jl/blob/main/examples/lorenz/lorenz.jl"><code>examples/lorenz.jl</code></a> also includes some raw HTML to load Plotly and mdpad and to load the WebAssembly file.</p><script>
+    // Weird hack to load Plotly: https://stackoverflow.com/a/3363588
+    // https://github.com/JuliaDocs/Documenter.jl/issues/12471
+    window.__define = window.define;
+    window.__require = window.require;
+    window.define = undefined;
+    window.require = undefined;
+</script>
+<script src="https://cdn.plot.ly/plotly-2.26.0.min.js" charset="utf-8"></script>
+<script>
+    window.define = window.__define;
+    window.require = window.__require;
+    window.__define = undefined;
+    window.__require = undefined;
+</script>
+<script src="/js/mdpad.js" ></script>
+<script src="lorenz.wasm.js"></script>
+<script>
+async function mdpad_init() {
+    const fetchPromise = fetch('lorenz.wasm');
+    const { instance } = await WebAssembly.instantiateStreaming(fetchPromise, jsexports);
+    wasm = instance.exports;
+}
+function mdpad_update() {
+    wasm.update()
+}
+</script></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../basics/">« JS interop</a><a class="docs-footer-nextpage" href="../../api/">API »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option><option value="auto">Automatic (OS)</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 1.1.0 on <span class="colophon-date" title="Monday 2 October 2023 15:46">Monday 2 October 2023</span>. Using Julia version 1.9.3.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
