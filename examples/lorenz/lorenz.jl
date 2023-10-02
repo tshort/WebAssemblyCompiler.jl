@@ -1,5 +1,5 @@
 #=
-# Lorentz model using OrdinaryDiffEq
+# Lorenz model using OrdinaryDiffEq
 
 =#
 
@@ -165,12 +165,12 @@ nothing #hide
 
 # Compile `update` to WebAssembly:
 
-compile((update,); filepath = "lorentz/lorentz.wasm", validate = true)
+compile((update,); filepath = "lorenz/lorenz.wasm", validate = true)
 
 #=
 `update()` runs automatically whenever inputs are changed.
 
-[`examples/lorentz.jl`](https://github.com/tshort/WebAssemblyCompiler.jl/blob/main/examples/lorentz.jl)
+[`examples/lorenz.jl`](https://github.com/tshort/WebAssemblyCompiler.jl/blob/main/examples/lorenz.jl)
 also includes some raw HTML to load Plotly and mdpad and to load the WebAssembly file. 
 
 ```@raw html
@@ -190,10 +190,10 @@ also includes some raw HTML to load Plotly and mdpad and to load the WebAssembly
     window.__require = undefined;
 </script>
 <script src="/js/mdpad.js" ></script>
-<script src="lorentz.wasm.js"></script>
+<script src="lorenz.wasm.js"></script>
 <script>
 async function mdpad_init() {
-    const fetchPromise = fetch('lorentz.wasm');
+    const fetchPromise = fetch('lorenz.wasm');
     const { instance } = await WebAssembly.instantiateStreaming(fetchPromise, jsexports);
     wasm = instance.exports;
 }

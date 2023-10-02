@@ -34,7 +34,7 @@ function hideall(input)
 end
 
 Literate.markdown("../examples/basics/basics.jl", "src/examples", credit = false, postprocess = hideall)
-Literate.markdown("../examples/lorentz/lorentz.jl", "src/examples", credit = false, postprocess = hideall)
+Literate.markdown("../examples/lorenz/lorenz.jl", "src/examples", credit = false, postprocess = hideall)
 
 makedocs(
     sitename = "WebAssemblyCompiler",
@@ -48,7 +48,7 @@ makedocs(
         "Introduction" => "index.md",
         "Examples" => Any[
            "JS interop"    => "examples/basics.md",
-           "Lorentz model" => "examples/lorentz.md",
+           "Lorenz model" => "examples/lorenz.md",
         ],
         "api.md",
         "notes.md"
