@@ -33,8 +33,10 @@ function hideall(input)
     return join(lines, "\n")
 end
 
-Literate.markdown("../examples/basics/basics.jl", "src/examples", credit = false, postprocess = hideall)
-Literate.markdown("../examples/lorenz/lorenz.jl", "src/examples", credit = false, postprocess = hideall)
+Literate.markdown(joinpath(@__DIR__, "../examples/basics/basics.jl"), 
+                  joinpath(@__DIR__, "src/examples"), credit = false, postprocess = hideall)
+Literate.markdown(joinpath(@__DIR__, "../examples/lorenz/lorenz.jl"), 
+                  joinpath(@__DIR__, "src/examples"), credit = false, postprocess = hideall)
 
 makedocs(
     sitename = "WebAssemblyCompiler",
