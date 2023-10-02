@@ -189,7 +189,7 @@ also includes some raw HTML to load Plotly and mdpad and to load the WebAssembly
     window.__define = undefined;
     window.__require = undefined;
 </script>
-<script src="/js/mdpad.js" ></script>
+<script src="../../js/mdpad.js" ></script>
 <script src="lorenz.wasm.js"></script>
 <script>
 async function mdpad_init() {
