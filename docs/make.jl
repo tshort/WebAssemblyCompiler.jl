@@ -42,6 +42,7 @@ makedocs(
     sitename = "WebAssemblyCompiler",
     # modules = [WebAssemblyCompiler],
     repo = Remotes.GitHub("tshort", "WebAssemblyCompiler.jl"),
+    remotes = nothing,
     # linkcheck = true,
     format = Documenter.HTML(
         assets = ["assets/custom.css", "assets/favicon.ico"],
