@@ -42,7 +42,7 @@ WebAssemblyCompiler supports [overlays](@ref Overlays) and other ways to fix up 
 
 Once compiled to WebAssembly, you can integrate that into web apps in many ways.
 The examples in these docs are made with:
-* [Literate.jl](https://fredrikekre.github.io/Literate.jl/v2/)--The Julia files in [/examples](https://github.com/tshort/WebAssemblyCompiler.jl/blob/main/examples/) can run standalone, or they can be used with [Franklin](https://franklinjl.org/) or [Documenter](https://documenter.juliadocs.org/stable/) (as done here).
+* [Literate.jl](https://fredrikekre.github.io/Literate.jl/v2/)--The Julia files in [/examples](https://github.com/tshort/WebAssemblyCompiler.jl/tree/main/examples/) can run standalone, or they can be used with [Franklin](https://franklinjl.org/) or [Documenter](https://documenter.juliadocs.org/stable/) (as done here).
 * [mdpad](https://mdpad.netlify.app/)--This small JavaScript package provides features for single-page web apps, including auto-updates of inputs and address-bar handling.
 * [Bulma](https://bulma.io/)--Any CSS framework should work. Because Documenter uses a theme based on Bulma, that is used for styling web apps.
 

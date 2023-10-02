@@ -41,10 +41,12 @@ Literate.markdown(joinpath(@__DIR__, "../examples/lorenz/lorenz.jl"),
 makedocs(
     sitename = "WebAssemblyCompiler",
     # modules = [WebAssemblyCompiler],
+    repo="https://github.com/tshort/WebAssemblyCompiler.jl/blob/{commit}{path}#L{line}",
+    linkcheck = true,
     format = Documenter.HTML(
         assets = ["assets/custom.css", "assets/favicon.ico"],
         prettyurls = true, # haskey(ENV, "GITHUB_ACTIONS"),
-        canonical = "https://fredrikekre.github.io/Literate.jl/v2",
+        canonical = "https://tshort.github.io/WebAssemblyCompiler.jl/",
     ),
     pages = Any[
         "Introduction" => "index.md",
@@ -56,9 +58,4 @@ makedocs(
         "notes.md"
     ])
 
-# Documenter can also automatically deploy documentation to gh-pages.
-# See "Hosting Documentation" and deploydocs() in the Documenter manual
-# for more information.
-#=deploydocs(
-    repo = "<repository url>"
-)=#
+deploydocs(; repo="github.com/tshort/WebAssemblyCompiler.jl.git", target="build")
