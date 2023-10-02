@@ -14,6 +14,8 @@ Keyword arguments include:
 * `optimize`--Apply Binaryen's default optimization passes (still shaky).
 * `experimental`--Use experimental WebAssembly features.
 
+`compile` also writes a WebAssembly text tile to the same path as `filepath` with an added ".wat" extension.
+
 Examples:
 
     compile((exp, Float64), filepath = "exp.wasm", optimize = true)   

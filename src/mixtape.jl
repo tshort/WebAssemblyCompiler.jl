@@ -3,10 +3,10 @@
 ##### Exports
 #####
 
-export CompilationContext, 
-       NoContext,
-       allow, 
-       transform 
+# export CompilationContext, 
+#        NoContext,
+#        allow, 
+#        transform 
 
 #####
 ##### Compilation context

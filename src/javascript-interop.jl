@@ -5,15 +5,16 @@ export @jscall
 
 Call a JavaScript function `fun`. 
 `fun` is a string and normally includes the JavaScript function definition.
-For now, this is a straight passthrough to `Base.llvmcall`.
+Under the hood, these use `Base.llvmcall`.
 All `@jscall` definitions are imported from JavaScript.
 
 `rettype`, `tt`, ang `args...` all follow the `Base.llvmcall` format.
 `tt` is a Tuple type (not a regular Tuple).
 
 Arguments are converted to the types specified in `tt`.
-Allowable types include: [`Externref`](@ref), `String`, `Int64`, `Int32`, `UInt64`, 
+The following types can be included: `String`, `Int64`, `Int32`, `UInt64`, 
 `UInt32`, `Float64`, `Float32`, `Char`, `Bool`, `UInt8`, and `Int8`.
+For all other types, specify [`Externref`](@ref). 
 [`Externref`](@ref) types are converted with [`JS.object`](@ref).
 
 Examples:
@@ -27,9 +28,13 @@ Examples:
 """
 macro jscall(fun, rettype, tt, args...)
     tp = tt.args[2:end]
-    convertedargs = (:(convert($(tp[i]), $a)) for (i,a) in enumerate(args))
+    convertedargs = (:($_convert($(tp[i]), $a)) for (i,a) in enumerate(args))
     esc(:(Base.llvmcall($fun, $rettype, $tt, $(convertedargs...))))
 end
+
+_convert(::Type{T}, x) where T = Base.convert(T, x)
+_convert(::Type{Externref}, x) = JS.object(x)
+_convert(::Type{String}, x::Symbol) = x
 
 export JS
 
@@ -69,7 +74,7 @@ sethtml(ref::Externref, str::String) = @jscall("(x, str) => x.innerHTML = str", 
 sethtml(id::String, str::String) = sethtml(getelementbyid(id), str)
 
 """
-Evaluate the JavaScript string `x`. Returns a JavaScript object.
+Evaluate the JavaScript string `x`. Returns an [`Externref`](@ref).
 """
 eval(x::String) = @jscall("(x) => eval(x)", Externref, Tuple{String}, x)
 
@@ -81,8 +86,11 @@ array_to_string(x::Vector) = array_to_string(object(x))
 """
     object(x)
 
-Return a JavaScript object representing the Julia object `x`.
+Return an [`Externref`](@ref) (JavaScript object) representing the Julia object `x`.
 This is useful for transfering arrays, named tuples, and other objects to JavaScript.
+
+The types `Int32`, `Float32`, `Float64`, `Bool`, `String`, `Symbol`, and `Externref` 
+are passed stright through.
 """
 object(x::Union{Int32, Float32, Float64, Bool, String, Symbol, Externref}) = x
 # object(x::Char) = string(x)
@@ -150,7 +158,6 @@ end
     _setjsa(jsa, i, x)
     _setjsa(jsa, i + 1, xs...)
 end
-Base.convert(::Type{Externref}, x) = object(x)
 
 # Simple IO buffer for printing to strings
 struct IOBuff <: IO

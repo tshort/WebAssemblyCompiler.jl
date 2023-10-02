@@ -36,7 +36,7 @@ numform(name; mdpad = "name", step = 1, value = 1) =
 #=
 ## Making the app
 
-Here is the function we'll compile.
+Here is the model that we'll compile.
 =#
 
 using OrdinaryDiffEq
@@ -90,7 +90,7 @@ function update()
 end
 nothing #hide
 
-# For some reason, the version of `OrdinaryDiffEq.initialize!` doesn't work, so define one here.
+# The following include simpler versions of `OrdinaryDiffEq.reinit!` and `OrdinaryDiffEq.initialize!`.
 
 function reinit!(integrator::OrdinaryDiffEq.ODEIntegrator, u0 = integrator.sol.prob.u0;
     t0 = integrator.sol.prob.tspan[1],
@@ -155,6 +155,7 @@ plotly(id, data, layout, config) =
     @jscall("(id, data, layout, config) => Plotly.newPlot(id, data, layout, config)",
         Nothing, Tuple{String, Externref, Externref, Externref},
         id, data, layout, config)
+nothing #hide
 
 # Before compiling, we need to override some error checks that caused failures.
 
@@ -169,6 +170,8 @@ compile((update,); filepath = "lorentz/lorentz.wasm", validate = true)
 #=
 `update()` runs automatically whenever inputs are changed.
 
+[`examples/lorentz.jl`](https://github.com/tshort/WebAssemblyCompiler.jl/blob/main/examples/lorentz.jl)
+also includes some raw HTML to load Plotly and mdpad and to load the WebAssembly file. 
 
 ```@raw html
 <script>
