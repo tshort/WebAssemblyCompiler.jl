@@ -41,12 +41,13 @@ Literate.markdown(joinpath(@__DIR__, "../examples/lorenz/lorenz.jl"),
 makedocs(
     sitename = "WebAssemblyCompiler",
     # modules = [WebAssemblyCompiler],
-    repo="https://github.com/tshort/WebAssemblyCompiler.jl.git",
+    repo = Remotes.GitHub("tshort", "WebAssemblyCompiler.jl"),
     # linkcheck = true,
     format = Documenter.HTML(
         assets = ["assets/custom.css", "assets/favicon.ico"],
         prettyurls = true, # haskey(ENV, "GITHUB_ACTIONS"),
         canonical = "https://tshort.github.io/WebAssemblyCompiler.jl/",
+        # format = HTML(repolink = "https://github.com/tshort/WebAssemblyCompiler.jl"),
     ),
     pages = Any[
         "Introduction" => "index.md",
@@ -59,7 +60,7 @@ makedocs(
     ])
 
 deploydocs(
-    repo = "github.com/tshort/WebAssemblyCompiler.jl.git",
+    repo = Remotes.GitHub("tshort", "WebAssemblyCompiler.jl"),
     target = "build",
     branch = "gh-pages",
     devbranch = "main", 
