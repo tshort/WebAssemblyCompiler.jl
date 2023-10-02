@@ -58,4 +58,10 @@ makedocs(
         "notes.md"
     ])
 
-deploydocs(; repo="github.com/tshort/WebAssemblyCompiler.jl.git", target="build")
+deploydocs(
+    repo = "github.com/tshort/WebAssemblyCompiler.jl.git",
+    target = "build",
+    branch = "gh-pages",
+    devbranch = "main", 
+    versions = ["stable" => "v^", "v#.#" ],
+)
