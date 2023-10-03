@@ -2,20 +2,22 @@
 <html>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/mithril/2.2.3/mithril.min.js" integrity="sha512-veJyRkYTPP9HJBUEq3oqA1uBzxGA+OiiHkcgT4Nm8Ovg9dNKSxf4mxClYVCkujcxIz+reFruwp4OPsXY10U8UA==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+<script src="https://cdn.plot.ly/plotly-2.26.0.min.js" charset="utf-8"></script>
+<script src="lorenz/lorenz.wasm.js"></script> 
+
 <body>
-    <div id="myid"></div>
-    <script src="simplesolve.wasm.js"></script> 
+    <div id="xyplot"></div>
+    <div id="timeplot"></div>
+    <script>
+        mdpad = {p1: 10, p2: 28, p3: 2.666}
+    </script>
     <script type="module">
-      export async function run(x) {
-          const response = await fetch('simplesolve.wasm');
-          const bytes = await response.arrayBuffer();
-          const { instance } = await WebAssembly.instantiate(bytes, jsexports);
-          const { simplesolve} = instance.exports;
-          return simplesolve(x)
-      }
-      var x = await run(2.0);
-      console.log(x);
+        export async function run() {
+            const fetchPromise = fetch('lorenz/lorenz.wasm');
+            const { instance } = await WebAssembly.instantiateStreaming(fetchPromise, jsexports);
+            instance.exports.update();
+        }
+        var x = await run();
     </script>
 </body>
-
 </html>
