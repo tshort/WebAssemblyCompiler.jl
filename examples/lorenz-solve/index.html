@@ -11,12 +11,13 @@
     <script>
       mdpad = {p1: 10, p2: 28, p3: 2.666}
     </script>
-    <script src="lorenz/lorenz.wasm.js"></script> 
+    <script src="lorenz-solve/lorenz-solve.wasm.js"></script> 
     <script type="module">
       export async function run() {
-          const fetchPromise = fetch('lorenz/lorenz.wasm');
+          // const fetchPromise = fetch('lorenz-solve/lorenz-solve.wasm');
+          const fetchPromise = fetch('lorenz-solve/ls.wasm');
           const { instance } = await WebAssembly.instantiateStreaming(fetchPromise, jsexports);
-          instance.exports.update();
+          instance.exports.update2();
       }
       var x = await run();
     </script>

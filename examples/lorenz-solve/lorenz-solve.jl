@@ -54,7 +54,7 @@ tspan = (0.0,100.0)
 p = (10.0,28.0,8/3)
 prob = ODEProblem{true, SciMLBase.FullSpecialize}(lorenz!,u0,tspan,p)  # try to avoid FunctionWrappers with FullSpecialize
 
-integ = init(prob, Tsit5(), dense = true)
+const integ = init(prob, Tsit5(), dense = true)
 integ.opts.adaptive = false
 nothing #hide
 
@@ -168,10 +168,16 @@ nothing #hide
 # Compile `update` to WebAssembly:
 
 # compile((update,); filepath = "lorenz/lorenz.wasm", validate = true, optimize = true)
-compile((update,); filepath = "lorenz/lorenz.wasm", validate = true)
+# compile((update,); filepath = "lorenz/lorenz.wasm", validate = true)
 
+function update2()
+    sol = solve!(integ)
+    JS.console_log(sol.u[2])
+    nothing
+end
 
-compile((solve!, typeof(integ)); filepath = "lorenz/solve.wasm", validate = true)
+# compile((solve!,typeof(integ)); filepath = "lorenz-solve/lorenz-solve-integ.wasm", validate = true)
+compile((update2,); filepath = "lorenz-solve/lorenz-solve.wasm", validate = true)
 
 #=
 `update()` runs automatically whenever inputs are changed.
