@@ -524,7 +524,16 @@ function compile_block(ctx::CompilerContext, cfg::Core.Compiler.CFG, phis, idx)
                 x = BinaryenStructSet(ctx.mod, 1, _arraywrapper, newlen)
                 update!(ctx, x)
             end
- 
+
+        elseif matchforeigncall(node, :jl_array_del_end) do args
+                arraywrapper = _compile(ctx, args[5])
+                i = _compile(ctx, I32(args[6]))
+                arraylen = BinaryenStructGet(ctx.mod, 1, arraywrapper, C_NULL, false)
+                newlen = BinaryenBinary(ctx.mod, BinaryenSubInt32(), arraylen, i)
+                x = BinaryenStructSet(ctx.mod, 1, arraywrapper, newlen)
+                update!(ctx, x)
+            end
+
         elseif matchforeigncall(node, :_jl_array_copy) do args
                 srcbuffer = getbuffer(ctx, args[5])
                 destbuffer = getbuffer(ctx, args[6])
