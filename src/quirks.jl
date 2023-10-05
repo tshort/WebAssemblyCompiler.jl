@@ -71,6 +71,15 @@ end
 
 @overlay MT Base.display(x) = JS.console_log(x)
 
+@overlay WebAssemblyCompiler.MT function fill!(a::Union{Array{UInt8}, Array{Int8}}, x::Integer)
+    val = x isa eltype(a) ? x : convert(eltype(a), x)
+    for i in eachindex(a)
+        a[i] = val
+    end
+    return nothing
+end
+
+
 # I'm not sure this works:
 @overlay MT @inline Base.FastMath.mul_float_fast(a, b) = a * b
 @overlay MT @inline Base.FastMath.div_float_fast(a, b) = a / b

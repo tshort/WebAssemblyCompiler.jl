@@ -9,8 +9,13 @@ function _compile(ctx::CompilerContext, x::Core.Argument)
                      gettype(ctx, type))
 end
 function _compile(ctx::CompilerContext, x::Core.SSAValue)   # These come after the function arguments.
-    BinaryenLocalGet(ctx.mod, ctx.varmap[x.id],
-                     gettype(ctx, ssatype(ctx, x.id)))
+    bt = basetype(ctx, x)
+    if Base.issingletontype(bt)
+        getglobal(ctx, _compile(ctx, nothing))
+    else
+        BinaryenLocalGet(ctx.mod, ctx.varmap[x.id],
+                         gettype(ctx, ssatype(ctx, x.id)))
+    end
     # localid = ctx.varmap[x.id]
     # BinaryenLocalGet(ctx.mod, localid, ctx.locals[localid])
 end

@@ -68,22 +68,34 @@ function update()
     OrdinaryDiffEq.reinit!(integ)
     integ.p = update_params()
     integ.dt = 0.005
-    s = solve!(integ)
+    sol = solve!(integ)
     u1 = Float64[x[1] for x in integ.sol.u]
     u2 = Float64[x[2] for x in integ.sol.u]
     u3 = Float64[x[3] for x in integ.sol.u]
     t = integ.sol.t
-    ## # The following doesn't work. It fails on returning and passing `nothing`.
+    ## # The following doesn't work. It fails on interpolation.
     ## t = collect(0:0.001:100)
-    ## sol = integ.sol
     ## u1 = Float64[sol(tt)[1] for tt in t]
     ## u2 = Float64[sol(tt)[2] for tt in t]
     ## u3 = Float64[sol(tt)[3] for tt in t]
-    JS.console_log(u1)
+    ## JS.console_log(sol[5])
+    JS.console_log(sol(5.0))
+    ##JS.console_log(u1)
     update_output(t, u1, u2, u3)
     nothing
 end
 nothing #hide
+
+# const sol = solve!(integ)
+
+## function update()
+##     sol = solve!(integ)
+##     display(sol(5.0))
+##     ##JS.console_log(u1)
+##     nothing
+## end
+## nothing #hide
+
 
 
 # These utilities update the page inputs.

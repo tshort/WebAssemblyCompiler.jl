@@ -246,6 +246,17 @@ end
     # end
     # compile((fa6, Float64,); filepath = "tmp/fa6.wasm")
 
+    const a = [1.,2.]
+    @noinline function fa7!(x)
+        a[1] = x
+        return x
+    end
+    function fa7(x)
+        fa7!(x)
+        x
+    end
+    compile((fa7, Float64,); filepath = "fa7.wasm")
+
 end
 
 
@@ -445,6 +456,12 @@ end
     # works in browser!
     # jsfun = jsfunctions((f, Int32,))
     # @show jsfun.f(1)
+
+    function fdict1(x)
+        d = Dict{Int, Float64}((1 => 10., 2 => 20., 3 => 30.))
+        get(d, 2, -1.0) + x
+    end
+    compile((fdict1, Float64,); filepath = "tmp/fdict1.wasm")
 
 end
  

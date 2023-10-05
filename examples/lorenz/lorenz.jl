@@ -73,9 +73,8 @@ function update()
     u1 = zeros(n)
     u2 = zeros(n)
     u3 = zeros(n)
-    u1[5] = 99.0
     for i in 1:n
-        ret = OrdinaryDiffEq.perform_step!(integ, integ.cache)
+        OrdinaryDiffEq.perform_step!(integ, integ.cache)
         OrdinaryDiffEq.recursivecopy!(integ.uprev, integ.u)
         OrdinaryDiffEq.recursivecopy!(integ.fsalfirst, integ.fsallast)
         integ.t = integ.t + integ.dt
@@ -85,6 +84,7 @@ function update()
         u2[i] = integ.u[2]
         u3[i] = integ.u[3]
     end
+    JS.console_log(u1)
     update_output(tres, u1, u2, u3)
     nothing
 end
