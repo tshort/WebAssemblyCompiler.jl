@@ -16,13 +16,16 @@ function update!(ctx::CompilerContext, x, localtype = nothing)
     return nothing
 end
 
-function setlocal!(ctx, idx, x, set = true)
+function setlocal!(ctx, idx, x; set = true, drop = false)
     T = ssatype(ctx, idx)
-    if T != Union{} && T != Nothing && set # && T != Any
+    if T != Union{} && set  # && T != Nothing && set # && T != Any
         ctx.varmap[idx] = ctx.localidx
         x = BinaryenLocalSet(ctx.mod, ctx.localidx, x)
         update!(ctx, x, T)
     else
+        if drop
+            x = BinaryenDrop(ctx.mod, x)
+        end
         _DEBUG_ && BinaryenExpressionPrint(x)
         push!(ctx.body, x)
     end
@@ -193,6 +196,9 @@ function compile_block(ctx::CompilerContext, cfg::Core.Compiler.CFG, phis, idx)
                     binaryfun(ctx, idx, (BinaryenEqInt64, BinaryenEqInt32), a, b)
                 elseif roottype(ctx, a) <: AbstractFloat
                     binaryfun(ctx, idx, (BinaryenEqFloat64, BinaryenEqFloat32), a, b)
+                elseif roottype(ctx, a) <: Union{String, Symbol}
+                    x = BinaryenStringEq(ctx.mod, BinaryenStringEqEqual(), _compile(ctx, a), _compile(ctx, b))
+                    setlocal!(ctx, idx, x)
                 else
                     x = BinaryenRefEq(ctx.mod, _compile(ctx, a), _compile(ctx, b))
                     setlocal!(ctx, idx, x)
@@ -524,7 +530,16 @@ function compile_block(ctx::CompilerContext, cfg::Core.Compiler.CFG, phis, idx)
                 x = BinaryenStructSet(ctx.mod, 1, _arraywrapper, newlen)
                 update!(ctx, x)
             end
- 
+
+        elseif matchforeigncall(node, :jl_array_del_end) do args
+                arraywrapper = _compile(ctx, args[5])
+                i = _compile(ctx, I32(args[6]))
+                arraylen = BinaryenStructGet(ctx.mod, 1, arraywrapper, C_NULL, false)
+                newlen = BinaryenBinary(ctx.mod, BinaryenSubInt32(), arraylen, i)
+                x = BinaryenStructSet(ctx.mod, 1, arraywrapper, newlen)
+                update!(ctx, x)
+            end
+
         elseif matchforeigncall(node, :_jl_array_copy) do args
                 srcbuffer = getbuffer(ctx, args[5])
                 destbuffer = getbuffer(ctx, args[6])
@@ -714,11 +729,10 @@ function compile_block(ctx::CompilerContext, cfg::Core.Compiler.CFG, phis, idx)
                 jargs = node.args[2:end][used]
                 args = [_compile(ctx, x) for x in jargs]
             end
-            ssarettype = ssatype(ctx, idx)
-            rettype = gettype(ctx, ssarettype == Nothing || ssarettype == Any ? Union{} : ssarettype)
             if haskey(ctx.names, newsig)
                 name = ctx.names[newsig]
             else
+                _DEBUG_ && @show newsig
                 _DEBUG_ && @show newci
                 name = validname(string("julia_", node.args[1].def.name, newsig.parameters[2:end]...))[1:min(end,255)]
                 ctx.sigs[name] = newsig
@@ -730,8 +744,11 @@ function compile_block(ctx::CompilerContext, cfg::Core.Compiler.CFG, phis, idx)
             # ssarettype == Any normally means that the return type isn't used.
             # It can sometimes be Any if the method really does return Any, 
             # so compare against the real return type. 
-            set = ssarettype != Any || ssarettype == newci.rettype
-            setlocal!(ctx, idx, BinaryenCall(ctx.mod, name, args, length(args), rettype), set)
+            wrettype = gettype(ctx, newci.rettype == Nothing ? Union{} : newci.rettype)
+            ssarettype = ssatype(ctx, idx)
+            drop = ssarettype == Any && newci.rettype != Nothing
+            set = ssarettype != Nothing && (ssarettype != Any || ssarettype == newci.rettype)
+            setlocal!(ctx, idx, BinaryenCall(ctx.mod, name, args, length(args), wrettype); set, drop)
 
         elseif node isa Expr && node.head == :call && node.args[1] isa GlobalRef && node.args[1].name == :isa    # val isa T
             T = node.args[3]

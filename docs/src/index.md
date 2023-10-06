@@ -18,6 +18,7 @@ WebAssemblyCompiler supports many Julia constructs, including:
 * Vector{T} where T is a bitstype and Vector{Any}
 * Strings
 * Symbols
+* Dicts
 * Mutable and immutable structs
 * Tuples and NamedTuples
 * Global variables
@@ -35,7 +36,6 @@ Code must be type stable (no dynamic dispatches). In addition, several Julia con
 * Exception handling
 * Errors
 * Some integer types (Int16, Int128, ...)
-* Dict's (at least some uses of [Dictionaries.jl](https://github.com/andyferris/Dictionaries.jl) work based on light testing)
 * BLAS and all other C dependencies
 
 WebAssemblyCompiler supports [overlays](@ref Overlays) and other ways to fix up code when compiling.

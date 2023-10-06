@@ -50,6 +50,8 @@ function compile(funs::Tuple...; filepath = "foo.wasm", jspath = filepath * ".js
     _DEBUG_ && BinaryenModulePrint(ctx.mod)
     # _DEBUG_ && BinaryenModulePrintStackIR(ctx.mod, false)
     validate && BinaryenModuleValidate(ctx.mod)
+    # BinaryenSetShrinkLevel(0)
+    # BinaryenSetOptimizeLevel(1)
     optimize && BinaryenModuleOptimize(ctx.mod)
 
     out = BinaryenModuleAllocateAndWrite(ctx.mod, C_NULL)

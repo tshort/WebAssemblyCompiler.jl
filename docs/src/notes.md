@@ -28,10 +28,7 @@
 
 * Symbols are currently converted straight to strings. That allows basic operations to work, including comparisons. This simple approach may cause issues for some code.
 
-* Binaryen doesn't do any auto-vectorization. WebAssembly has basic SIMD types, but none are supported by WebAssemblyCompiler. Options to improve this situation include:
-  * Write a Binaryen pass to do auto-vectorization.
-  * For loops with `@simd`, try to vectorize those.
-  * Add support for basic SIMD types.
+* Binaryen doesn't do any auto-vectorization. WebAssembly has basic SIMD types, but none are supported by WebAssemblyCompiler. 
 
 * LoopVectorization doesn't work. It's LLVM specific.
 
@@ -61,38 +58,45 @@ The downsides of this approach are:
 * Browser support for WASM-GC is just beginning.
 * More bugs.
 
-## TODO
 
-Here is a list of some things that are not implemented.
+# Project ideas
 
-### SSA IR / exception handling
+## BLAS
 
-* PhiC nodes
-* Upsilon nodes
+Implement replacements for key BLAS functionality. This could be tackled by compiling an existing library to WebAssembly (like [BLIS](https://github.com/flame/blis)) or by implementing functionality in Julia.
 
-### Intrinsics / Builtins
+## Makie
 
-* Several
+Makie in the browser would be so useful. Plot directly via WebGL or WebGPU.
 
-### Types
+## Robust Array support
 
-* String concatenation
-* Unions
-* svec
+Once the [Memory type PR](https://github.com/JuliaLang/julia/pull/51319) is merged, update the Array support in WebAssemblyCompiler. Support grow and multidimensional arrays.
 
-### JS integration
-  - Structs to objects
+## Vectorization / SIMD
 
-### libjulia
+WebAssembly supports basic SIMD types. There are several ways that could be incorporated:
 
-* IO
+* Write a Binaryen pass to do auto-vectorization (C++).
+* For loops with `@simd`, vectorize those with Julia. This would be at the typed IR level.
+* Add support for WebAssembly's basic SIMD types.
 
-### Tests
+## Implement Int128
 
-* Updated NodeCall
+Use of Int128's is common in Julia code, but it's not a native WebAssembly type. Add a package to mimic Int128's which can be incorporated using overlays.
 
-### Other
+## Exception handling
 
-* unsafe_copyto! - needs overlay
-* Split up tests
+Handle PhiC and Upsilon nodes in the SSA IR. WebAssembly has `throw` and other exception-handling features. This might need the equivalent of relooping but for exceptions.
 
+## Union types
+
+WebAssembly doesn't have this capability, so some mechanism would be needed to mimic these.
+
+## CI / testing
+
+Update [NodeCall](https://github.com/sunoru/NodeCall.jl) to support the latest WebAssembly features, and update tests ([issue](https://github.com/sunoru/NodeCall.jl/issues/14)).
+
+## Convert / test your favorite package
+
+Compiling code using key packages would help improve the code.

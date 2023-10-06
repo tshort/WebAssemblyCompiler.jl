@@ -54,8 +54,7 @@ tspan = (0.0,100.0)
 p = (10.0,28.0,8/3)
 prob = ODEProblem{true, SciMLBase.FullSpecialize}(lorenz!,u0,tspan,p)  # try to avoid FunctionWrappers with FullSpecialize
 
-const integ = init(prob, Tsit5())
-integ.opts.adaptive = false
+const integ = init(prob, Tsit5(), dense = true)
 nothing #hide
 
 #=
@@ -65,68 +64,14 @@ WebAssembly stores that as a global variable.
 =#
 
 function update()
-    reinit!(integ)
+    OrdinaryDiffEq.reinit!(integ)
     integ.p = update_params()
-    integ.dt = 0.005
-    n = 10000
-    tres = zeros(n)
-    u1 = zeros(n)
-    u2 = zeros(n)
-    u3 = zeros(n)
-    u1[5] = 99.0
-    for i in 1:n
-        ret = OrdinaryDiffEq.perform_step!(integ, integ.cache)
-        OrdinaryDiffEq.recursivecopy!(integ.uprev, integ.u)
-        OrdinaryDiffEq.recursivecopy!(integ.fsalfirst, integ.fsallast)
-        integ.t = integ.t + integ.dt
-        integ.tprev = integ.t
-        tres[i] = integ.t
-        u1[i] = integ.u[1]
-        u2[i] = integ.u[2]
-        u3[i] = integ.u[3]
-    end
-    update_output(tres, u1, u2, u3)
-    nothing
-end
-nothing #hide
-
-# The following include simpler versions of `OrdinaryDiffEq.reinit!` and `OrdinaryDiffEq.initialize!`.
-
-function reinit!(integrator::OrdinaryDiffEq.ODEIntegrator, u0 = integrator.sol.prob.u0;
-    t0 = integrator.sol.prob.tspan[1],
-    tf = integrator.sol.prob.tspan[2],
-    )
-
-    OrdinaryDiffEq.recursivecopy!(integrator.u, u0)
-    OrdinaryDiffEq.recursivecopy!(integrator.uprev, integrator.u)
-
-    integrator.t = t0
-    integrator.tprev = t0
-
-    tspan = (t0, tf)
-
-    integrator.iter = 0
-    integrator.success_iter = 0
-    integrator.u_modified = false
-
-    initialize!(integrator, integrator.cache)
-end
-nothing #hide
-
-function initialize!(integrator, cache)
-    integrator.kshortsize = 7
-    integrator.fsalfirst = cache.k1
-    integrator.fsallast = cache.k7 # setup pointers
-    resize!(integrator.k, integrator.kshortsize)
-    integrator.k[1] = cache.k1
-    integrator.k[2] = cache.k2
-    integrator.k[3] = cache.k3
-    integrator.k[4] = cache.k4
-    integrator.k[5] = cache.k5
-    integrator.k[6] = cache.k6
-    integrator.k[7] = cache.k7
-    integrator.f(integrator.fsalfirst, integrator.uprev, integrator.p, integrator.t) # Pre-start fsal
-    integrator.stats.nf += 1
+    sol = solve!(integ)
+    t = collect(0:0.001:100)
+    u1 = Float64[sol(tt)[1] for tt in t]
+    u2 = Float64[sol(tt)[2] for tt in t]
+    u3 = Float64[sol(tt)[3] for tt in t]
+    update_output(t, u1, u2, u3)
     nothing
 end
 nothing #hide
@@ -161,11 +106,14 @@ nothing #hide
 
 using Base.Experimental: @overlay
 @overlay WebAssemblyCompiler.MT @inline SciMLBase.check_error(integrator::SciMLBase.DEIntegrator) = SciMLBase.ReturnCode.Success
+## The following function includes a try/catch, so bypass it.
+@overlay WebAssemblyCompiler.MT @inline OrdinaryDiffEq.ode_determine_initdt(args...; kw...) = 0.001
 nothing #hide
 
 # Compile `update` to WebAssembly:
 
 compile((update,); filepath = "lorenz/lorenz.wasm", validate = true)
+nothing #hide
 
 #=
 `update()` runs automatically whenever inputs are changed.

@@ -4,7 +4,6 @@
         get(d, 2, -1.0) + x
     end
     compile(f1, (Float64,); filepath = "dict.wasm")
-    run(`$(WebAssemblyCompiler.Bin.wasmdis()) dict.wasm -o dict.wat`)
     # jsfun = jsfunctions(f1, (Float64,))
     # x = 1.0
     # @test jsfun.f1(x) == f1(x)
