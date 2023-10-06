@@ -63,7 +63,7 @@
  (import "js" "(v, i, x) => v[i] = x" (func $_v__i__x_____v_i____xNothingExternrefStringFloat64 (type $42) (param externref stringref f64)))
  (import "js" "(v, i, x) => v[i] = x" (func $_v__i__x_____v_i____xNothingExternrefInt32Int64 (type $43) (param externref i32 i64)))
  (import "js" "(x) => console.log(x)" (func $_x_____console_log_x_NothingExternref (type $45) (param externref)))
- (global $g18446744070140057708 (ref null $6) (struct.new_default $6))
+ (global $g18446744070541991635 (ref null $6) (struct.new_default $6))
  (global $g9918849156355524007 stringref (string.const "strong"))
  (global $g17301565310365817963 stringref (string.const " This is strong text with a class."))
  (global $g6816192608897699015 stringref (string.const "myclass"))
@@ -222,6 +222,7 @@
   (local $24 (ref null $1))
   (local $25 (ref null $0))
   (local $26 i64)
+  (local $27 (ref null $6))
   (block
    (local.set $2
     (struct.get $7 0
@@ -900,7 +901,7 @@
      (global.get $g6706693452496592420)
     )
    )
-   (drop
+   (local.set $27
     (global.get $g18446744069659016546)
    )
    (return)
@@ -5733,7 +5734,7 @@
    (block
     (local.set $7
      (call $julia_hStringTuple_String_
-      (global.get $g18446744070140057708)
+      (global.get $g18446744070541991635)
       (global.get $g9918849156355524007)
       (array.new_fixed $5 1
        (global.get $g17301565310365817963)
@@ -5753,7 +5754,7 @@
     (local.set $10
      (call $julia_hNamedTuple___class____Tuple_String__typeof_WebAssemblyCompiler_JS_h_StringTuple_WebAssemblyCompiler_JS_Node_NamedTuple_____Tuple_____Tuple_String___
       (local.get $9)
-      (global.get $g18446744070140057708)
+      (global.get $g18446744070541991635)
       (global.get $g8580268782864986099)
       (array.new_fixed $8 1
        (local.get $7)
