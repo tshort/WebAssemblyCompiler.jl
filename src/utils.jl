@@ -155,16 +155,18 @@ function getglobal(ctx, gval; compiledval = nothing)
     T = typeof(gval)
     wtype = gettype(ctx, T)
     name = string("g", id)
-    BinaryenAddGlobal(ctx.mod, 
-                      name, 
-                      wtype, 
-                    #   ismutable(gval), 
-                      false, 
-                      isnothing(compiledval) ? _compile(ctx, gval) : compiledval)
-                    #   isnothing(compiledval) ? _compileglobal(ctx, gval) : compiledval)
     gv = BinaryenGlobalGet(ctx.mod, name, wtype)
     # BinaryenExpressionPrint(gv)
     ctx.globals[id] = gv
+    if BinaryenGetGlobal(ctx.mod, name) == BinaryenGlobalRef(0)
+        BinaryenAddGlobal(ctx.mod, 
+                          name, 
+                          wtype, 
+                        #   ismutable(gval), 
+                          false, 
+                          isnothing(compiledval) ? _compile(ctx, gval; globals = true) : compiledval)
+                        #   isnothing(compiledval) ? _compileglobal(ctx, gval) : compiledval)
+    end
     return gv
 end
 getglobal(ctx, mod, name; compiledval = nothing) = getglobal(ctx, Core.eval(mod, name); compiledval)

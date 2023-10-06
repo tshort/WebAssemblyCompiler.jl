@@ -5,21 +5,9 @@ const W = WebAssemblyCompiler
 const WebAssemblyCompiler._DEBUG_ = true
 # const WebAssemblyCompiler._DEBUG_ = false
     
+    function fdict1(x)
+        d = Dict{Int, Float64}((1 => 10., 2 => 20., 3 => 30.))
+        get(d, 2, -1.0) + x
+    end
+    compile((fdict1, Float64,); filepath = "tmp/fdict1.wasm")
 
-    # const a = [1.,2.,3.]
-    # @noinline function fnothing2(y; idxs = 3)
-    #     idxs2 = idxs
-    #     if typeof(idxs2) <: Nothing
-    #         return y
-    #     else
-    #         return 2y
-    #     end
-    # end
-    # function fnothing(x)
-    #     z = nothing
-    #     return fnothing2(x, idxs = z)
-    # end
-    # compile((fnothing, Float64,); filepath = "tmp/fnothing.wasm", validate = true)
-
-
-    

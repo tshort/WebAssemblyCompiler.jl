@@ -464,16 +464,41 @@ end
     compile((fdict1, Float64,); filepath = "tmp/fdict1.wasm")
 
 end
- 
+
+@testitem "Aliasing" begin
+    const a = Float64[1.,2.,3.]
+    const tpl = (a, a)
+    function falias(x)
+        @inline tpl[1][1] = 10. 
+        y = tpl[2][1]
+        display(y)
+        return x
+    end
+    compile((falias, Float64,); filepath = "tmp/falias.wasm", validate = true)
+
+    function falias2(x)  # works
+        a = Float64[1:1.:10;]
+        tpl = (a = a, aa = a, b = 3)
+        tpl.a[1] = 10. 
+        y = tpl.aa[1]
+        display(1.0)
+        display(string(y, " "))
+        display(3.0)
+        display("hello")
+        return x
+    end
+    compile((falias2, Float64,); filepath = "tmp/falias2.wasm", validate = true)
+
+end
 
 @testitem "Dictionaries" begin
     include("setup.jl")   
     using Dictionaries
-    function fdict1(x)
+    function fdict2(x)
         d = Dictionary{Int32, Float64}(Int32[Int32(1),Int32(2),Int32(3)], [10.,20.,30.])
         get(d, 2, -1.0) + x
     end
-    compile((fdict1, Float64,); filepath = "tmp/fdict1.wasm", validate = true)
+    compile((fdict2, Float64,); filepath = "tmp/fdict2.wasm", validate = true)
 end
  
 @testitem "JavaScript interop" begin

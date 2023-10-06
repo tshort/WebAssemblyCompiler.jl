@@ -14,6 +14,7 @@
     <script src="lorenz/lorenz.wasm.js"></script> 
     <script type="module">
       export async function run() {
+          // const fetchPromise = fetch('lorenz/lorenz.wasm');
           const fetchPromise = fetch('lorenz/lorenz.wasm');
           const { instance } = await WebAssembly.instantiateStreaming(fetchPromise, jsexports);
           instance.exports.update();
