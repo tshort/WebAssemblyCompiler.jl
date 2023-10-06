@@ -55,19 +55,19 @@ using Base.Experimental: @overlay
 `WebAssemblyCompiler.MT` is the MethodTable that is used during compilation.
 
 Redefinitions built into WebAssemblyCompiler are defined in 
-[quirks.jl](https://github.com/tshort/WebAssemblyCompiler.jl/blob/main/src/javascript-interop.jl).
+[quirks.jl](https://github.com/tshort/WebAssemblyCompiler.jl/blob/main/src/quirks.jl).
 Many math functions are replaced by JavaScript versions.
 Many error functions are also replaced.
 
-## MixTape support
+## Mixtape support
 
 Overlays are the most common way to manipulate code for compilation.
 More advanced manipulation is possible with [Mixtape](https://github.com/JuliaCompilerPlugins/Mixtape.jl) support built in.
 
-MixTape support is considered experimental and not part of the official API.
+Mixtape support is considered experimental and not part of the official API.
 This support has not been tested extensively.
 
-MixTape is enabled using the following methods and types (none are exported):
+Mixtape is enabled using the following methods and types (none are exported):
 
 ```@docs
 WebAssemblyCompiler.CompilationContext 
