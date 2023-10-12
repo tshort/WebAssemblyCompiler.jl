@@ -1,3 +1,4 @@
+
 export @jscall
 
 """
@@ -40,6 +41,7 @@ export JS
 
 module JS
 using ..WebAssemblyCompiler: Externref, Box, @jscall
+using CompTime
 
 arraynew(n) = @jscall("n => Array(n)", Externref, Tuple{Int32}, n)
 ## Use setindex! instead?? If so, need an ArrayRef type?
@@ -177,7 +179,7 @@ Base.take!(b::IOBuff) = array_to_string(b.x)
 
 
 @inline _string(x...) = array_to_string(JS.object(Any[x...]))
-@inline _string(x) = x
+# @inline _string(x) = x
 @inline _string(x::Symbol) = string("", x)  # cheating here, but how do we make this better?
 
 
@@ -186,18 +188,46 @@ Base.take!(b::IOBuff) = array_to_string(b.x)
 
 Should not often be used directly.  See [`h`](@ref).
 """
-struct Node{A <: NamedTuple, C <: Tuple}
+struct Node{A <: NamedTuple}
     tag::String
     attrs::A
-    children::C
+    children::Vector{String}
+end
+function Node(tag::AbstractString, attrs::A, children::AbstractVector) where A
+    Node{A}(string(tag), attrs, _collect(children))
 end
 tag(o::Node) = getfield(o, :tag)
 attrs(o::Node) = getfield(o, :attrs)
 children(o::Node) = getfield(o, :children)
 
+@ct_enable function _collect(t::T) where T
+    x = Vector{String}(undef, length(T.parameters))
+    @ct_ctrl for i = 1:(length(T.parameters))
+        x[@ct i] = string(t[@ct i])
+    end
+    return x
+end
+
 attrs(kw::AbstractDict) = NamedTuple(kw)
 
-(o::Node)(x...; kw...) = Node(tag(o), (;attrs(o)..., attrs(kw)...), (children(o)..., x...))
+# function (o::Node)(x...; kw...) 
+#     newchildren = copy(children(o))
+#     for v in x
+#         push!(newchildren, v)
+#     end
+#     return Node(tag(o), (;attrs(o)..., attrs(kw)...), newchildren)
+# end
+@generated function (o::Node)(x...; kw...)
+    res = Expr(:block)
+    push!(res.args, :(newchildren = copy(children(o))))
+    for i in 1:length(x)
+        push!(res.args, :(push!(newchildren, string(x[$i]))))
+    end
+    push!(res.args, :(return Node(tag(o), (;attrs(o)..., attrs(kw)...), newchildren)))
+    return res
+end
+
+
 
 Base.:(==)(a::Node, b::Node) = all(f(a) == f(b) for f in (tag, attrs, children))
 
@@ -218,13 +248,13 @@ Base.getproperty(o::Node, class::Symbol) = o(class = string(Base.get(o, :class, 
 
 # methods that pass through to children(o)
 Base.lastindex(o::Node) = lastindex(children(o))
-# Base.getindex(o::Node, i::Union{Integer, AbstractVector{<:Integer}, Colon}) = children(o)[i]
-# Base.setindex!(o::Node, x, i::Union{Integer, AbstractVector{<:Integer}, Colon}) = setindex!(children(o), x, i)
+Base.getindex(o::Node, i::Union{Integer, AbstractVector{<:Integer}, Colon}) = children(o)[i]
+Base.setindex!(o::Node, x, i::Union{Integer, AbstractVector{<:Integer}, Colon}) = setindex!(children(o), x, i)
 Base.length(o::Node) = length(children(o))
 Base.iterate(o::Node) = iterate(children(o))
 Base.iterate(o::Node, state) = iterate(children(o), state)
-# Base.push!(o::Node, x) = push!(children(o), x)
-# Base.append!(o::Node, x) = append!(children(o), x)
+Base.push!(o::Node, x) = push!(children(o), x)
+Base.append!(o::Node, x) = append!(children(o), x)
 
 #-----------------------------------------------------------------------------# h
 """
@@ -252,7 +282,7 @@ For `WebAssemblyCompiler.h`, the following are equivalent:
 Note that strings are not encoded, so be sure not to include problematic HTML characters like `<`. 
 Use [`escape`](@ref) or [`esc"..."`](@ref @esc_str) to fix strings with problematic characters.
 """
-@inline h(tag, children...; attrs...) = Node(tag, NamedTuple(attrs), children)
+@inline h(tag, children...; attrs...) = Node(tag, NamedTuple(attrs), _collect(children))
 
 
 @inline Base.getproperty(::typeof(h), tag::Symbol) = h(_string(tag))
@@ -301,8 +331,8 @@ end
         v == "true" ? print(io, " ", k) : v != "false" && print(io, " ", k, "=\"", v, "\"")
         # print(io, " ", k, "=\"", v, "\"")
     end
-    self_close && Symbol(tag(o)) ∉ VOID_ELEMENTS &&  length(children(o)) == 0 ?
-        print(io, " />") :
+    # self_close && Symbol(tag(o)) ∉ VOID_ELEMENTS &&  length(children(o)) == 0 ?
+    #     print(io, " />") :
         print(io, ">")
     nothing
 end
@@ -322,16 +352,10 @@ end
 @inline function Base.show(io::IO, o::Node)
     p(args...) = print(io, args...)
     print_opening_tag(io, o)
-    _printchildren(io, children(o)...)
+    for x in children(o)
+        p(x)
+    end
     p("</", tag(o), ">")
-    nothing
-end
-
-_printchildren(io) = nothing
-_printchildren(io, x) = print(io, x)
-@inline function _printchildren(io, x, others...)
-    print(io, x)
-    _printchildren(io, others...)
     nothing
 end
 

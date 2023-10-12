@@ -12,7 +12,7 @@ function update!(ctx::CompilerContext, x, localtype = nothing)
         push!(ctx.locals, gettype(ctx, localtype))
         ctx.localidx += 1
     end
-    _DEBUG_ && BinaryenExpressionPrint(x)
+    _DEBUG_ && _debug_binaryen(ctx, x)
     return nothing
 end
 
@@ -26,7 +26,7 @@ function setlocal!(ctx, idx, x; set = true, drop = false)
         if drop
             x = BinaryenDrop(ctx.mod, x)
         end
-        _DEBUG_ && BinaryenExpressionPrint(x)
+        _DEBUG_ && _debug_binaryen(ctx, x)
         push!(ctx.body, x)
     end
 end
@@ -68,8 +68,8 @@ function compile_block(ctx::CompilerContext, cfg::Core.Compiler.CFG, phis, idx)
     ctx.body = BinaryenExpressionRef[]
     for idx in idxs
         node = ci.code[idx]
-        _DEBUG_ && @show idx 
-        _DEBUG_ && @show node
+        # _DEBUG_ && @show idx node ssatype(ctx, idx)
+        _DEBUG_ && _debug_line(ctx, idx, node)
 
         if node isa Union{Core.GotoNode, Core.GotoIfNot, Core.PhiNode, Nothing}
             # do nothing
@@ -732,13 +732,14 @@ function compile_block(ctx::CompilerContext, cfg::Core.Compiler.CFG, phis, idx)
             if haskey(ctx.names, newsig)
                 name = ctx.names[newsig]
             else
-                _DEBUG_ && @show newsig
-                _DEBUG_ && @show newci
                 name = validname(string("julia_", node.args[1].def.name, newsig.parameters[2:end]...))[1:min(end,255)]
                 ctx.sigs[name] = newsig
                 ctx.names[newsig] = name
                 newci.parent.specTypes = newsig
-                compile_method(CompilerContext(ctx, newci))
+                newctx = CompilerContext(ctx, newci)
+                _DEBUG_ && @show newci.parent.def newci.parent
+                _DEBUG_ && _debug_ci(newctx, ctx)
+                compile_method(newctx)
             end
             # `set` controls whether a local variable is set to the return value.
             # ssarettype == Any normally means that the return type isn't used.

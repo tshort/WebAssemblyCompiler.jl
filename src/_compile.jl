@@ -122,6 +122,14 @@ function _compile(ctx::CompilerContext, x::T; globals = false, kw...) where T # 
     return BinaryenStructNew(ctx.mod, args, length(args), type)
 end
 
+function _compile(ctx::CompilerContext, x::Expr; kw...)
+    if x.head == :boundscheck
+        return _compile(ctx, false)
+    else
+        return _compile(ctx, false)  # not sure what to put here...
+    end
+end
+
 # function _compileglobal(ctx::CompilerContext, x::T; kw...) where T <: Array 
 #     _compile(ctx, x)
 # end

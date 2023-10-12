@@ -58,8 +58,8 @@ const experimentalwat = raw"""
 (module
 
   (func $hash-string
-    (param $s stringref) (result i32)
-    (return (string.hash (local.get $s))))
+    (param $s stringref) (result i64)
+    (return (i64.extend_i32_s (string.hash (local.get $s)))))
 
   (func $string-eq
     (param $s1 stringref) (param $s2 stringref) (result i32)

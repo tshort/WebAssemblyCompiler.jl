@@ -233,6 +233,7 @@ end
 arraydefault(x) = zero(x)
 arraydefault(x::Type{Any}) = Ref(0)
 arraydefault(x::Type{String}) = ""
+arraydefault(x::Type{Symbol}) = :_
 arraydefault(x::Type{Vector{T}}) where T = T[]
 
 

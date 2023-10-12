@@ -27,6 +27,7 @@ function compile(funs::Tuple...; filepath = "foo.wasm", jspath = filepath * ".js
     cis = Core.CodeInfo[]
     dummyci = code_typed(() -> nothing, Tuple{})[1].first
     ctx = CompilerContext(dummyci; experimental)
+    _DEBUG_ && _debug_ci(ctx)
     # BinaryenModuleSetFeatures(ctx.mod, BinaryenFeatureReferenceTypes() | BinaryenFeatureGC() | BinaryenFeatureStrings())
     BinaryenModuleSetFeatures(ctx.mod, BinaryenFeatureAll())
     BinaryenModuleAutoDrop(ctx.mod)
@@ -43,11 +44,12 @@ function compile(funs::Tuple...; filepath = "foo.wasm", jspath = filepath * ".js
     end
     # Compile funs
     for ci in cis
-        _DEBUG_ && @show ci
-        compile_method(CompilerContext(ctx, ci), exported = true)
+        newctx = CompilerContext(ctx, ci)
+        _DEBUG_ && _debug_ci(newctx, ctx)
+        compile_method(newctx, exported = true)
     end
     BinaryenModuleAutoDrop(ctx.mod)
-    _DEBUG_ && BinaryenModulePrint(ctx.mod)
+    _DEBUG_ && _debug_module(ctx)
     # _DEBUG_ && BinaryenModulePrintStackIR(ctx.mod, false)
     validate && BinaryenModuleValidate(ctx.mod)
     # BinaryenSetShrinkLevel(0)

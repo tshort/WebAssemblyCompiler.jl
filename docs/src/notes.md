@@ -14,13 +14,13 @@
 
 * The compiler includes some known bandaids and rough spots.
 
-* In `compile_block`, the handling of `QuoteNode`s and `Core.Const` wrappers is uneven. Handling is included in a spotty fashio, but a more consistent approach would be better.
+* In `compile_block`, the handling of `QuoteNode`s and `Core.Const` wrappers is uneven. Handling is included in a spotty fashion, but a more consistent approach would be better.
 
 * On the WebAssembly side, on-the-fly type detection doesn't work. Heap objects are not stored with type information. It would be possible to add type info to all types. [Guile Hoot](https://gitlab.com/spritely/guile-hoot) does this by adding a type hash to every struct.
 
 * Union's are not supported, and the path to supporting them is unclear. WebAssembly's type system doesn't have anything like that, and it also doesn't allow re-interpeting content easily.
 
-* Several intrinsics are not supported. Some are challenging.
+* Several intrinsics are not supported. Some are challenging. `do_apply` / `_apply_iterate` look tough.
 
 * Several of the existing intrinsics only support basic types (Int32, Int64, etc.). Better handling of these would be nice.
 
@@ -31,6 +31,8 @@
 * Binaryen doesn't do any auto-vectorization. WebAssembly has basic SIMD types, but none are supported by WebAssemblyCompiler. 
 
 * LoopVectorization doesn't work. It's LLVM specific.
+
+* Using overlays with `@jscall` of normal Julia code will block constant propagation by the Julia compiler because the Julia compiler can't know what's happening and can't run it in the existing process.  
 
 ## Comparing Approaches to Generating WebAssembly
 
