@@ -20,6 +20,7 @@ include("_compile.jl")
 include("utils.jl")
 include("javascript-interop.jl")
 include("quirks.jl")
+include("observables.jl")
 include("julia-compiler.jl")
 
 
