@@ -1,5 +1,7 @@
 
 function _compile(ctx::CompilerContext, x::Core.Argument; kw...)
+    @show x.n
+    @show argmap(ctx, x.n)
     if ctx.ci.slottypes[x.n] isa Core.Const 
         type = typeof(ctx.ci.slottypes[x.n].val)
     else

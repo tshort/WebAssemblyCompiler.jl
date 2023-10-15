@@ -5,37 +5,51 @@ const W = WebAssemblyCompiler
 const WebAssemblyCompiler._DEBUG_ = true
 # const WebAssemblyCompiler._DEBUG_ = false
    
-# # using Hyperscript
-# using Cobweb
-# using Cobweb: h
-
-const h = JS.h
-
-
-    # function fcw1(x)
-    #     n = h("div", "jkl", class = "myclass")
-    #     # n = h("div", "jkl")
-    #     io = JS.IOBuff() 
-    #     show(io, n)
-    #     # str = take!(io)
-    #     display(io.x)
-    #     return x
-    # end
-
-    function fcw2(x)
-        # snip = h("div",
-        #          h.h1("Hello there"),
-        #          h.p("This is some ", h.strong("strong text")),
-        #          h.p("more text", class = "myclass"))
-        snip = h.h1("Hello there", h("div"))
-        JS.console_log(snip)
-        return x
+    struct X
+        a::Float64
     end
-    compile((fcw2, Float64,); filepath = "tmp/fcw2.wasm", validate = true)
-    # function fcw1(x)
-    #     n = h("div", "jkl", h("strong", "!!!!!", "xxxx"), class = "myclass")
-    #     n = h("div", "hi", "abc", x, n, class = "myclass2")
-    #     display(string(n))
-    #     return x
+    function (z::X)(x)
+        return x + z.a
+    end
+    const fclos1 = X(2.0)
+    compile((fclos1, Float64,); filepath = "tmp/fclos1.wasm", validate = true)
+
+    # function outer(x)
+    #     a = x + 1.0
+    #     inner(y) = y + a + x
+    #     return inner
     # end
-    # compile((fcw1, Float64,); filepath = "tmp/fcw1.wasm", validate = true)
+    # fclos2(x) = outer(1.0)(x)
+    # compile((fclos2, Float64,); filepath = "tmp/fclos2.wasm", validate = true)
+
+    # # too much constant prop to test
+    # struct X
+    #     a::Base.RefValue{Float64}
+    # end
+    # function (z::X)(x)
+    #     return x + z.a[]
+    # end
+    # function fclos3(y)
+    #     x = X(Ref(y + 1.0))
+    #     return x(y)
+    # end
+    # compile((fclos3, Float64,); filepath = "tmp/fclos3.wasm", validate = true)
+
+
+    # using Statistics
+    # function est_mean(x)
+    #     function fun(m)
+    #         return m - mean(x)
+    #     end
+    #     val = fun(2.0)
+    #     @show val, mean(x)
+    #     return fun # explicitly return the inner function to inspect it
+    # end
+    # x = rand(10)
+    # fun = est_mean(x)
+    # fun(10)
+    # # gfun(x) = est_mean(x)
+    # # gfun(10)
+
+
+        

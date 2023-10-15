@@ -50,6 +50,8 @@ mutable struct CompilerContext
     locals::Vector{BinaryenType}
     localidx::Int
     varmap::Dict{Int, Int}
+    fun::Any
+    gfun::Any
     ## special context
     meta::Dict{Symbol, Any}
 end
@@ -76,8 +78,8 @@ const wat = raw"""
 
 CompilerContext(ci::Core.CodeInfo; experimental = false) = 
     CompilerContext(BinaryenModuleParse(experimental ? experimentalwat : wat), Dict{DataType, String}(), Dict{String, DataType}(), Dict{String, Any}(), wtypes(), Dict{String, Any}(),
-                    ci, BinaryenExpressionRef[], BinaryenType[], 0, Dict{Int, Int}(), Dict{Symbol, Any}())
-CompilerContext(ctx::CompilerContext, ci::Core.CodeInfo) = 
+                    ci, BinaryenExpressionRef[], BinaryenType[], 0, Dict{Int, Int}(), nothing, nothing, Dict{Symbol, Any}())
+CompilerContext(ctx::CompilerContext, ci::Core.CodeInfo, fun) = 
     CompilerContext(ctx.mod, ctx.names, ctx.sigs, ctx.imports, ctx.wtypes, ctx.globals,
-                    ci, BinaryenExpressionRef[], BinaryenType[], 0, Dict{Int, Int}(), Dict{Symbol, Any}())
+                    ci, BinaryenExpressionRef[], BinaryenType[], 0, Dict{Int, Int}(), fun, nothing, Dict{Symbol, Any}())
 

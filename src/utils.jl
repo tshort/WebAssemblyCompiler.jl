@@ -3,11 +3,15 @@
 # If the 1st and 4th arguments are unused, argmap(3) == 2 and argmap(6) == 4.
 function argmap(ci, n)
     used = argsused(ci)
-    return sum(used[1:n])
+    result = sum(used[1:n])
+    return result
 end
 
 # Number of arguments, accounting for skipped args.
 nargs(ci) = sum(argsused(ci))
+
+# TODO: fix / review
+# argmap(ci, n) = n
 
 # A Vector{Bool} showing whether arguments are used.
 argsused(ci) = [ci.slotflags[i] & 0x08 > 0 for i in 1:length(ci.slotflags)]
@@ -245,3 +249,5 @@ else
 end
 
 validname(s::String) = replace(s, r"\W" => "_")
+
+callablestruct(ctx::CompilerContext) = callablestruct(ctx.ci)

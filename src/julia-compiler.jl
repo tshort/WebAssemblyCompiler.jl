@@ -43,8 +43,8 @@ function compile(funs::Tuple...; filepath = "foo.wasm", jspath = filepath * ".js
         ctx.names[sig] = name
     end
     # Compile funs
-    for ci in cis
-        newctx = CompilerContext(ctx, ci)
+    for i in eachindex(cis)
+        newctx = CompilerContext(ctx, cis[i], funs[i][i])
         _DEBUG_ && _debug_ci(newctx, ctx)
         compile_method(newctx, exported = true)
     end
@@ -91,6 +91,9 @@ function compile_method_body(ctx::CompilerContext)
     ctx.localidx += nargs(ci)
     cfg = Core.Compiler.compute_basic_blocks(code)
     relooper = RelooperCreate(ctx.mod)
+    if callablestruct(ctx) 
+        ctx.gfun = getglobal(ctx, ctx.fun)
+    end
 
     # Find and collect phis
     phis = Dict{Int32, Any}()
