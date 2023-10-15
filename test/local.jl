@@ -51,5 +51,18 @@ const WebAssemblyCompiler._DEBUG_ = true
     # # gfun(x) = est_mean(x)
     # # gfun(10)
 
+    @noinline fargs1a(a, b) = 2a
+    function fargs1(x)
+        y = fargs1a(x, sin)
+        return x * y
+    end
+    compile((fargs1, Float64,); filepath = "tmp/fargs1.wasm", validate = true)
 
+
+    @noinline (x::X)(w) = w * x.a 
+    function fargs2(x)
+        y = X(2.0)(x)
+        return x * y
+    end
+    compile((fargs2, Float64,); filepath = "tmp/fargs2.wasm", validate = true)
         

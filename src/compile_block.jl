@@ -714,9 +714,12 @@ function compile_block(ctx::CompilerContext, cfg::Core.Compiler.CFG, phis, idx)
             mi = Core.Compiler.specialize_method(match)
             sig = mi.specTypes
             newci = Base.code_typed_by_type(mi.specTypes, interp = StaticInterpreter())[1][1]
+            @show node.args
+            newfun = node.args[2] isa QuoteNode ? node.args[2].value : x->x
+            newctx = CompilerContext(ctx, newci, newfun)
             newsig = newci.parent.specTypes
             # Filter out unused arguments (slotflag & 0x08)
-            used = argsused(newci)
+            used = argsused(newctx)
             s = node.args[1].def.sig
             if newci.parent.def.isva     # varargs
                 jargs = node.args[2:length(used)][used[1:end-1]]   # up to the last arg which is a vararg
@@ -736,7 +739,6 @@ function compile_block(ctx::CompilerContext, cfg::Core.Compiler.CFG, phis, idx)
                 ctx.sigs[name] = newsig
                 ctx.names[newsig] = name
                 newci.parent.specTypes = newsig
-                newctx = CompilerContext(ctx, newci)
                 _DEBUG_ && @show newci.parent.def newci.parent
                 _DEBUG_ && _debug_ci(newctx, ctx)
                 compile_method(newctx)

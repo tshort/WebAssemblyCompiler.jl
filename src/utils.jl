@@ -1,9 +1,14 @@
 # Return the argument that function matches with the n'th slottype.
 # Unused arguments are skipped. 
 # If the 1st and 4th arguments are unused, argmap(3) == 2 and argmap(6) == 4.
-function argmap(ci, n)
-    used = argsused(ci)
+function argmap(ctx, n)
+    used = argsused(ctx)
     result = sum(used[1:n])
+    # if callablestruct(ctx)  
+    #     result -= 1
+    # end
+    @show n, result
+    @show used
     return result
 end
 
@@ -14,7 +19,8 @@ nargs(ci) = sum(argsused(ci))
 # argmap(ci, n) = n
 
 # A Vector{Bool} showing whether arguments are used.
-argsused(ci) = [ci.slotflags[i] & 0x08 > 0 for i in 1:length(ci.slotflags)]
+argused(ci, i) = (ci.slotflags[i] & 0x08) > 0
+argsused(ci) = [false, (argused(ci, i) for i in 2:length(ci.slotflags))...]
 argsused(ctx::CompilerContext) = argsused(ctx.ci)
 
 specialtype(x) = nothing
@@ -250,4 +256,6 @@ end
 
 validname(s::String) = replace(s, r"\W" => "_")
 
-callablestruct(ctx::CompilerContext) = callablestruct(ctx.ci)
+callablestruct(ctx::CompilerContext) = argused(ctx.ci, 1) && length(fieldcount(typeof(ctx.fun))) > 0
+
+
