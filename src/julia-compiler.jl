@@ -80,6 +80,7 @@ function compile_method(ctx::CompilerContext; sig = ctx.ci.parent.specTypes, exp
     if exported
         BinaryenAddFunctionExport(ctx.mod, funname, funname)
     end
+    @show ctx.objects
     return nothing
 end
 

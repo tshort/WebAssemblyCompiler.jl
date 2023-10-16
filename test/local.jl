@@ -5,6 +5,15 @@ const W = WebAssemblyCompiler
 const WebAssemblyCompiler._DEBUG_ = true
 # const WebAssemblyCompiler._DEBUG_ = false
    
+    function fcommon1(x)
+        a = Float64[1.0]
+        b = [a]
+        c = [a]
+        a[1] = 2.0
+        return x + b[1][1] + c[1][1]
+    end
+    compile((fcommon1, Float64,); filepath = "tmp/fcommon1.wasm", validate = true)
+
     # struct X
     #     a::Float64
     # end
@@ -34,8 +43,3 @@ const WebAssemblyCompiler._DEBUG_ = true
     # end
     # # compile((frecurs2, Float64,); filepath = "tmp/frecurs2.wasm", validate = true)
 
-    function fb2(x,y)
-        a = x + y
-        a > 2 ? a + 1 : 2a
-    end
-    compile((fb2, Float64, Float64); filepath = "tmp/fb2.wasm", validate = true)

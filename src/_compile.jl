@@ -59,7 +59,7 @@ function _compile(ctx::CompilerContext, x::NTuple{N,T}; globals = false, kw...) 
     return BinaryenArrayNewFixed(ctx.mod, arraytype, values, N)
 end
 function _compile(ctx::CompilerContext, x::Val; kw...)
-    return _compile(ctx, hash(x))
+    return _compile(ctx, hash(x))     # TODO: what am I doing here?
     type = BinaryenTypeGetHeapType(gettype(ctx, roottype(ctx, x)))
     nargs = nfields(x)
     args = [_compile(ctx, getfield(x, i)) for i in 1:nargs]
@@ -85,7 +85,8 @@ end
 
 
 function _compile(ctx::CompilerContext, x::T; globals = false, kw...) where T <: Array 
-    # TODO: fix this
+    haskey(ctx.objects, x) && return ctx.objects[x]
+    # TODO: fix this; problem is, I can't remember what's broken
     elT = eltype(roottype(ctx, T))
     buffertype = BinaryenTypeGetHeapType(gettype(ctx, Buffer{elT}))
     if globals
@@ -97,7 +98,9 @@ function _compile(ctx::CompilerContext, x::T; globals = false, kw...) where T <:
     end
     buffer = BinaryenArrayNewFixed(ctx.mod, buffertype, values, length(x))
     wrappertype = BinaryenTypeGetHeapType(gettype(ctx, FakeArrayWrapper{elT}))
-    return BinaryenStructNew(ctx.mod, [buffer, _compile(ctx, Int32(length(x)))], 2, wrappertype)
+    result = BinaryenStructNew(ctx.mod, [buffer, _compile(ctx, Int32(length(x)))], 2, wrappertype)
+    ctx.objects[x] = result
+    return result
 end
 
 function _compile(ctx::CompilerContext, x::T; globals = false, kw...) where T <: Tuple # general tuples
@@ -114,6 +117,9 @@ function _compile(ctx::CompilerContext, x::T; globals = false, kw...) where T <:
 end
 
 function _compile(ctx::CompilerContext, x::T; globals = false, kw...) where T # general version for structs
+    if ismutabletype(T) && haskey(ctx.objects, x)
+        return ctx.objects[x]
+    end
     type = BinaryenTypeGetHeapType(gettype(ctx, T))
     if globals
         args = [fieldtype(T, field) in basictypes ? 
@@ -122,7 +128,11 @@ function _compile(ctx::CompilerContext, x::T; globals = false, kw...) where T # 
     else
         args = [_compile(ctx, getfield(x, field)) for field in fieldnames(T)]
     end
-    return BinaryenStructNew(ctx.mod, args, length(args), type)
+    result = BinaryenStructNew(ctx.mod, args, length(args), type)
+    if ismutabletype(T)
+        ctx.objects[x] = result
+    end
+    return result
 end
 
 function _compile(ctx::CompilerContext, x::Expr; kw...)
