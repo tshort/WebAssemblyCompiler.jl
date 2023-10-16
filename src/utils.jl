@@ -118,6 +118,7 @@ function gettype(ctx, type)
     if haskey(ctx.wtypes, type)
         return ctx.wtypes[type]
     end
+    @show type
     # if specialtype(type) !== nothing
     #     @show type
     #     @show specialtype(type)
@@ -256,6 +257,6 @@ end
 
 validname(s::String) = replace(s, r"\W" => "_")
 
-callablestruct(ctx::CompilerContext) = argused(ctx.ci, 1) && length(fieldcount(typeof(ctx.fun))) > 0
+callablestruct(ctx::CompilerContext) = fieldcount(typeof(ctx.fun)) > 0
 
 

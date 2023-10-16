@@ -8,6 +8,8 @@ using WebAssemblyCompiler.JS: h
 const W = WebAssemblyCompiler
 const WebAssemblyCompiler._DEBUG_ = true
 
+using Observables
+
 numform(name; mdpad = "name", step = 1, value = 1) =
      h.div."field has-addons"(
        h.p."control"(
@@ -69,9 +71,6 @@ nothing #hide
 #=
 =#
 
-
-
-using Observables
 
 fix!(o::AbstractObservable...) = fix!(Set{AbstractObservable}(), o...)
 
@@ -169,4 +168,15 @@ function mdpad_update() {
 }
 </script>
 ```
+=#
+
+#=
+
+## Plan to handle circular types:
+
+* If a struct is mutable, create a version with default values. 
+* Will need to come up with ways to define defaults for everything.
+* Then, fill in the real values. How to do this?
+* It should descend down and keep filling in arrays and structs from there.
+
 =#

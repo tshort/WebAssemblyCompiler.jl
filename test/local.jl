@@ -5,64 +5,37 @@ const W = WebAssemblyCompiler
 const WebAssemblyCompiler._DEBUG_ = true
 # const WebAssemblyCompiler._DEBUG_ = false
    
-    struct X
-        a::Float64
-    end
-    function (z::X)(x)
-        return x + z.a
-    end
-    const fclos1 = X(2.0)
-    compile((fclos1, Float64,); filepath = "tmp/fclos1.wasm", validate = true)
-
-    # function outer(x)
-    #     a = x + 1.0
-    #     inner(y) = y + a + x
-    #     return inner
-    # end
-    # fclos2(x) = outer(1.0)(x)
-    # compile((fclos2, Float64,); filepath = "tmp/fclos2.wasm", validate = true)
-
-    # # too much constant prop to test
     # struct X
-    #     a::Base.RefValue{Float64}
+    #     a::Float64
     # end
     # function (z::X)(x)
-    #     return x + z.a[]
+    #     return x + z.a
     # end
-    # function fclos3(y)
-    #     x = X(Ref(y + 1.0))
-    #     return x(y)
+    # const fclos1 = X(2.0)
+    # compile((fclos1, Float64,); filepath = "tmp/fclos1.wasm", validate = true)
+
+    # # Here, just the type is circular
+    # struct Y
+    #     a::Float64
+    #     b::Vector{Y}
     # end
-    # compile((fclos3, Float64,); filepath = "tmp/fclos3.wasm", validate = true)
-
-
-    # using Statistics
-    # function est_mean(x)
-    #     function fun(m)
-    #         return m - mean(x)
-    #     end
-    #     val = fun(2.0)
-    #     @show val, mean(x)
-    #     return fun # explicitly return the inner function to inspect it
+    # const y = Y(1.0, Vector{Y}[])
+    # const z = Y(1.0, Vector{Y}[])
+    # push!(y.b, z)
+    # function frecurs1(x)
+    #     return x + y.b[1].a
     # end
-    # x = rand(10)
-    # fun = est_mean(x)
-    # fun(10)
-    # # gfun(x) = est_mean(x)
-    # # gfun(10)
+    # compile((frecurs1, Float64,); filepath = "tmp/frecurs1.wasm", validate = true)
 
-    @noinline fargs1a(a, b) = 2a
-    function fargs1(x)
-        y = fargs1a(x, sin)
-        return x * y
+    # # Here, the value is circular
+    # push!(y.b, y)
+    # function frecurs2(x)
+    #     return x + y.b[1].a
+    # end
+    # # compile((frecurs2, Float64,); filepath = "tmp/frecurs2.wasm", validate = true)
+
+    function fb2(x,y)
+        a = x + y
+        a > 2 ? a + 1 : 2a
     end
-    compile((fargs1, Float64,); filepath = "tmp/fargs1.wasm", validate = true)
-
-
-    @noinline (x::X)(w) = w * x.a 
-    function fargs2(x)
-        y = X(2.0)(x)
-        return x * y
-    end
-    compile((fargs2, Float64,); filepath = "tmp/fargs2.wasm", validate = true)
-        
+    compile((fb2, Float64, Float64); filepath = "tmp/fb2.wasm", validate = true)

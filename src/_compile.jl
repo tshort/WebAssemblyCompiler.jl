@@ -1,11 +1,8 @@
 
 function _compile(ctx::CompilerContext, x::Core.Argument; kw...)
-    @show x.n
-    @show callablestruct(ctx)  
     if x.n == 1 && callablestruct(ctx)
         return ctx.gfun
     end
-    @show argmap(ctx, x.n)
     if ctx.ci.slottypes[x.n] isa Core.Const 
         type = typeof(ctx.ci.slottypes[x.n].val)
     else
