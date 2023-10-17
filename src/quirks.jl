@@ -40,9 +40,18 @@ end
     @ccall _jl_array_copy(src::Array{T,N}, dest::Array{T,N}, length(src)::Int32)::Cvoid
     return dest
 end
-# @overlay MT Base.size(x::Vector) = length(x)
+# @overlay MT Base._unsafe_copyto!(dest::Array{U, 1}, doffs::Integer, src::Array{T, 1}, soffs::Integer, n::Integer) where {T,U} =
+#     @ccall _jl_array_copyto(dest::Array{U,1}, (doffs-1)::Int32, src::Array{T,1}, (soffs-1)::Int32, n::Int32)::Array{T,1}
+@overlay MT function Base._unsafe_copyto!(dest::Array, doffs::Integer, src::Array, soffs::Integer, n::Integer) 
+    @inbounds for i in 1:n
+        dest[i+doffs-1] = src[i+soffs-1]
+    end
+    return dest
+end
 @overlay MT Base._copyto_impl!(dest::Array{T, 1}, doffs::Integer, src::Array{T, 1}, soffs::Integer, n::Integer) where {T} =
     @ccall _jl_array_copyto(dest::Array{T,1}, (doffs-1)::Int32, src::Array{T,1}, (soffs-1)::Int32, n::Int32)::Array{T,1}
+
+# @overlay MT Base.size(x::Vector) = length(x)
 
 # @overlay MT Base.string(x...) = JS.array_to_string(JS.object(Any[x...]))
 @overlay MT Base.string(x...) = JS._string(x...)
@@ -59,7 +68,7 @@ using Unrolled
     return a
 end
 
-@overlay MT Base.hash(x::String) = Int(@jscall("\$hash-string", Int32, Tuple{String}, x))
+@overlay MT Base.hash(x::String) = @jscall("\$hash-string", UInt64, Tuple{String}, x)
 
 @overlay MT Base.:(==)(s1::String, s2::String) = Bool(@jscall("\$string-eq", Int32, Tuple{String, String}, s1, s2))
 

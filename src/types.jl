@@ -43,13 +43,16 @@ mutable struct CompilerContext
     sigs::Dict{String, DataType}   # name to function signature
     imports::Dict{String, Any}
     wtypes::Dict{Any, BinaryenType}
-    globals::Dict{UInt, Any}    
+    globals::IdDict{Any, Any}    
+    objects::IdDict{Any, Any}
     ## function-level context
     ci::Core.CodeInfo
     body::Vector{BinaryenExpressionRef}
     locals::Vector{BinaryenType}
     localidx::Int
     varmap::Dict{Int, Int}
+    fun::Any
+    gfun::Any
     ## special context
     meta::Dict{Symbol, Any}
 end
@@ -58,8 +61,8 @@ const experimentalwat = raw"""
 (module
 
   (func $hash-string
-    (param $s stringref) (result i32)
-    (return (string.hash (local.get $s))))
+    (param $s stringref) (result i64)
+    (return (i64.extend_i32_s (string.hash (local.get $s)))))
 
   (func $string-eq
     (param $s1 stringref) (param $s2 stringref) (result i32)
@@ -75,9 +78,9 @@ const wat = raw"""
 """
 
 CompilerContext(ci::Core.CodeInfo; experimental = false) = 
-    CompilerContext(BinaryenModuleParse(experimental ? experimentalwat : wat), Dict{DataType, String}(), Dict{String, DataType}(), Dict{String, Any}(), wtypes(), Dict{String, Any}(),
-                    ci, BinaryenExpressionRef[], BinaryenType[], 0, Dict{Int, Int}(), Dict{Symbol, Any}())
-CompilerContext(ctx::CompilerContext, ci::Core.CodeInfo) = 
-    CompilerContext(ctx.mod, ctx.names, ctx.sigs, ctx.imports, ctx.wtypes, ctx.globals,
-                    ci, BinaryenExpressionRef[], BinaryenType[], 0, Dict{Int, Int}(), Dict{Symbol, Any}())
+    CompilerContext(BinaryenModuleParse(experimental ? experimentalwat : wat), Dict{DataType, String}(), Dict{String, DataType}(), Dict{String, Any}(), wtypes(), IdDict{Any, Any}(), IdDict{Any, Any}(),
+                    ci, BinaryenExpressionRef[], BinaryenType[], 0, Dict{Int, Int}(), nothing, nothing, Dict{Symbol, Any}())
+CompilerContext(ctx::CompilerContext, ci::Core.CodeInfo, fun) = 
+    CompilerContext(ctx.mod, ctx.names, ctx.sigs, ctx.imports, ctx.wtypes, ctx.globals, ctx.objects,
+                    ci, BinaryenExpressionRef[], BinaryenType[], 0, Dict{Int, Int}(), fun, nothing, Dict{Symbol, Any}())
 

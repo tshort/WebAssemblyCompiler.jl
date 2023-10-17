@@ -14,7 +14,7 @@ You can enable debugging output using:
 
     const WebAssemblyCompiler._DEBUG_ = true
 
-Outputs include:
+Outputs from that are stored in `WebAssemblyCompiler.DEBUG`, including:
 * Julia IR for each method compiled
 * WebAssembly code generated for each statement
 

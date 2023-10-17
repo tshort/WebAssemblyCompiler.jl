@@ -1,0 +1,3 @@
+[deps]
+Observables = "510215fc-4207-5dde-b226-833fc4488ee2"
+WebAssemblyCompiler = "9bc180e8-272c-4d08-a460-9682f1716cbe"

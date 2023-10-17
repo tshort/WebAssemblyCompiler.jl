@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/mithril/2.2.3/mithril.min.js" integrity="sha512-veJyRkYTPP9HJBUEq3oqA1uBzxGA+OiiHkcgT4Nm8Ovg9dNKSxf4mxClYVCkujcxIz+reFruwp4OPsXY10U8UA==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+<script src="https://cdn.plot.ly/plotly-2.26.0.min.js" charset="utf-8"></script>
+<body>
+
+<!DOCTYPE html>
+    <div id="plot"></div>
+    <script>
+      mdpad = {radii: 10.0, phase: 0.0, sample_step: 0.1, nsamples: 100}
+    </script>
+    <script src="observables/observables.wasm.js"></script> 
+    <script type="module">
+      export async function load_wasm() {
+          const response = await fetch('observables/observables.wasm');
+          const bytes = await response.arrayBuffer();
+          const { instance } = await WebAssembly.instantiate(bytes, jsexports);
+          const { basics } = instance.exports;
+          return instance.exports;
+      }
+      var wasm = await load_wasm();
+      console.log(wasm.sample_step(0.6));
+      setTimeout(() => console.log(wasm.sample_step(0.6)), 1000)
+      document.wasm = wasm;
+    </script>
+  </script>
+</body>
+</html>

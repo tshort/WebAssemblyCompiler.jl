@@ -12,7 +12,7 @@ function update!(ctx::CompilerContext, x, localtype = nothing)
         push!(ctx.locals, gettype(ctx, localtype))
         ctx.localidx += 1
     end
-    _DEBUG_ && BinaryenExpressionPrint(x)
+    _DEBUG_ && _debug_binaryen(ctx, x)
     return nothing
 end
 
@@ -26,7 +26,7 @@ function setlocal!(ctx, idx, x; set = true, drop = false)
         if drop
             x = BinaryenDrop(ctx.mod, x)
         end
-        _DEBUG_ && BinaryenExpressionPrint(x)
+        _DEBUG_ && _debug_binaryen(ctx, x)
         push!(ctx.body, x)
     end
 end
@@ -68,8 +68,8 @@ function compile_block(ctx::CompilerContext, cfg::Core.Compiler.CFG, phis, idx)
     ctx.body = BinaryenExpressionRef[]
     for idx in idxs
         node = ci.code[idx]
-        _DEBUG_ && @show idx 
-        _DEBUG_ && @show node
+        # _DEBUG_ && @show idx node ssatype(ctx, idx)
+        _DEBUG_ && _debug_line(ctx, idx, node)
 
         if node isa Union{Core.GotoNode, Core.GotoIfNot, Core.PhiNode, Nothing}
             # do nothing
@@ -496,7 +496,7 @@ function compile_block(ctx::CompilerContext, cfg::Core.Compiler.CFG, phis, idx)
                 elT = eltype(args[1])
                 size = _compile(ctx, I32(args[6]))
                 arraytype = BinaryenTypeGetHeapType(gettype(ctx, Buffer{elT}))
-                buffer = BinaryenArrayNew(ctx.mod, arraytype, size, _compile(ctx, arraydefault(elT)))
+                buffer = BinaryenArrayNew(ctx.mod, arraytype, size, _compile(ctx, default(elT)))
                 wrappertype = BinaryenTypeGetHeapType(gettype(ctx, FakeArrayWrapper{elT}))
                 binaryenfun(ctx, idx, BinaryenStructNew, [buffer, size], UInt32(2), wrappertype; passall = true)
             end
@@ -517,7 +517,7 @@ function compile_block(ctx::CompilerContext, cfg::Core.Compiler.CFG, phis, idx)
                 neednewbuffer = BinaryenBinary(ctx.mod, BinaryenLeUInt32(), arraylen, newlen)
                 newbufferget = BinaryenLocalGet(ctx.mod, ctx.localidx, arraytype)
                 newbufferblock = [
-                    BinaryenLocalSet(ctx.mod, ctx.localidx, BinaryenArrayNew(ctx.mod, arrayheaptype, newbufferlen, _compile(ctx, arraydefault(elT)))),
+                    BinaryenLocalSet(ctx.mod, ctx.localidx, BinaryenArrayNew(ctx.mod, arrayheaptype, newbufferlen, _compile(ctx, default(elT)))),
                     BinaryenArrayCopy(ctx.mod, newbufferget, _compile(ctx, I32(0)), buffer, _compile(ctx, I32(0)), _compile(ctx, arraylen)),
                     BinaryenStructSet(ctx.mod, 0, _arraywrapper, newbufferget),
                 ]
@@ -714,9 +714,11 @@ function compile_block(ctx::CompilerContext, cfg::Core.Compiler.CFG, phis, idx)
             mi = Core.Compiler.specialize_method(match)
             sig = mi.specTypes
             newci = Base.code_typed_by_type(mi.specTypes, interp = StaticInterpreter())[1][1]
+            newfun = node.args[2] isa QuoteNode ? node.args[2].value : x->x
+            newctx = CompilerContext(ctx, newci, newfun)
             newsig = newci.parent.specTypes
             # Filter out unused arguments (slotflag & 0x08)
-            used = argsused(newci)
+            used = argsused(newctx)
             s = node.args[1].def.sig
             if newci.parent.def.isva     # varargs
                 jargs = node.args[2:length(used)][used[1:end-1]]   # up to the last arg which is a vararg
@@ -732,13 +734,13 @@ function compile_block(ctx::CompilerContext, cfg::Core.Compiler.CFG, phis, idx)
             if haskey(ctx.names, newsig)
                 name = ctx.names[newsig]
             else
-                _DEBUG_ && @show newsig
-                _DEBUG_ && @show newci
                 name = validname(string("julia_", node.args[1].def.name, newsig.parameters[2:end]...))[1:min(end,255)]
                 ctx.sigs[name] = newsig
                 ctx.names[newsig] = name
                 newci.parent.specTypes = newsig
-                compile_method(CompilerContext(ctx, newci))
+                _DEBUG_ && @show newci.parent.def newci.parent
+                _DEBUG_ && _debug_ci(newctx, ctx)
+                compile_method(newctx)
             end
             # `set` controls whether a local variable is set to the return value.
             # ssarettype == Any normally means that the return type isn't used.
