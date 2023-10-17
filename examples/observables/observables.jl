@@ -10,32 +10,39 @@ const WebAssemblyCompiler._DEBUG_ = true
 
 using Observables
 
-numform(name; mdpad = "name", step = 1, value = 1) =
-     h.div."field has-addons"(
-       h.p."control"(
-         h.a."button is-static"(
-           name
-         )
-       ),
-       h.p."control"(
-         h.input."input"(;type = "number", mdpad, step, value)
-       ),
-     )
- html = h.div(
-     h.div."columns is-vcentered"(
-         h.div."column"(
-             h.form(
-                 numform("nsamples", mdpad = "nsamples", step = 1.0, value = 100.0),
-                 numform("sample_step", mdpad = "sample_step", step = 0.01, value = 0.1),
-                 numform("phase", mdpad = "phase", step = 0.1, value = 0.0),
-                 numform("radii", mdpad = "radii", step = 0.1, value = 10.0),
-             )
-         ),
-         h.div."column"(
-             h.div(id = "plot")
-         )
-     ),
- )
+const names = []
+const os = []
+
+function numform(description; jl = description, step = 1, value = 1)
+    push!(names, jl)
+    push!(os, Observable(value))
+    h.div."field has-addons"(
+        h.p."control"(
+            h.a."button is-static"(
+              description
+            )
+        ),
+        h.p."control"(
+            h.input."input"(;type = "number", step, value, onchange = "x => wasm.$jl(this.value)")
+        ),
+    )
+end
+
+html = h.div(
+    h.div."columns is-vcentered"(
+        h.div."column"(
+            h.form(
+                numform("nsamples", step = 1.0, value = 100),
+                numform("sample_step", step = 0.01, value = 0.1),
+                numform("phase", step = 0.1, value = 0.0),
+                numform("radii", step = 0.1, value = 10.0),
+            )
+        ),
+        h.div."column"(
+            h.div(id = "plot")
+        )
+    ),
+)
  
 
 #=
@@ -63,7 +70,6 @@ function set_svg(nsamples, sample_step, phase, radii)
     geom = JS.array_to_string(geom)
     JS.sethtml("plot", string(h.svg(h.g(geom); height)))
 end
-os = (nsamples = Observable(100), sample_step = Observable(0.1), phase = Observable(0.0), radii = Observable(10.0))
 
 nothing #hide
 
@@ -72,7 +78,6 @@ nothing #hide
 
 
 fix!(os::AbstractObservable...) = fix!(Set{AbstractObservable}(), os...)
-fix!(os::NamedTuple) = fix!(Set{AbstractObservable}(), os)
 
 function fix!(ctx::Set{AbstractObservable}, mc::Observables.MapCallback, val)
     set! = makenotify(ctx, mc.result).set![1]
@@ -109,22 +114,22 @@ end
 #=
 Use a function to generate a function.
 =#
-function fix!(ctx::Set{AbstractObservable}, observables::NamedTuple)
+function fix!(ctx::Set{AbstractObservable}, observables::Observable...)
     setfuns = []
     notifies = []
-    names = []
     @show "here"
     @show observables
     @show "here2"
-    for (name, observable) in pairs(observables)
+    for observable in observables
+        @show observable
         observable in ctx && continue
         push!(ctx, observable)
         mn = makenotify(ctx, observable)
         push!(setfuns,  mn.set!)
         push!(notifies, mn.notify)
-        push!(names, name)
     end
-    return (; setfuns, notifies, names)
+    @show ctx
+    return (; setfuns, notifies)
 end
 
 function makenotify(ctx::Set{AbstractObservable}, observable::Observable{T}) where T
@@ -155,13 +160,10 @@ end
 
 W.arraydefault(o::Observable{T}) where T = Observable(W.arraydefault(T))
 
-onany(set_svg, values(os)...)
-# onany((a,b,c,d) -> display(d), values(os)...)
-# z = map((a,b,c,d) -> b+c, values(os)...)
-# nt = (;os..., z)
-fobs = fix!(os)
-compile(fobs.setfuns...; names = fobs.names, filepath = "observables/observables.wasm", validate = true)
-# z = map((a,b,c,d) -> (println("b:", b)), values(os)...)
+onany(set_svg, os...)
+## onany((a,b,c,d) -> display(d), values(os)...)
+fos = fix!(os...)
+compile(fos.setfuns...; names = names, filepath = "observables/observables.wasm", validate = true)
 
 
 
@@ -183,13 +185,4 @@ function mdpad_update() {
 ```
 =#
 
-#=
 
-## Plan to handle circular types:
-
-* If a struct is mutable, create a version with default values. 
-* Will need to come up with ways to define defaults for everything.
-* Then, fill in the real values. How to do this?
-* It should descend down and keep filling in arrays and structs from there.
-
-=#
