@@ -4,14 +4,14 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/mithril/2.2.3/mithril.min.js" integrity="sha512-veJyRkYTPP9HJBUEq3oqA1uBzxGA+OiiHkcgT4Nm8Ovg9dNKSxf4mxClYVCkujcxIz+reFruwp4OPsXY10U8UA==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 <body>
     <div id="myid"></div>
-    <script src="tmp/fcommon1.wasm.js"></script> 
+    <script src="tmp/fcw1.wasm.js"></script> 
     <script type="module">
       export async function run(x) {
-          const response = await fetch('tmp/fcommon1.wasm');
+          const response = await fetch('tmp/fcw1.wasm');
           const bytes = await response.arrayBuffer();
           const { instance } = await WebAssembly.instantiate(bytes, jsexports);
-          const { fcommon1} = instance.exports;
-          return fcommon1(x)
+          const { fcw1} = instance.exports;
+          return fcw1(x)
       }
       var x = await run(2.0);
       console.log(x);

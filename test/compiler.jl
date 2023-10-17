@@ -80,7 +80,6 @@ end
     end
     compile((f13, Float64); filepath = "tmp/f13.wasm", validate = true)
     x = 3.0
-    # @show f13(x)
     jsfun = jsfunctions((f13, Float64,))
     @test f13(x) == jsfun.f13(x)
 
@@ -314,6 +313,17 @@ end
     x = 3.0
     # jsfun = jsfunctions((fstructs3, Float64,))
     # @test fstructs3(x) == jsfun.fstructs3(x)
+
+    mutable struct Y
+        a::Float64
+        b
+    end
+    const y = Y(2.0, Any[])
+    push!(y.b, y)
+    function fcircular1(x)
+        return y.a + x
+    end
+    compile((fcircular1, Float64,); filepath = "tmp/fcircular1.wasm", validate = true)
 
 end
 

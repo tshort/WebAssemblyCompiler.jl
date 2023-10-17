@@ -1,7 +1,6 @@
 
 function _compile(ctx::CompilerContext, x::Core.Argument; kw...)
     if x.n == 1 && callablestruct(ctx)
-        @show ctx.fun
         return ctx.gfun
     end
     if ctx.ci.slottypes[x.n] isa Core.Const 
@@ -89,13 +88,10 @@ function _compile(ctx::CompilerContext, x::T; globals = false, kw...) where T <:
     if haskey(ctx.globals, x)
         return ctx.globals[x]
     end
-    # @show "_compile arrays" x
-    # @show ctx.objects
     if haskey(ctx.objects, x)
         ox = ctx.objects[x]
-        # @show ox
         if ox == Nothing  # indicates a circular reference
-            return arraydefault(x)
+            return default(x)
         end
         return ox
     end
@@ -114,7 +110,6 @@ function _compile(ctx::CompilerContext, x::T; globals = false, kw...) where T <:
     wrappertype = BinaryenTypeGetHeapType(gettype(ctx, FakeArrayWrapper{elT}))
     result = BinaryenStructNew(ctx.mod, [buffer, _compile(ctx, Int32(length(x)))], 2, wrappertype)
     ctx.objects[x] = result
-    # @show "DONE _compile arrays"
     return result
 end
 
@@ -132,16 +127,13 @@ function _compile(ctx::CompilerContext, x::T; globals = false, kw...) where T <:
 end
 
 function _compile(ctx::CompilerContext, x::T; globals = false, kw...) where T # general version for structs
-    @show "_compile struct" x
-    @show ctx.objects
     if haskey(ctx.globals, x)
         return ctx.globals[x]
     end
     if ismutabletype(T) && haskey(ctx.objects, x)
         ox = ctx.objects[x]
-        @show ox
         if ox == Nothing  # indicates a circular reference
-            return arraydefault(x)
+            return default(x)
         end
         return ox
     end
@@ -158,7 +150,6 @@ function _compile(ctx::CompilerContext, x::T; globals = false, kw...) where T # 
     if ismutabletype(T)
         ctx.objects[x] = result
     end
-    # @show "DONE _compile struct"
     return result
 end
 

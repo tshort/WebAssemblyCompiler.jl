@@ -2,7 +2,7 @@
 export compile
 
 """
-    compile(funs::Tuple...; filepath = "foo.wasm", jspath = filepath * ".js", validate = true, optimize = false, experimental = true)
+    compile(funs::Tuple...; filepath = "foo.wasm", jspath = filepath * ".js", names = nothing, validate = true, optimize = false, experimental = true)
 
 Compile the methods defined by `funs`.
 Each function definition to be compiled is a tuple with the first entry as the function followed by argument types.
@@ -10,6 +10,7 @@ Keyword arguments include:
 
 * `filepath`--File path for the WebAssembly binary. The path will be created if it doesn't exist.
 * `jspath`--File path for the extra JavaScript file that defines `jsexports` which are the JS functions imported into WebAssembly (those normally defined by [`@jscall`](@ref)). 
+* `names`--A vector or other indexable object with names of functions that are compiled. It's length must equal the length of `funs`.
 * `validate`--Apply Binaryen's validation tests.
 * `optimize`--Apply Binaryen's default optimization passes (still shaky).
 * `experimental`--Use experimental WebAssembly features.
@@ -80,7 +81,6 @@ function compile_method(ctx::CompilerContext; sig = ctx.ci.parent.specTypes, exp
     bparams = BinaryenTypeCreate(jparams, length(jparams))
     rettype = gettype(ctx, ctx.ci.rettype == Nothing ? Union{} : ctx.ci.rettype)
     body = compile_method_body(ctx)
-    @show funname
     BinaryenAddFunction(ctx.mod, funname, bparams, rettype, ctx.locals, length(ctx.locals), body)
     if exported
         BinaryenAddFunctionExport(ctx.mod, funname, funname)
@@ -96,9 +96,9 @@ function compile_method_body(ctx::CompilerContext)
     ctx.localidx += nargs(ci)
     cfg = Core.Compiler.compute_basic_blocks(code)
     relooper = RelooperCreate(ctx.mod)
-    @show ctx.ci.parent.def.name
-    @show ctx.ci.parent.def
-    @show ctx.fun
+    # @show ctx.ci.parent.def.name
+    # @show ctx.ci.parent.def
+    # @show ctx.fun
     if callablestruct(ctx) 
         ctx.gfun = getglobal(ctx, ctx.fun)
     end

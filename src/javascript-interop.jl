@@ -326,11 +326,11 @@ end
 #-----------------------------------------------------------------------------# show (html)
 @inline function print_opening_tag(io::IO, o::Node; self_close::Bool = false)
     print(io, "<", tag(o))
-    # _printattrs(io, pairs(attrs(o))...)
-    for (k,v) in pairs(attrs(o))
-        v == "true" ? print(io, " ", k) : v != "false" && print(io, " ", k, "=\"", v, "\"")
-        # print(io, " ", k, "=\"", v, "\"")
-    end
+    _printattrs(io, pairs(attrs(o))...)
+    # for (k,v) in pairs(attrs(o))
+    #     v == "true" ? print(io, " ", k) : v != "false" && print(io, " ", k, "=\"", v, "\"")
+    #     # print(io, " ", k, "=\"", v, "\"")
+    # end
     # self_close && Symbol(tag(o)) ∉ VOID_ELEMENTS &&  length(children(o)) == 0 ?
     #     print(io, " />") :
         print(io, ">")

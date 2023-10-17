@@ -34,6 +34,10 @@
 
 * Using overlays with `@jscall` of normal Julia code will block constant propagation by the Julia compiler because the Julia compiler can't know what's happening and can't run it in the existing process.  
 
+* WebAssembly doesn't support circular references, but Julia does. What we do is assign a default value for the circular reference and hope it doesn't cause problems. This works for the Observables support because the circular references aren't used after the set of Observables is statically compiled.
+
+* The support of aliased objects may still be patchy. Some were fixed up recently, but I worry that some still lurk (meaning you might get a copy when you want two references to point to the same object).
+
 ## Comparing Approaches to Generating WebAssembly
 
 [StaticCompiler](https://github.com/tshort/StaticCompiler.jl) can also generate WebAssembly from Julia code. Some of the advantages of that approach include:

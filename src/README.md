@@ -2,7 +2,7 @@ WebAssembly compiler processed Julia IR code to generate WebAssembly. Every `inv
 
 Here are the key contents for the source.
 
-* `julia-compiler.jl`--The main file that defines `compile` (exported) which calls `compile_method` which calls `compile_method_body`.
+* `compiler.jl`--The main file that defines `compile` (exported) which calls `compile_method` which calls `compile_method_body`.
 
 * `compile_block.jl`--`compile_block` is the key function that compiles Julia IR. It's one giant if-elseif function that evaluates each line of IR code.
 

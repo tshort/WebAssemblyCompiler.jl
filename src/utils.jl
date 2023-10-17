@@ -156,7 +156,6 @@ function gettype(ctx, type)
 end
 
 function getglobal(ctx, gval; compiledval = nothing)
-    # @show "global---------------------------------------------------" gval typeof(gval)
     id = objectid(gval)
     if haskey(ctx.globals, gval)
         return ctx.globals[gval]
@@ -164,12 +163,10 @@ function getglobal(ctx, gval; compiledval = nothing)
     T = typeof(gval)
     wtype = gettype(ctx, T)
     name = string("g", id)
-    @show name1 = name
     if BinaryenGetGlobal(ctx.mod, name) == BinaryenGlobalRef(0)
         cx = _compile(ctx, gval; globals = true)
-        @show name2 = name
         if cx isa Nothing
-            cx = _compile(ctx, arraydefault(gval))
+            cx = _compile(ctx, default(gval))
             name = string("g", hash(cx))
         end
         if BinaryenGetGlobal(ctx.mod, name) == BinaryenGlobalRef(0)
@@ -183,7 +180,7 @@ function getglobal(ctx, gval; compiledval = nothing)
         end
     end
     gv = BinaryenGlobalGet(ctx.mod, name, wtype)
-    BinaryenExpressionPrint(gv)
+    # BinaryenExpressionPrint(gv)
     ctx.globals[gval] = gv
     return gv
 end
@@ -248,25 +245,22 @@ function box(ctx::CompilerContext, val, valT)
     return val
 end
 
-arraydefault(x::Union{Int64, Int32, UInt64, UInt32, Float64, Float32, Bool, UInt8, Int8}) = zero(x)
-# arraydefault(::Any) = Ref(0)
-arraydefault(::String) = ""
-arraydefault(::Symbol) = :_
-arraydefault(::Vector{T}) where T = T[]
-arraydefault(x::Type{T}) where T <: Union{Int64, Int32, UInt64, UInt32, Float64, Float32, Bool, UInt8, Int8} = zero(x)
-arraydefault(::Type{Any}) = Ref(0)
-arraydefault(::Type{String}) = ""
-arraydefault(::Type{Symbol}) = :_
-arraydefault(::Type{Vector{T}}) where T = T[]
+default(x::Union{Int64, Int32, UInt64, UInt32, Float64, Float32, Bool, UInt8, Int8}) = zero(x)
+# default(::Any) = Ref(0)
+default(::String) = ""
+default(::Symbol) = :_
+default(::Vector{T}) where T = T[]
+default(x::Type{T}) where T <: Union{Int64, Int32, UInt64, UInt32, Float64, Float32, Bool, UInt8, Int8} = zero(x)
+default(::Type{Any}) = Ref(0)
+default(::Type{String}) = ""
+default(::Type{Symbol}) = :_
+default(::Type{Vector{T}}) where T = T[]
 
 
 # Note that this will mess up for nonstandard type constructors
-function arraydefault(x::T) where T
-    args = [arraydefault(getfield(x, i)) for i in 1:fieldcount(T)]
-    # @show T
-    # @show args
+function default(x::T) where T
+    args = [default(getfield(x, i)) for i in 1:fieldcount(T)]
     res = T(args...)
-    # @show res
     return res
 end
 

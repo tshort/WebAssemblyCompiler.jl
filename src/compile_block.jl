@@ -496,7 +496,7 @@ function compile_block(ctx::CompilerContext, cfg::Core.Compiler.CFG, phis, idx)
                 elT = eltype(args[1])
                 size = _compile(ctx, I32(args[6]))
                 arraytype = BinaryenTypeGetHeapType(gettype(ctx, Buffer{elT}))
-                buffer = BinaryenArrayNew(ctx.mod, arraytype, size, _compile(ctx, arraydefault(elT)))
+                buffer = BinaryenArrayNew(ctx.mod, arraytype, size, _compile(ctx, default(elT)))
                 wrappertype = BinaryenTypeGetHeapType(gettype(ctx, FakeArrayWrapper{elT}))
                 binaryenfun(ctx, idx, BinaryenStructNew, [buffer, size], UInt32(2), wrappertype; passall = true)
             end
@@ -517,7 +517,7 @@ function compile_block(ctx::CompilerContext, cfg::Core.Compiler.CFG, phis, idx)
                 neednewbuffer = BinaryenBinary(ctx.mod, BinaryenLeUInt32(), arraylen, newlen)
                 newbufferget = BinaryenLocalGet(ctx.mod, ctx.localidx, arraytype)
                 newbufferblock = [
-                    BinaryenLocalSet(ctx.mod, ctx.localidx, BinaryenArrayNew(ctx.mod, arrayheaptype, newbufferlen, _compile(ctx, arraydefault(elT)))),
+                    BinaryenLocalSet(ctx.mod, ctx.localidx, BinaryenArrayNew(ctx.mod, arrayheaptype, newbufferlen, _compile(ctx, default(elT)))),
                     BinaryenArrayCopy(ctx.mod, newbufferget, _compile(ctx, I32(0)), buffer, _compile(ctx, I32(0)), _compile(ctx, arraylen)),
                     BinaryenStructSet(ctx.mod, 0, _arraywrapper, newbufferget),
                 ]
@@ -715,7 +715,6 @@ function compile_block(ctx::CompilerContext, cfg::Core.Compiler.CFG, phis, idx)
             sig = mi.specTypes
             newci = Base.code_typed_by_type(mi.specTypes, interp = StaticInterpreter())[1][1]
             newfun = node.args[2] isa QuoteNode ? node.args[2].value : x->x
-            @show newfun
             newctx = CompilerContext(ctx, newci, newfun)
             newsig = newci.parent.specTypes
             # Filter out unused arguments (slotflag & 0x08)
