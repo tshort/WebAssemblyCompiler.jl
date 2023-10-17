@@ -18,3 +18,24 @@
     # @test jsfun.nextpow(x,y) == nextpow(x,y)
     # @show jsfun.nextpow(x,y)
 
+    # Circular references
+    # Here, just the type is circular
+    struct Y
+        a::Float64
+        b::Vector{Y}
+    end
+    const y = Y(1.0, Vector{Y}[])
+    const z = Y(1.0, Vector{Y}[])
+    push!(y.b, z)
+    function frecurs1(x)
+        return x + y.b[1].a
+    end
+    compile((frecurs1, Float64,); filepath = "tmp/frecurs1.wasm", validate = true)
+
+    # Here, the value is circular
+    push!(y.b, y)
+    function frecurs2(x)
+        return x + y.b[1].a
+    end
+    # compile((frecurs2, Float64,); filepath = "tmp/frecurs2.wasm", validate = true)
+

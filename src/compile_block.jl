@@ -714,8 +714,8 @@ function compile_block(ctx::CompilerContext, cfg::Core.Compiler.CFG, phis, idx)
             mi = Core.Compiler.specialize_method(match)
             sig = mi.specTypes
             newci = Base.code_typed_by_type(mi.specTypes, interp = StaticInterpreter())[1][1]
-            @show node.args
             newfun = node.args[2] isa QuoteNode ? node.args[2].value : x->x
+            @show newfun
             newctx = CompilerContext(ctx, newci, newfun)
             newsig = newci.parent.specTypes
             # Filter out unused arguments (slotflag & 0x08)

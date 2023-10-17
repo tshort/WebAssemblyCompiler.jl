@@ -22,7 +22,7 @@ Examples:
     compile((acos, Float64), (asin, Float64), filepath = "trigs.wasm", optimize = true)   
 
 """
-function compile(funs::Tuple...; filepath = "foo.wasm", jspath = filepath * ".js", validate = true, optimize = false, experimental = true)
+function compile(funs::Tuple...; filepath = "foo.wasm", jspath = filepath * ".js", validate = true, optimize = false, experimental = true, names = nothing)
     mkpath(dirname(filepath))
     cis = Core.CodeInfo[]
     dummyci = code_typed(() -> nothing, Tuple{})[1].first
@@ -32,12 +32,16 @@ function compile(funs::Tuple...; filepath = "foo.wasm", jspath = filepath * ".js
     BinaryenModuleSetFeatures(ctx.mod, BinaryenFeatureAll())
     BinaryenModuleAutoDrop(ctx.mod)
     # Create CodeInfo's, and fill in names first
-    for funtpl in funs
+    for (i, funtpl) in enumerate(funs)
         tt = length(funtpl) > 1 ? Base.to_tuple_type(funtpl[2:end]) : Tuple{}
         # isconcretetype(tt) || error("input type signature $tt for $(funtpl[1]) is not concrete")
         ci = code_typed(funtpl[1], tt, interp = StaticInterpreter())[1].first
         push!(cis, ci)
-        name = string(funtpl[1])   # [1:min(end,20)]
+        if names == nothing
+            name = string(funtpl[1])   # [1:min(end,20)]
+        else
+            name = string(names[i])
+        end
         sig = ci.parent.specTypes
         ctx.sigs[name] = sig
         ctx.names[sig] = name
@@ -76,11 +80,11 @@ function compile_method(ctx::CompilerContext; sig = ctx.ci.parent.specTypes, exp
     bparams = BinaryenTypeCreate(jparams, length(jparams))
     rettype = gettype(ctx, ctx.ci.rettype == Nothing ? Union{} : ctx.ci.rettype)
     body = compile_method_body(ctx)
+    @show funname
     BinaryenAddFunction(ctx.mod, funname, bparams, rettype, ctx.locals, length(ctx.locals), body)
     if exported
         BinaryenAddFunctionExport(ctx.mod, funname, funname)
     end
-    @show ctx.objects
     return nothing
 end
 
@@ -94,9 +98,7 @@ function compile_method_body(ctx::CompilerContext)
     relooper = RelooperCreate(ctx.mod)
     @show ctx.ci.parent.def.name
     @show ctx.ci.parent.def
-    @show fieldcount(typeof(ctx.fun))
-    @show fieldnames(typeof(ctx.fun))
-    @show callablestruct(ctx) 
+    @show ctx.fun
     if callablestruct(ctx) 
         ctx.gfun = getglobal(ctx, ctx.fun)
     end

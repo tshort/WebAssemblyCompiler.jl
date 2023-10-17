@@ -257,6 +257,16 @@ end
     end
     compile((fa7, Float64,); filepath = "fa7.wasm")
 
+    # References to a common object
+    function fcommon1(x)
+        a = Float64[1.0]
+        b = [a]
+        c = [a]
+        a[1] = 2.0
+        return x + b[1][1] + c[1][1]
+    end
+    compile((fcommon1, Float64,); filepath = "tmp/fcommon1.wasm", validate = true)
+
 end
 
 

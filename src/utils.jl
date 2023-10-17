@@ -7,8 +7,6 @@ function argmap(ctx, n)
     # if callablestruct(ctx)  
     #     result -= 1
     # end
-    @show n, result
-    @show used
     return result
 end
 
@@ -118,7 +116,6 @@ function gettype(ctx, type)
     if haskey(ctx.wtypes, type)
         return ctx.wtypes[type]
     end
-    @show type
     # if specialtype(type) !== nothing
     #     @show type
     #     @show specialtype(type)
@@ -159,29 +156,39 @@ function gettype(ctx, type)
 end
 
 function getglobal(ctx, gval; compiledval = nothing)
+    # @show "global---------------------------------------------------" gval typeof(gval)
     id = objectid(gval)
-    if haskey(ctx.globals, id)
-        return ctx.globals[id]
+    if haskey(ctx.globals, gval)
+        return ctx.globals[gval]
     end
     T = typeof(gval)
     wtype = gettype(ctx, T)
     name = string("g", id)
-    gv = BinaryenGlobalGet(ctx.mod, name, wtype)
-    # BinaryenExpressionPrint(gv)
-    ctx.globals[id] = gv
+    @show name1 = name
     if BinaryenGetGlobal(ctx.mod, name) == BinaryenGlobalRef(0)
-        BinaryenAddGlobal(ctx.mod, 
-                          name, 
-                          wtype, 
-                        #   ismutable(gval), 
-                          false, 
-                          isnothing(compiledval) ? _compile(ctx, gval; globals = true) : compiledval)
-                        #   isnothing(compiledval) ? _compileglobal(ctx, gval) : compiledval)
+        cx = _compile(ctx, gval; globals = true)
+        @show name2 = name
+        if cx isa Nothing
+            cx = _compile(ctx, arraydefault(gval))
+            name = string("g", hash(cx))
+        end
+        if BinaryenGetGlobal(ctx.mod, name) == BinaryenGlobalRef(0)
+            BinaryenAddGlobal(ctx.mod, 
+                              name, 
+                              wtype, 
+                            #   ismutable(gval), 
+                              false, 
+                              isnothing(compiledval) ? cx : compiledval)
+                            #   isnothing(compiledval) ? _compileglobal(ctx, gval) : compiledval)
+        end
     end
+    gv = BinaryenGlobalGet(ctx.mod, name, wtype)
+    BinaryenExpressionPrint(gv)
+    ctx.globals[gval] = gv
     return gv
 end
 getglobal(ctx, mod, name; compiledval = nothing) = getglobal(ctx, Core.eval(mod, name); compiledval)
-hasglobal(ctx, gval) = haskey(ctx.globals, objectid(gval))
+hasglobal(ctx, gval) = haskey(ctx.globals, gval)
 hasglobal(ctx, mod, name) = hasglobal(ctx, mod.eval(name))
 
 # BROKEN
@@ -241,12 +248,27 @@ function box(ctx::CompilerContext, val, valT)
     return val
 end
 
-arraydefault(x) = zero(x)
-arraydefault(x::Type{Any}) = Ref(0)
-arraydefault(x::Type{String}) = ""
-arraydefault(x::Type{Symbol}) = :_
-arraydefault(x::Type{Vector{T}}) where T = T[]
+arraydefault(x::Union{Int64, Int32, UInt64, UInt32, Float64, Float32, Bool, UInt8, Int8}) = zero(x)
+# arraydefault(::Any) = Ref(0)
+arraydefault(::String) = ""
+arraydefault(::Symbol) = :_
+arraydefault(::Vector{T}) where T = T[]
+arraydefault(x::Type{T}) where T <: Union{Int64, Int32, UInt64, UInt32, Float64, Float32, Bool, UInt8, Int8} = zero(x)
+arraydefault(::Type{Any}) = Ref(0)
+arraydefault(::Type{String}) = ""
+arraydefault(::Type{Symbol}) = :_
+arraydefault(::Type{Vector{T}}) where T = T[]
 
+
+# Note that this will mess up for nonstandard type constructors
+function arraydefault(x::T) where T
+    args = [arraydefault(getfield(x, i)) for i in 1:fieldcount(T)]
+    # @show T
+    # @show args
+    res = T(args...)
+    # @show res
+    return res
+end
 
 # from Cthulhu
 if isdefined(Core, :kwcall)

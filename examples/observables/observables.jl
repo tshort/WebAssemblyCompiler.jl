@@ -52,19 +52,18 @@ end
 
 function set_svg(nsamples, sample_step, phase, radii)
     width, height = 900.0, 300.0
-    cxs_unscaled = [i*sample_step[] + phase[] for i in 1:nsamples[]]
-    cys = [sin(cxs_unscaled[i]) * height/3 + height/2 for i in 1:nsamples[]]
-    cxs = [cxs_unscaled[i] * width/4pi for i in 1:nsamples[]]
-    rr = radii[]
+    cxs_unscaled = [i*sample_step + phase for i in 1:nsamples]
+    cys = [sin(cxs_unscaled[i]) * height/3 + height/2 for i in 1:nsamples]
+    cxs = [cxs_unscaled[i] * width/4pi for i in 1:nsamples]
+    rr = radii
     geom = Any[]
-    for i in 1:nsamples[]
+    for i in 1:nsamples
         push!(geom, circ(cxs[i], cys[i], rr, i))
     end
     geom = JS.array_to_string(geom)
     JS.sethtml("plot", string(h.svg(h.g(geom); height)))
 end
-nsamples = Observable(100); sample_step = Observable(0.1); phase = Observable(0.0); radii = Observable(10.0);
-svg = onany(set_svg, nsamples, sample_step, phase, radii)
+os = (nsamples = Observable(100), sample_step = Observable(0.1), phase = Observable(0.0), radii = Observable(10.0))
 
 nothing #hide
 
@@ -72,7 +71,8 @@ nothing #hide
 =#
 
 
-fix!(o::AbstractObservable...) = fix!(Set{AbstractObservable}(), o...)
+fix!(os::AbstractObservable...) = fix!(Set{AbstractObservable}(), os...)
+fix!(os::NamedTuple) = fix!(Set{AbstractObservable}(), os)
 
 function fix!(ctx::Set{AbstractObservable}, mc::Observables.MapCallback, val)
     set! = makenotify(ctx, mc.result).set![1]
@@ -109,17 +109,22 @@ end
 #=
 Use a function to generate a function.
 =#
-function fix!(ctx::Set{AbstractObservable}, observables::AbstractObservable...)
+function fix!(ctx::Set{AbstractObservable}, observables::NamedTuple)
     setfuns = []
     notifies = []
-    for observable in observables
+    names = []
+    @show "here"
+    @show observables
+    @show "here2"
+    for (name, observable) in pairs(observables)
         observable in ctx && continue
         push!(ctx, observable)
         mn = makenotify(ctx, observable)
-        push!(setfuns, mn.set!)
+        push!(setfuns,  mn.set!)
         push!(notifies, mn.notify)
+        push!(names, name)
     end
-    return (; setfuns, notifies)
+    return (; setfuns, notifies, names)
 end
 
 function makenotify(ctx::Set{AbstractObservable}, observable::Observable{T}) where T
@@ -148,8 +153,16 @@ function makenotify(ctx::Set{AbstractObservable}, observable::Observable{T}) whe
     return (notify = (nnotify,), set! = (set!, T))
 end
 
-fobs = fix!(nsamples, sample_step, phase, radii)
-compile(fobs.setfuns...; filepath = "obervables/obervables.wasm", validate = true)
+W.arraydefault(o::Observable{T}) where T = Observable(W.arraydefault(T))
+
+onany(set_svg, values(os)...)
+# onany((a,b,c,d) -> display(d), values(os)...)
+# z = map((a,b,c,d) -> b+c, values(os)...)
+# nt = (;os..., z)
+fobs = fix!(os)
+compile(fobs.setfuns...; names = fobs.names, filepath = "observables/observables.wasm", validate = true)
+# z = map((a,b,c,d) -> (println("b:", b)), values(os)...)
+
 
 
 #=
