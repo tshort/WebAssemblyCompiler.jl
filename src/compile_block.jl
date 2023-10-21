@@ -559,6 +559,10 @@ function compile_block(ctx::CompilerContext, cfg::Core.Compiler.CFG, phis, idx)
                 setlocal!(ctx, idx, _compile(ctx, args[5]))
             end
 
+        elseif matchforeigncall(node, :jl_object_id) do args
+                setlocal!(ctx, idx, _compile(ctx, objectid(_compile(ctx, args[5]))))
+            end
+
         elseif matchgr(node, :getfield) || matchcall(node, getfield)
             x = node.args[2]
             index = node.args[3]
@@ -695,6 +699,7 @@ function compile_block(ctx::CompilerContext, cfg::Core.Compiler.CFG, phis, idx)
         elseif node isa Expr && node.head == :invoke
             T = node.args[1].specTypes.parameters[1]
             if isa(DomainError, T) ||
+               isa(DimensionMismatch, T) ||
                isa(InexactError, T) ||
                isa(ArgumentError, T) ||
                isa(OverflowError, T) ||
@@ -738,7 +743,7 @@ function compile_block(ctx::CompilerContext, cfg::Core.Compiler.CFG, phis, idx)
                 ctx.sigs[name] = newsig
                 ctx.names[newsig] = name
                 newci.parent.specTypes = newsig
-                _DEBUG_ && @show newci.parent.def newci.parent
+                # _DEBUG_ && @show newci.parent.def newci.parent
                 _DEBUG_ && _debug_ci(newctx, ctx)
                 compile_method(newctx)
             end

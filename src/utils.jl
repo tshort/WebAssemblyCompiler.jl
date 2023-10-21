@@ -177,10 +177,10 @@ function getglobal(ctx, gval; compiledval = nothing)
                               false, 
                               isnothing(compiledval) ? cx : compiledval)
                             #   isnothing(compiledval) ? _compileglobal(ctx, gval) : compiledval)
+            # BinaryenExpressionPrint(isnothing(compiledval) ? cx : compiledval)
         end
     end
     gv = BinaryenGlobalGet(ctx.mod, name, wtype)
-    # BinaryenExpressionPrint(gv)
     ctx.globals[gval] = gv
     return gv
 end
@@ -249,12 +249,31 @@ default(x::Union{Int64, Int32, UInt64, UInt32, Float64, Float32, Bool, UInt8, In
 # default(::Any) = Ref(0)
 default(::String) = ""
 default(::Symbol) = :_
+default(::Core.SimpleVector) = Core.svec()
 default(::Vector{T}) where T = T[]
 default(x::Type{T}) where T <: Union{Int64, Int32, UInt64, UInt32, Float64, Float32, Bool, UInt8, Int8} = zero(x)
+default(::Tuple) = ()
+default(::Tuple{}) = ()
 default(::Type{Any}) = Ref(0)
 default(::Type{String}) = ""
 default(::Type{Symbol}) = :_
 default(::Type{Vector{T}}) where T = T[]
+default(::Type{Tuple{T}}) where T = ()
+default(::Type{Tuple{}}) = ()
+
+function default(::Type{T}) where T
+    fieldtypes = Base.datatype_fieldtypes(T)
+    args = [default(ft) for ft in fieldtypes]
+    res = T(args...)
+    return res
+end
+
+function default(::Type{T}) where T <: Tuple
+    fieldtypes = Base.datatype_fieldtypes(T)
+    args = [default(ft) for ft in fieldtypes]
+    res = tuple(args...)
+    return res
+end
 
 
 # Note that this will mess up for nonstandard type constructors

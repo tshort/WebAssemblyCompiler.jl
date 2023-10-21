@@ -1,0 +1,5 @@
+[deps]
+Makie = "ee78f7c6-11fb-53f2-987a-cfe4a2b5a57a"
+MakieCore = "20f20a25-4f0e-4fdf-b5d1-57303727442b"
+Observables = "510215fc-4207-5dde-b226-833fc4488ee2"
+WebAssemblyCompiler = "9bc180e8-272c-4d08-a460-9682f1716cbe"

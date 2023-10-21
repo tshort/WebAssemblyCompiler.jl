@@ -88,6 +88,8 @@ end
     return nothing
 end
 
+# Make this match the version for AbstractArrays (removes a pointer access)
+@overlay MT @inline Base.dataids(A::Array) = (UInt(objectid(A)),)
 
 # I'm not sure this works:
 @overlay MT @inline Base.FastMath.mul_float_fast(a, b) = a * b
@@ -99,10 +101,11 @@ end
 @overlay MT @inline Base.error(err) = JS.console_log(err)
 @overlay MT @inline Base.throw(err) = JS.console_log(err)
 @overlay MT @inline Base.DomainError(str) = str
-@overlay MT @inline Base.InexactError(str) = str
+@overlay MT @inline Base.InexactError(str...) = str
 @overlay MT @inline Base.ArgumentError(str) = str
 @overlay MT @inline Base.OverflowError(str) = str
 @overlay MT @inline Base.AssertionError(str) = str
+@overlay MT @inline Base.DimensionMismatch(str) = str
 
 # math.jl
 @overlay MT @inline Base.Math.throw_complex_domainerror(f::Symbol, x) =

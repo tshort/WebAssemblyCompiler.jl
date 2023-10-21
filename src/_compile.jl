@@ -99,12 +99,13 @@ function _compile(ctx::CompilerContext, x::T; globals = false, kw...) where T <:
     # TODO: fix this; problem is, I can't remember what's broken
     elT = eltype(roottype(ctx, T))
     buffertype = BinaryenTypeGetHeapType(gettype(ctx, Buffer{elT}))
+    _f(i) = isassigned(x, i) ? x[i] : default(elT)
     if globals
         values = [elT in basictypes ? 
-                  _compile(ctx, v) : 
-                  getglobal(ctx, v) for v in x]
+                  _compile(ctx, _f(i)) : 
+                  getglobal(ctx, _f(i)) for i in eachindex(x)]
     else
-        values = [_compile(ctx, v) for v in x]
+        values = [_compile(ctx, _f(i)) for i in eachindex(x)]
     end
     buffer = BinaryenArrayNewFixed(ctx.mod, buffertype, values, length(x))
     wrappertype = BinaryenTypeGetHeapType(gettype(ctx, FakeArrayWrapper{elT}))
