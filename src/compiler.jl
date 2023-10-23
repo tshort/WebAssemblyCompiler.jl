@@ -81,7 +81,9 @@ function compile_method(ctx::CompilerContext; sig = ctx.ci.parent.specTypes, exp
     bparams = BinaryenTypeCreate(jparams, length(jparams))
     rettype = gettype(ctx, ctx.ci.rettype == Nothing ? Union{} : ctx.ci.rettype)
     body = compile_method_body(ctx)
-    BinaryenAddFunction(ctx.mod, funname, bparams, rettype, ctx.locals, length(ctx.locals), body)
+    if BinaryenGetFunction(ctx.mod, funname) == C_NULL
+        BinaryenAddFunction(ctx.mod, funname, bparams, rettype, ctx.locals, length(ctx.locals), body)
+    end
     if exported
         BinaryenAddFunctionExport(ctx.mod, funname, funname)
     end
@@ -98,7 +100,7 @@ function compile_method_body(ctx::CompilerContext)
     relooper = RelooperCreate(ctx.mod)
     @show ctx.ci.parent.def.name
     @show ctx.ci.parent.def
-    @show ctx.fun
+    # @show ctx.fun
     # @show ctx.ci
     if callablestruct(ctx) 
         ctx.gfun = getglobal(ctx, ctx.fun)

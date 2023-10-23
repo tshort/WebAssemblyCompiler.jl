@@ -52,13 +52,14 @@ nothing #hide
 ## A basic Makie plot
 =#
 
-const x = 0:0.01:8π
+const x = 0:1.01:8π
 # obs = [Observable(x) for x in (1.0, 0.0, 0.0, 1.0, 0.0, 0.0)]
 sine(x, a, ω, ϕ) = a * cos((ω * x + ϕ) * π) 
 
 y1 = lift((a, ω, ϕ) -> [sine(x, a, ω, ϕ) for x in x], os[1], os[2], os[3])
 y2 = lift((a, ω, ϕ) -> [sine(x, a, ω, ϕ) for x in x], os[4], os[5], os[6])
-y3 = @lift($(y1) + $(y2))
+# y3 = lift((y1, y2) -> Float64[x for x in y1], y1, y2)
+y3 = lift((y1) -> Float64[x for x in y1], y1)
 
 fig = Figure()
 color1 = :steelblue3
@@ -71,14 +72,16 @@ ax1 = Axis(fig[1, 1], title = "Independent sine waves", xlabel = "t", ylabel = "
 )
 lines!(x, y1, label = L"f_1", color = color1)
 lines!(x, y2, label = L"f_2", color = color2)
-ylims!(-3.1, 3.1)
-# axislegend(ax1)
+# ylims!(-3.1, 3.1)
+# # axislegend(ax1)
 
 ax2 = Axis(fig[2, 1], title = "Sum of sines", xlabel = "t", ylabel = L"f_1 + f_2",
             # xticks = (xtickvals, xtickformat))
 )
-lines!(x, y3, color = :indigo)
-ylims!(-5.2, 5.2)
+# # lines!(x, y2, label = L"f_2", color = color2)
+# lines!(x, y3, color = :indigo)
+lines!(x, y3, color = :orange)
+# ylims!(-5.2, 5.2)
 
 nothing #hide
 
@@ -128,7 +131,7 @@ function make_svg_function()
     # push!(ea, :(display(JS.array_to_string(svg))))
     push!(ea, :(JS.sethtml("plot", JS.array_to_string(svg))))
     # return e
-    @show e
+    # @show e
     return eval(e)
 end
 
@@ -144,7 +147,7 @@ function primitive_svg_expr(primitive::Union{Lines, LineSegments})
     scene_x_origin, scene_y_origin = scene_area.origin
     top_offset = root_area_height - scene_height - scene_y_origin
     transform_expr = " transform='translate($scene_x_origin,$top_offset)'"
-@show transform_expr
+# @show transform_expr
     model = primitive[:model][]
     positions = primitive[1]
     length(to_value(positions)) < 1 && return nothing
@@ -208,7 +211,7 @@ end
 using CairoMakie
 save("ss.png", fig)
 fsvg = make_svg_function()
-# onany(fsvg, os...)
+onany(fsvg, os[1])
 nothing #hide
 
 

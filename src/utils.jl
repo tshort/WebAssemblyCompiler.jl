@@ -243,16 +243,16 @@ default(x::Union{Int64, Int32, UInt64, UInt32, Float64, Float32, Bool, UInt8, In
 # default(::Any) = Ref(0)
 default(::String) = ""
 default(::Symbol) = :_
-default(::Core.SimpleVector) = Core.svec()
+default(x::Core.SimpleVector) = deepcopy(x)
 default(::Vector{T}) where T = T[]
 default(x::Type{T}) where T <: Union{Int64, Int32, UInt64, UInt32, Float64, Float32, Bool, UInt8, Int8} = zero(x)
-default(::Tuple) = ()
+default(x::Tuple) = deepcopy(x)
 default(::Tuple{}) = ()
 default(::Type{Any}) = Ref(0)
 default(::Type{String}) = ""
 default(::Type{Symbol}) = :_
 default(::Type{Vector{T}}) where T = T[]
-default(::Type{Tuple{T}}) where T = ()
+# default(::Type{Tuple{T}}) where T = tuple((default(t) for t in T)...)
 default(::Type{Tuple{}}) = ()
 
 function default(::Type{T}) where T
@@ -287,5 +287,5 @@ end
 validname(s::String) = replace(s, r"\W" => "_")
 
 callablestruct(ctx::CompilerContext) = fieldcount(typeof(ctx.fun)) > 0
-
+# callablestruct(ctx::CompilerContext) = fieldcount(typeof(ctx.ci.parent.def.sig.parameters[1])) > 0
 
