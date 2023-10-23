@@ -59,7 +59,7 @@ sine(x, a, ω, ϕ) = a * cos((ω * x + ϕ) * π)
 y1 = lift((a, ω, ϕ) -> [sine(x, a, ω, ϕ) for x in x], os[1], os[2], os[3])
 y2 = lift((a, ω, ϕ) -> [sine(x, a, ω, ϕ) for x in x], os[4], os[5], os[6])
 # y3 = lift((y1, y2) -> Float64[x for x in y1], y1, y2)
-y3 = lift((y1) -> Float64[x for x in y1], y1)
+y3 = lift((y1, y2) -> Float64[y1[i] + y2[i] for i in eachindex(y1)], y1, y2)
 
 fig = Figure()
 color1 = :steelblue3
