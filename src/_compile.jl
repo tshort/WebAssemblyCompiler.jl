@@ -8,6 +8,7 @@ function _compile(ctx::CompilerContext, x::Core.Argument; kw...)
     else
         type = ctx.ci.slottypes[x.n]
     end
+    @show x x.n argmap(ctx, x.n) argsused(ctx) callablestruct(ctx) typeof(ctx.fun)
     BinaryenLocalGet(ctx.mod, argmap(ctx, x.n) - 1,
                      gettype(ctx, type))
 end

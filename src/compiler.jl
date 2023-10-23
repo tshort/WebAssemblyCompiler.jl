@@ -96,16 +96,16 @@ function compile_method_body(ctx::CompilerContext)
     ctx.localidx += nargs(ci)
     cfg = Core.Compiler.compute_basic_blocks(code)
     relooper = RelooperCreate(ctx.mod)
-    # @show ctx.ci.parent.def.name
-    # @show ctx.ci.parent.def
-    # @show ctx.fun
+    @show ctx.ci.parent.def.name
+    @show ctx.ci.parent.def
+    @show ctx.fun
     # @show ctx.ci
     if callablestruct(ctx) 
         ctx.gfun = getglobal(ctx, ctx.fun)
     end
 
     # Find and collect phis
-    phis = Dict{Int32, Any}()
+    phis = Dict{Int, Any}()
     for (idx, block) in enumerate(cfg.blocks)
         for stmt in block.stmts
             node = code[stmt]

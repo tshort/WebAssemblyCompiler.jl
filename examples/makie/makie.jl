@@ -33,7 +33,12 @@ html = h.div(
     h.div."columns is-vcentered"(
         h.div."column is-2"(
             h.form(
-                numform("k", step = 2.0, value = 10.0),
+                numform("k1", step = 0.2, value = 1.0),
+                numform("k2", step = 0.2, value = 1.0),
+                numform("k3", step = 0.2, value = 1.0),
+                numform("k4", step = 0.2, value = 1.0),
+                numform("k5", step = 0.2, value = 1.0),
+                numform("k6", step = 0.2, value = 1.0),
             )
         ),
         h.div."column"(
@@ -47,15 +52,34 @@ nothing #hide
 ## A basic Makie plot
 =#
 
-x = Observable([1:0.1:10;])
-k = Observable(1.0)
-# v = map(x -> 2x, k)
-y = map((x, k) -> [k .* z.^2 for z in x], x, k)
-f = Figure()
-ax = Axis(f[1, 1])
-# hidedecorations!(ax)
-# hidespines!(ax)
-l = lines!(x, y; label = "Parabola")
+const x = 0:0.01:8π
+# obs = [Observable(x) for x in (1.0, 0.0, 0.0, 1.0, 0.0, 0.0)]
+sine(x, a, ω, ϕ) = a * cos((ω * x + ϕ) * π) 
+
+y1 = lift((a, ω, ϕ) -> [sine(x, a, ω, ϕ) for x in x], os[1], os[2], os[3])
+y2 = lift((a, ω, ϕ) -> [sine(x, a, ω, ϕ) for x in x], os[4], os[5], os[6])
+y3 = @lift($(y1) + $(y2))
+
+fig = Figure()
+color1 = :steelblue3
+color1a = :midnightblue
+color2 = :orange
+color2a = :firebrick4
+
+ax1 = Axis(fig[1, 1], title = "Independent sine waves", xlabel = "t", ylabel = "y",
+            # xticks = (xtickvals, xtickformat))
+)
+lines!(x, y1, label = L"f_1", color = color1)
+lines!(x, y2, label = L"f_2", color = color2)
+ylims!(-3.1, 3.1)
+# axislegend(ax1)
+
+ax2 = Axis(fig[2, 1], title = "Sum of sines", xlabel = "t", ylabel = L"f_1 + f_2",
+            # xticks = (xtickvals, xtickformat))
+)
+lines!(x, y3, color = :indigo)
+ylims!(-5.2, 5.2)
+
 nothing #hide
 
 #=
@@ -85,7 +109,7 @@ function project_position(transform_func::T, space, point, model::Makie.Mat4, re
 end
 
 function make_svg_function()
-    allplots = Makie.collect_atomic_plots(f.scene)
+    allplots = Makie.collect_atomic_plots(fig.scene)
     zvals = Makie.zvalue2d.(allplots)
     permute!(allplots, sortperm(zvals))
     # color = to_color(primitive.calculated_colors[])
@@ -182,9 +206,9 @@ end
 function primitive_svg_expr(x)
 end
 using CairoMakie
-save("t.png", f)
+save("ss.png", fig)
 fsvg = make_svg_function()
-onany(fsvg, k)
+# onany(fsvg, os...)
 nothing #hide
 
 
@@ -206,7 +230,7 @@ This triggers propagation of updates to the listeners.
 =#
 
 include("observable-utils.jl")
-fos = fix!(k)
+fos = fix!(os...)
 
 #=
 Kludge Makie some to try to make it amenable to compilation.
