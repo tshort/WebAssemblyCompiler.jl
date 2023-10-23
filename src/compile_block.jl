@@ -143,6 +143,10 @@ function compile_block(ctx::CompilerContext, cfg::Core.Compiler.CFG, phis, idx)
                 binaryfun(ctx, idx, (BinaryenRemUInt64, BinaryenRemUInt32), a, b)
             end
 
+        elseif matchgr(node, :checked_urem_int) do a, b
+                binaryfun(ctx, idx, (BinaryenRemUInt64, BinaryenRemUInt32), a, b)
+            end
+
         elseif matchgr(node, :add_float) do a, b
                 binaryfun(ctx, idx, (BinaryenAddFloat64, BinaryenAddFloat32), a, b)
             end

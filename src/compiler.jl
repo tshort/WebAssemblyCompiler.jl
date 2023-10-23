@@ -99,6 +99,7 @@ function compile_method_body(ctx::CompilerContext)
     # @show ctx.ci.parent.def.name
     # @show ctx.ci.parent.def
     # @show ctx.fun
+    # @show ctx.ci
     if callablestruct(ctx) 
         ctx.gfun = getglobal(ctx, ctx.fun)
     end

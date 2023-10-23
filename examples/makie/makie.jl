@@ -104,38 +104,81 @@ function make_svg_function()
     # push!(ea, :(display(JS.array_to_string(svg))))
     push!(ea, :(JS.sethtml("plot", JS.array_to_string(svg))))
     # return e
-    # @show e
+    @show e
     return eval(e)
 end
 
-function primitive_svg_expr(primitive::Lines)
-    scene = primitive.parent
+function primitive_svg_expr(primitive::Union{Lines, LineSegments})
+    scene = Makie.parent_scene(primitive)
+    if primitive isa Lines 
+        scene = primitive.parent
+    end
+    root_area = Makie.root(scene).px_area[]
+    root_area_height = widths(root_area)[2]
+    scene_area = pixelarea(scene)[]
+    scene_height = widths(scene_area)[2]
+    scene_x_origin, scene_y_origin = scene_area.origin
+    top_offset = root_area_height - scene_height - scene_y_origin
+    transform_expr = " transform='translate($scene_x_origin,$top_offset)'"
+@show transform_expr
     model = primitive[:model][]
     positions = primitive[1]
+    length(to_value(positions)) < 1 && return nothing
     @get_attribute(primitive, (color, linewidth, linestyle))
-    hexcolor = hex(RGB(color))
     transform = Makie.transform_func(primitive)
     space = QuoteNode(to_value(get(primitive, :space, :data)))
     res = scene.camera.resolution[]
     camera = scene.camera
-    disconnect!(camera)    # compilation fails without this
     # @show scene positions transform space model res camera
     projectionview = camera.projectionview[]
+    hexcolor = hex(RGB(color isa Vector ? color[1] : color)) 
+    opacity = alpha(color isa Vector ? color[1] : color)
+    draw_expr = primitive isa Lines ? draw_lines(hexcolor, opacity, transform_expr) : draw_linesegments(hexcolor, opacity, transform_expr)
     return quote
         projected_positions = [project_position($transform, $space, p, $model, $res, $projectionview) for p in to_value($positions)]
-        # projected_positions = [CairoMakie.project_position($scene, $transform, $space, p, $model) for p in to_value($positions)]
+        $draw_expr
+        push!(svg, "'/>")
+    end
+end
+function draw_lines(hexcolor, alpha, transform)
+    return quote
         push!(svg, "<polyline fill='none' stroke='#")
         push!(svg, $hexcolor)
-        push!(svg, "' points='")
+        push!(svg, "' stroke-opacity=")
+        push!(svg, $alpha)
+        push!(svg, $transform)
+        push!(svg, " points='")
         for pt in projected_positions
             push!(svg, pt[1])
             push!(svg, ",")
             push!(svg, pt[2])
             push!(svg, " ")
         end
-        push!(svg, "'/>")
     end
 end
+function draw_linesegments(hexcolor, alpha, transform)
+    return quote
+        push!(svg, "<path fill='none' stroke='#")
+        push!(svg, $hexcolor)
+        push!(svg, "' stroke-opacity=")
+        push!(svg, $alpha)
+        push!(svg, $transform)
+        push!(svg, " d='")
+        @inbounds for i in 1:2:length(projected_positions)-1
+            p1 = projected_positions[i]
+            p2 = projected_positions[i+1]
+            push!(svg, " M ")
+            push!(svg, p1[1])
+            push!(svg, ",")
+            push!(svg, p1[2])
+            push!(svg, " L ")
+            push!(svg, p2[1])
+            push!(svg, ",")
+            push!(svg, p2[2])
+        end
+    end
+end
+ 
 function primitive_svg_expr(x)
 end
 using CairoMakie
