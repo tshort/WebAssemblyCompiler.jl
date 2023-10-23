@@ -102,6 +102,8 @@ function object(v::Vector{Any})
     for (i, x) in enumerate(v)
         if x isa Box{Float64}
             _set(jsa, i, x.x)
+        elseif x isa Box{Float32}
+            _set(jsa, i, x.x)
         elseif x isa Box{Int32}
             _set(jsa, i, x.x)
         elseif x isa Box{String}

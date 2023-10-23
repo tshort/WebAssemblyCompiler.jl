@@ -97,9 +97,12 @@ end
 @overlay MT @inline Base.FastMath.add_float_fast(a, b) = a + b
 
 #### Error handling
+struct DummyException <: Exception
+end
+@overlay MT @inline Base.error(err) = throw(DummyException())
 
-@overlay MT @inline Base.error(err) = JS.console_log(err)
-@overlay MT @inline Base.throw(err) = JS.console_log(err)
+# @overlay MT @inline Base.error(err) = JS.console_log(err)
+# @overlay MT @inline Base.throw(err) = JS.console_log(err)
 @overlay MT @inline Base.DomainError(str) = str
 @overlay MT @inline Base.InexactError(str...) = str
 @overlay MT @inline Base.ArgumentError(str) = str

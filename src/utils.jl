@@ -21,10 +21,6 @@ argused(ci, i) = (ci.slotflags[i] & 0x08) > 0
 argsused(ci) = [false, (argused(ci, i) for i in 2:length(ci.slotflags))...]
 argsused(ctx::CompilerContext) = argsused(ctx.ci)
 
-specialtype(x) = nothing
-specialtype(::Type{T}) where T <: Val = BinaryenTypeInt64()
-# specialtype(::Module) = DummyModule
-
 function ssatype(ctx::CompilerContext, idx)
     ctx.ci.ssavaluetypes[idx]
 end
@@ -116,11 +112,9 @@ function gettype(ctx, type)
     if haskey(ctx.wtypes, type)
         return ctx.wtypes[type]
     end
-    # if specialtype(type) !== nothing
-    #     @show type
-    #     @show specialtype(type)
-    #     return specialtype(type)
-    # end
+    if type isa Union || isabstracttype(type)
+        return gettype(ctx, Any)
+    end
     if type <: Array && !haskey(ctx.meta, :arraypass)
         wrappertype = gettype(ctx, FakeArrayWrapper{eltype(type)})
         ctx.wtypes[type] = wrappertype

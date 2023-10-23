@@ -85,6 +85,7 @@ end
 
 
 function _compile(ctx::CompilerContext, x::T; globals = false, kw...) where T <: Array 
+    
     if haskey(ctx.globals, x)
         return ctx.globals[x]
     end
@@ -133,8 +134,8 @@ function _compile(ctx::CompilerContext, x::T; globals = false, kw...) where T # 
     end
     if ismutabletype(T) && haskey(ctx.objects, x)
         ox = ctx.objects[x]
-        if ox == Nothing  # indicates a circular reference
-            return default(x)
+        if ox == nothing  # indicates a circular reference
+            return _compile(ctx, default(x))
         end
         return ox
     end

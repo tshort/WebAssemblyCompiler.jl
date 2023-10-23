@@ -11,6 +11,7 @@ const WebAssemblyCompiler._DEBUG_ = true
 
 using Observables
 using Makie
+using Colors
 
 const names = []
 const os = []
@@ -60,8 +61,89 @@ nothing #hide
 #=
 ## A super basic Makie backend
 =#
-# points = map(x -> x * 2, l.converted[1])  # just to try some change
+
+function project_position(transform_func::T, space, point, model::Makie.Mat4, res, projectionview) where T
+    # use transform func
+    point = Makie.apply_transform(transform_func, point, space)
+    yflip = true
+    p4d = Makie.to_ndim(Vec4f, Makie.to_ndim(Vec3f, point, 0f0), 1f0)
+    clip = projectionview * model * p4d
+    # @show point p4d clip model space camera
+    @inbounds begin
+        # between -1 and 1
+        p = (clip ./ clip[4])[Vec(1, 2)]
+        # flip y to match cairo
+        p_yflip = Vec2f(p[1], (1f0 - 2f0 * yflip) * p[2])
+        # normalize to between 0 and 1
+        p_0_to_1 = (p_yflip .+ 1f0) ./ 2f0
+    end
+    # multiply with scene resolution for final position
+    # if point[1] == 1.0
+    #     @show point p4d clip model space projectionview p_0_to_1 res (p_0_to_1 .* res)
+    # end
+    return p_0_to_1 .* res
+end
+
+function make_svg_function()
+    allplots = Makie.collect_atomic_plots(f.scene)
+    zvals = Makie.zvalue2d.(allplots)
+    permute!(allplots, sortperm(zvals))
+    # color = to_color(primitive.calculated_colors[])
+    e = quote 
+        function (x) 
+            svg = Any["<svg width=800 height=600>"]
+        end
+    end
+    ea = e.args[end].args[end].args
+    for primitive in allplots
+        push!(ea, primitive_svg_expr(primitive))
+    end
+    push!(ea, :(push!(svg, "</svg>")))
+    push!(ea, :(display(svg)))
+    # push!(ea, :(display(join(svg, ""))))
+    # push!(ea, :(display(JS.array_to_string(svg))))
+    push!(ea, :(JS.sethtml("plot", JS.array_to_string(svg))))
+    # return e
+    # @show e
+    return eval(e)
+end
+
+function primitive_svg_expr(primitive::Lines)
+    scene = primitive.parent
+    model = primitive[:model][]
+    positions = primitive[1]
+    @get_attribute(primitive, (color, linewidth, linestyle))
+    hexcolor = hex(RGB(color))
+    transform = Makie.transform_func(primitive)
+    space = QuoteNode(to_value(get(primitive, :space, :data)))
+    res = scene.camera.resolution[]
+    camera = scene.camera
+    disconnect!(camera)    # compilation fails without this
+    # @show scene positions transform space model res camera
+    projectionview = camera.projectionview[]
+    return quote
+        projected_positions = [project_position($transform, $space, p, $model, $res, $projectionview) for p in to_value($positions)]
+        # projected_positions = [CairoMakie.project_position($scene, $transform, $space, p, $model) for p in to_value($positions)]
+        push!(svg, "<polyline fill='none' stroke='#")
+        push!(svg, $hexcolor)
+        push!(svg, "' points='")
+        for pt in projected_positions
+            push!(svg, pt[1])
+            push!(svg, ",")
+            push!(svg, pt[2])
+            push!(svg, " ")
+        end
+        push!(svg, "'/>")
+    end
+end
+function primitive_svg_expr(x)
+end
+using CairoMakie
+save("t.png", f)
+fsvg = make_svg_function()
+onany(fsvg, k)
 nothing #hide
+
 
 #=
 We also need to patch up some internals in WebAssemblyCompiler.
@@ -143,6 +225,7 @@ W.default(o::Observable) = Observable(o[])
 # Fix up a type issue in Base
 @overlay W.MT Base.merge(::NamedTuple{(), Tuple{}}, ::Tuple{}) = NamedTuple()
 
+# fos.setfuns[1][1](1.0)
 compile(fos.setfuns...; names = names, filepath = "makie/makie.wasm", validate = true)
 nothing #hide
 
