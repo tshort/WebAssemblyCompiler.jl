@@ -1,16 +1,19 @@
 
 function _compile(ctx::CompilerContext, x::Core.Argument; kw...)
-    if x.n == 1 && callablestruct(ctx)
-        return ctx.gfun
+    if callablestruct(ctx) && x.n == 1 && ctx.toplevel
+        getglobal(ctx, ctx.gfun)
     end
     if ctx.ci.slottypes[x.n] isa Core.Const 
         type = typeof(ctx.ci.slottypes[x.n].val)
     else
         type = ctx.ci.slottypes[x.n]
     end
-    # @show x x.n argmap(ctx, x.n) argsused(ctx) callablestruct(ctx) typeof(ctx.fun)
-    # @show Base.fieldcount(typeof(ctx.fun))
-    BinaryenLocalGet(ctx.mod, argmap(ctx, x.n) - 1,
+    # If at the top level or if it's not a callable struct, 
+    # we don't include the fun as the first argument.
+    offset = ctx.toplevel || !ctx.callablestruct ? 2 : 1  
+    @show x.n offset
+    # offset = ctx.toplevel ? 2 : 1  
+    BinaryenLocalGet(ctx.mod, x.n - offset,
                      gettype(ctx, type))
 end
 function _compile(ctx::CompilerContext, x::Core.SSAValue; kw...)   # These come after the function arguments.
@@ -117,7 +120,8 @@ function _compile(ctx::CompilerContext, x::T; globals = false, kw...) where T <:
     return result
 end
 
-function _compile(ctx::CompilerContext, x::T; globals = false, kw...) where T <: Tuple # general tuples
+# general tuples
+function _compile(ctx::CompilerContext, x::T; globals = false, kw...) where T <: Tuple
     TT = Tuple{(roottype(ctx, v) for v in x)...}
     type = BinaryenTypeGetHeapType(gettype(ctx, TT))
     if globals
@@ -130,15 +134,22 @@ function _compile(ctx::CompilerContext, x::T; globals = false, kw...) where T <:
     return BinaryenStructNew(ctx.mod, args, length(args), type)
 end
 
-function _compile(ctx::CompilerContext, x::T; globals = false, kw...) where T # general version for structs
+# general version for structs
+function _compile(ctx::CompilerContext, x::T; globals = false, kw...) where T
+    # @show T haskey(ctx.globals, x)
     if haskey(ctx.globals, x)
         return ctx.globals[x]
     end
     if ismutabletype(T) && haskey(ctx.objects, x)
+    # if haskey(ctx.objects, x)
         ox = ctx.objects[x]
-        if ox == nothing  # indicates a circular reference
-            return _compile(ctx, default(x))
-        end
+        # @show typeof(ox)
+        # if ox === nothing  # indicates a circular reference
+        #     @show ctx.objects
+        #     show(stdout, MIME"text/plain"(), ctx.objects)
+        #     @show x typeof(ox)
+        #     return _compile(ctx, default(x))
+        # end
         return ox
     end
     ctx.objects[x] = nothing
@@ -146,9 +157,10 @@ function _compile(ctx::CompilerContext, x::T; globals = false, kw...) where T # 
     if globals
         args = [fieldtype(T, field) in basictypes ? 
                 _compile(ctx, getfield(x, field)) : 
-                getglobal(ctx, getfield(x, field)) for field in fieldnames(T)]
+                # maybeboxfield(x, field) : 
+                getglobal(ctx, getfield(x, field)) for field in fieldskept(T)]
     else
-        args = [_compile(ctx, getfield(x, field)) for field in fieldnames(T)]
+        args = [_compile(ctx, getfield(x, field)) for field in fieldskept(T)]
     end
     result = BinaryenStructNew(ctx.mod, args, length(args), type)
     if ismutabletype(T)
@@ -156,7 +168,15 @@ function _compile(ctx::CompilerContext, x::T; globals = false, kw...) where T # 
     end
     return result
 end
-
+function maybeboxfield(x, field)
+    val = getfield(x, field)
+    ftype = fieldtype(typeof(x), field)
+    if typeof(val) == ftype
+        return _compile(ctx, val)
+    else
+        return BinaryenRefCast(ctx.mod, _compile(ctx, Box{ftype}(val)))
+    end
+end
 function _compile(ctx::CompilerContext, x::Expr; kw...)
     if x.head == :boundscheck
         return _compile(ctx, false)

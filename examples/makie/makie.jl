@@ -1,7 +1,8 @@
 #=
 # Makie, maybe
 
-
+* It seems like we're compiling way too many broadcast operations.
+* The wasm/wat file grows with the size of the array. We must be storing something we don't want.
 =#
 
 using WebAssemblyCompiler     # prep some input #hideall
@@ -52,14 +53,31 @@ nothing #hide
 ## A basic Makie plot
 =#
 
-const x = 0:1.01:8π
+const x = 0:0.1:8π
 # obs = [Observable(x) for x in (1.0, 0.0, 0.0, 1.0, 0.0, 0.0)]
 sine(x, a, ω, ϕ) = a * cos((ω * x + ϕ) * π) 
 
-y1 = lift((a, ω, ϕ) -> [sine(x, a, ω, ϕ) for x in x], os[1], os[2], os[3])
-y2 = lift((a, ω, ϕ) -> [sine(x, a, ω, ϕ) for x in x], os[4], os[5], os[6])
-# y3 = lift((y1, y2) -> Float64[x for x in y1], y1, y2)
-y3 = lift((y1, y2) -> Float64[y1[i] + y2[i] for i in eachindex(y1)], y1, y2)
+const y1 = lift((a, ω, ϕ) -> [sine(x, a, ω, ϕ) for x in x], os[1], os[2], os[3])
+const y2 = lift((a, ω, ϕ) -> [sine(x, a, ω, ϕ) for x in x], os[4], os[5], os[6])
+# const  y3 = lift((y1, y2) -> Float64[x for x in y1], y1, y2)
+const y3 = lift((y1, y2) -> Float64[y1[i] + y2[i] for i in eachindex(y1)], y1, y2)
+
+# x = 0..8π
+# sine(x, a, ω, ϕ) = a[] * cos((ω[] * x + ϕ[]) * π) 
+# y1 = x -> sine(x, os[1], os[2], os[3])
+# y2 = x -> sine(x, os[4], os[5], os[6])
+# y3 = x -> y1(x) + y2(x)
+
+# const x = 0:0.1:8π
+# sine(x, a, ω, ϕ) = a * cos((ω * x + ϕ) * π) 
+# const y1 = zeros(length(x))
+# const y2 = zeros(length(x))
+# const y3 = zeros(length(x))
+# onany(os...) do a1, ω1, ϕ1, a2, ω2, ϕ2
+#     y1[] .= [sine(x, a1, ω1, ϕ1) for x in x]
+#     y2[] .= [sine(x, a2, ω2, ϕ2) for x in x]
+#     y3[] .= [y1[i] + y2[i] for i in eachindex(y1)]
+# end
 
 fig = Figure()
 color1 = :steelblue3
@@ -70,9 +88,9 @@ color2a = :firebrick4
 ax1 = Axis(fig[1, 1], title = "Independent sine waves", xlabel = "t", ylabel = "y",
             # xticks = (xtickvals, xtickformat))
 )
-lines!(x, y1, label = L"f_1", color = color1)
-lines!(x, y2, label = L"f_2", color = color2)
-# ylims!(-3.1, 3.1)
+l1 = lines!(x, y1, label = L"f_1", color = color1)
+l2 = lines!(x, y2, label = L"f_2", color = color2)
+ylims!(-3.1, 3.1)
 # # axislegend(ax1)
 
 ax2 = Axis(fig[2, 1], title = "Sum of sines", xlabel = "t", ylabel = L"f_1 + f_2",
@@ -81,7 +99,7 @@ ax2 = Axis(fig[2, 1], title = "Sum of sines", xlabel = "t", ylabel = L"f_1 + f_2
 # # lines!(x, y2, label = L"f_2", color = color2)
 # lines!(x, y3, color = :indigo)
 lines!(x, y3, color = :orange)
-# ylims!(-5.2, 5.2)
+ylims!(-5.2, 5.2)
 
 nothing #hide
 
@@ -111,31 +129,35 @@ function project_position(transform_func::T, space, point, model::Makie.Mat4, re
     return p_0_to_1 .* res
 end
 
-function make_svg_function()
-    allplots = Makie.collect_atomic_plots(fig.scene)
-    zvals = Makie.zvalue2d.(allplots)
-    permute!(allplots, sortperm(zvals))
+_allplots = Makie.collect_atomic_plots(fig.scene)
+zvals = Makie.zvalue2d.(_allplots)
+permute!(_allplots, sortperm(zvals))
+# const allplots = tuple(filter(x -> x isa Lines || x isa LineSegments, _allplots)...)
+const allplots = tuple(filter(x -> x isa Lines, _allplots)...)
+
+function make_svg_function(nargs)
     # color = to_color(primitive.calculated_colors[])
+    dummyargs = gensym.(string.(1:nargs))
     e = quote 
-        function (x) 
-            svg = Any["<svg width=800 height=600>"]
+            function $(gensym())($(dummyargs...)) 
+                svg = Any["<svg width=800 height=600>"]
+            end
         end
-    end
     ea = e.args[end].args[end].args
-    for primitive in allplots
-        push!(ea, primitive_svg_expr(primitive))
+    for i in eachindex(allplots)
+        push!(ea, primitive_svg_expr(allplots[i], i))
     end
     push!(ea, :(push!(svg, "</svg>")))
     push!(ea, :(display(svg)))
     # push!(ea, :(display(join(svg, ""))))
     # push!(ea, :(display(JS.array_to_string(svg))))
-    push!(ea, :(JS.sethtml("plot", JS.array_to_string(svg))))
+    # push!(ea, :(JS.sethtml("plot", JS.array_to_string(svg))))
     # return e
     # @show e
     return eval(e)
 end
 
-function primitive_svg_expr(primitive::Union{Lines, LineSegments})
+function primitive_svg_expr(primitive::Union{Lines, LineSegments}, i)
     scene = Makie.parent_scene(primitive)
     if primitive isa Lines 
         scene = primitive.parent
@@ -147,7 +169,6 @@ function primitive_svg_expr(primitive::Union{Lines, LineSegments})
     scene_x_origin, scene_y_origin = scene_area.origin
     top_offset = root_area_height - scene_height - scene_y_origin
     transform_expr = " transform='translate($scene_x_origin,$top_offset)'"
-# @show transform_expr
     model = primitive[:model][]
     positions = primitive[1]
     length(to_value(positions)) < 1 && return nothing
@@ -162,7 +183,10 @@ function primitive_svg_expr(primitive::Union{Lines, LineSegments})
     opacity = alpha(color isa Vector ? color[1] : color)
     draw_expr = primitive isa Lines ? draw_lines(hexcolor, opacity, transform_expr) : draw_linesegments(hexcolor, opacity, transform_expr)
     return quote
-        projected_positions = [project_position($transform, $space, p, $model, $res, $projectionview) for p in to_value($positions)]
+        primitive = allplots[$i]        
+        positions = primitive[1]
+        # model = primitive[:model][]
+        projected_positions = [project_position($transform, $space, p, $model, $res, $projectionview) for p in to_value(positions)]
         $draw_expr
         push!(svg, "'/>")
     end
@@ -206,12 +230,12 @@ function draw_linesegments(hexcolor, alpha, transform)
     end
 end
  
-function primitive_svg_expr(x)
+function primitive_svg_expr(x, i)
 end
 using CairoMakie
 save("ss.png", fig)
-fsvg = make_svg_function()
-onany(fsvg, os[1])
+fsvg = make_svg_function(6)
+onany(fsvg, os...)
 nothing #hide
 
 
@@ -233,70 +257,31 @@ This triggers propagation of updates to the listeners.
 =#
 
 include("observable-utils.jl")
-fos = fix!(os...)
+setfuns = fix!(os...)
 
 #=
 Kludge Makie some to try to make it amenable to compilation.
 
 =#
 
-using Base.Experimental: @overlay
-const M = Makie
-@overlay W.MT function plot!(scene::Union{Combined, SceneLike}, P::M.PlotFunc, attributes::Attributes, args...; kw_attributes...)
-    attributes = merge!(Attributes(kw_attributes), attributes)
-    argvalues = to_value.(args)
-    pre_type_no_args = plottype(P, argvalues...)
-    # plottype will lose the argument types, so we just extract the plot func
-    # type and recreate the type with the argument type
-    PreType = Combined{plotfunc(pre_type_no_args), typeof(argvalues)}
-    used_attrs = used_attributes(PreType, argvalues...)
-    convert_keys = intersect(used_attrs, keys(attributes))
-    kw_signal = if isempty(convert_keys)
-        # lift(f) isn't supported so we need to catch the empty case
-        Observable(())
-    else
-        # Remove used attributes from `attributes` and collect them in a `Tuple` to pass them more easily
-        lift((args...) -> Pair.(convert_keys, args), scene, pop!.(attributes, convert_keys)...)
-    end
-    # call convert_arguments for a first time to get things started
-    converted = convert_arguments(PreType, argvalues...; kw_signal[]...)
-    # convert_arguments can return different things depending on the recipe type
-    # apply_conversion deals with that!
-
-    FinalType, argsconverted = apply_convert!(PreType, attributes, converted)
-    converted_node = Observable(argsconverted)
-    input_nodes = convert.(Observable, args)
-    # introduce a function barrier here
-    converted_node = _convert(kw_signal, input_nodes, FinalType)
-    # obs_funcs = onany(kw_signal, input_nodes...) do kwargs, args...
-    #     # do the argument conversion inside a lift
-    #     result = convert_arguments(FinalType, args...; kwargs...)
-    #     finaltype, argsconverted_ = apply_convert!(FinalType, attributes, result) # avoid a Core.Box (https://docs.julialang.org/en/v1/manual/performance-tips/#man-performance-captured)
-    #     if finaltype != FinalType
-    #         error("Plot type changed from $FinalType to $finaltype after conversion.
-    #             Changing the plot type based on values in convert_arguments is not allowed"
-    #         )
-    #     end
-    #     converted_node[] = argsconverted_
-    # end
-    plot_object = plot!(scene, FinalType, attributes, input_nodes, converted_node)
-    # bind observable clean up to plot object:
-    # append!(plot_object.deregister_callbacks, obs_funcs)
-    return plot_object
-end
-@noinline function _convert(kw_signal, input_nodes, ::Type{FinalType}) where FinalType
-    return map(kw_signal, input_nodes...) do kwargs, args...
-        convert_arguments(FinalType, args...; kwargs...)
-    end
-end
-
 W.default(o::Observable) = Observable(o[])
 
 # Fix up a type issue in Base
+using Base.Experimental: @overlay
 @overlay W.MT Base.merge(::NamedTuple{(), Tuple{}}, ::Tuple{}) = NamedTuple()
 
-# fos.setfuns[1][1](1.0)
-compile(fos.setfuns...; names = names, filepath = "makie/makie.wasm", validate = true)
+# Don't store the abstract parts of Observables
+W.fieldskept(::Type{T}) where T <: Observable = (:ignore_equal_values, :val)
+W.fieldskept(::Type{T}) where T <: Observables.MapCallback = ()
+W.fieldskept(::Type{T}) where T <: OnAnyHolder = (:f, :args)
+W.fieldskept(::Type{T}) where T <: MapCallbackHolder = (:args, :result, :listeners, :f)
+W.fieldskept(::Type{T}) where T <: LineSegments = (:converted,)
+W.fieldskept(::Type{T}) where T <: Lines = (:converted,)
+W.fieldskept(::Type{T}) where T <: Makie.Text = (:converted,)
+W.fieldskept(::Type{T}) where T <: Mesh = (:converted,)
+
+setfuns[1][1](1.0)
+compile(setfuns...; names = names, filepath = "makie/makie.wasm", validate = true)
 nothing #hide
 
 #=

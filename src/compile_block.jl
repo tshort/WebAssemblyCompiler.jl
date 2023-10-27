@@ -12,6 +12,8 @@ function update!(ctx::CompilerContext, x, localtype = nothing)
         push!(ctx.locals, gettype(ctx, localtype))
         ctx.localidx += 1
     end
+    # BinaryenExpressionPrint(x)
+    s = _debug_binaryen_get(ctx, x)
     _DEBUG_ && _debug_binaryen(ctx, x)
     return nothing
 end
@@ -56,7 +58,7 @@ function unaryfun(ctx, idx, bfuns, a)
     setlocal!(ctx, idx, x)
 end
 function binaryenfun(ctx, idx, bfun, args...; passall = false)
-    x = bfun(ctx.mod, (passall ? a : _compile(ctx, a) for a in args)...)
+     x = bfun(ctx.mod, (passall ? a : _compile(ctx, a) for a in args)...)
     setlocal!(ctx, idx, x)
 end
 
@@ -581,7 +583,7 @@ function compile_block(ctx::CompilerContext, cfg::Core.Compiler.CFG, phis, idx)
                 binaryenfun(ctx, idx, BinaryenArrayGet, _compile(ctx, x), Pass(i), gettype(ctx, eltype(T)), Pass(!unsigned))
             elseif roottype(ctx, index) <: Integer
                 # if length(node.args) == 3   # 2-arg version
-                    eT = Base.datatype_fieldtypes(T)[index]
+                    eT = fieldtypeskept(T)[index]
                     # unsigned = eT <: Unsigned
                     unsigned = true
                     binaryenfun(ctx, idx, BinaryenStructGet, UInt32(index - 1), _compile(ctx, x), gettype(ctx, eT), !unsigned, passall = true)
@@ -590,7 +592,7 @@ function compile_block(ctx::CompilerContext, cfg::Core.Compiler.CFG, phis, idx)
             else
                 field = index
                 nT = T <: Type ? DataType : T     # handle Types
-                index = UInt32(findfirst(x -> x == field.value, fieldnames(nT)) - 1)
+                index = UInt32(findfirst(x -> x == field.value, fieldskept(nT)) - 1)
                 eT = Base.datatype_fieldtypes(nT)[index + 1]
                 # unsigned = eT <: Unsigned
                 unsigned = true
@@ -620,7 +622,7 @@ function compile_block(ctx::CompilerContext, cfg::Core.Compiler.CFG, phis, idx)
         elseif matchgr(node, :setfield!) do x, field, value
                 if field isa QuoteNode && field.value isa Symbol
                     T = roottype(ctx, x)
-                    index = UInt32(findfirst(x -> x == field.value, fieldnames(T)) - 1)
+                    index = UInt32(findfirst(x -> x == field.value, fieldskept(T)) - 1)
                 elseif field isa Integer
                     index = UInt32(field)
                 else
@@ -700,6 +702,16 @@ function compile_block(ctx::CompilerContext, cfg::Core.Compiler.CFG, phis, idx)
                 setlocal!(ctx, idx, x)
             end
 
+        #=
+        `invoke` is one of the toughest parts of compilation.
+        Cases that must be handled include:
+        * Variable arguments: We pass these as the last argument as a tuple.
+        * Callable struct / closure: We pass these as the first argument if it's not a toplevel function.
+          If it's top level, then it's stored as a global variable.
+        Notes:
+        * The first argument is the function itself.
+          Use that for callable structs. We remove it if it's not callable.
+        =#
         elseif node isa Expr && node.head == :invoke
             T = node.args[1].specTypes.parameters[1]
             if isa(DomainError, T) ||
@@ -714,7 +726,6 @@ function compile_block(ctx::CompilerContext, cfg::Core.Compiler.CFG, phis, idx)
                 # skip errors
                 continue
             end
-            origsig = node.args[1].specTypes
             argtypes = [basetype(ctx, x) for x in node.args[2:end]]
             # Get the specialized method for this invocation
             TT = Tuple{argtypes...}
@@ -723,33 +734,42 @@ function compile_block(ctx::CompilerContext, cfg::Core.Compiler.CFG, phis, idx)
             mi = Core.Compiler.specialize_method(match)
             sig = mi.specTypes
             newci = Base.code_typed_by_type(mi.specTypes, interp = StaticInterpreter())[1][1]
-            newfun = node.args[2] isa QuoteNode ? node.args[2].value : node.args[2]
-            @show node.args[1] node.args[2] newfun
-            newctx = CompilerContext(ctx, newci, newfun)
+            n2 = node.args[2]
+            newfun = n2 isa QuoteNode ? n2.value : 
+                     n2 isa GlobalRef ? Core.eval(n2.mod, n2.name) :
+                     n2
+            callablestruct = fieldcount(typeof(newfun)) > 0
+            newctx = CompilerContext(ctx, newci; callablestruct)
+            argstart = callablestruct ? 2 : 3
             newsig = newci.parent.specTypes
-            # Filter out unused arguments (slotflag & 0x08)
-            used = argsused(newctx)
-            s = node.args[1].def.sig
             if newci.parent.def.isva     # varargs
-                jargs = node.args[2:length(used)][used[1:end-1]]   # up to the last arg which is a vararg
+                # jargs = node.args[2:length(used)][used[1:end-1]]   # up to the last arg which is a vararg
+                na = length(newci.slottypes) - (callablestruct ? 1 : 2) 
+                jargs = node.args[argstart:argstart+na-1]   # up to the last arg which is a vararg
+                @show node.args newci.slottypes na jargs
                 args = [_compile(ctx, x) for x in jargs]
-                n = length(newci.slottypes[end].parameters)
-                push!(args, _compile(ctx, tuple((x for x in node.args[end-n+1:end])...)))
+                nva = length(newci.slottypes[end].parameters)
+                @show nva
+                push!(args, _compile(ctx, tuple((x for x in node.args[end-nva+1:end])...)))
                 np = newsig.parameters
-                newsig = Tuple{np[1:end-n]..., Tuple{np[end-n+1:end]...}}
+                newsig = Tuple{np[1:end-nva]..., Tuple{np[end-nva+1:end]...}}
             else
-                jargs = node.args[2:end][used]
+                jargs = node.args[argstart:end]
                 args = [_compile(ctx, x) for x in jargs]
             end
+            @show jargs
             if haskey(ctx.names, newsig)
                 name = ctx.names[newsig]
             else
+                @show newsig
                 name = validname(string("julia_", node.args[1].def.name, newsig.parameters[2:end]...))[1:min(end,255)]
                 ctx.sigs[name] = newsig
                 ctx.names[newsig] = name
                 newci.parent.specTypes = newsig
                 # _DEBUG_ && @show newci.parent.def newci.parent
                 _DEBUG_ && _debug_ci(newctx, ctx)
+                # if callablestruct(newctx) 
+                # end
                 compile_method(newctx)
             end
             # `set` controls whether a local variable is set to the return value.

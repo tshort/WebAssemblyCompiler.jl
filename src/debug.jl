@@ -46,3 +46,12 @@ function _debug_line(ctx, idx, node)
     push!(ctx.meta[:debug].steps, :node => node)
     nothing
 end
+function _debug_binaryen_get(ctx, x)
+    original_stdout = stdout
+    (rd, wr) = redirect_stdout()
+    BinaryenExpressionPrint(x)
+    Libc.flush_cstdio()
+    close(wr)
+    redirect_stdout(original_stdout)
+    return read(rd, String)
+end

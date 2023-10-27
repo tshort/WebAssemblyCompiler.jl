@@ -38,7 +38,7 @@ function compile(funs::Tuple...; filepath = "foo.wasm", jspath = filepath * ".js
         # isconcretetype(tt) || error("input type signature $tt for $(funtpl[1]) is not concrete")
         ci = code_typed(funtpl[1], tt, interp = StaticInterpreter())[1].first
         push!(cis, ci)
-        if names == nothing
+        if names === nothing
             name = string(funtpl[1])   # [1:min(end,20)]
         else
             name = string(names[i])
@@ -49,7 +49,16 @@ function compile(funs::Tuple...; filepath = "foo.wasm", jspath = filepath * ".js
     end
     # Compile funs
     for i in eachindex(cis)
-        newctx = CompilerContext(ctx, cis[i], funs[i][1])
+        fun = funs[i][1]
+        # if callablestruct(fun)
+        #     fun = (args...) -> fun(fun, args...)
+        # end
+        if callablestruct(fun)
+            newctx = CompilerContext(ctx, cis[i], callablestruct = true)
+            newctx.gfun = _compile(newctx, fun) 
+        else
+            newctx = CompilerContext(ctx, cis[i], toplevel = true)
+        end
         _DEBUG_ && _debug_ci(newctx, ctx)
         compile_method(newctx, exported = true)
     end
@@ -77,15 +86,19 @@ end
 
 function compile_method(ctx::CompilerContext; sig = ctx.ci.parent.specTypes, exported = false)
     funname = ctx.names[sig]
-    jparams = [gettype(ctx, T) for T in collect(sig.parameters)[argsused(ctx)]]
+    jparams = [gettype(ctx, T) for T in collect(sig.parameters)]
+    if ctx.toplevel || !ctx.callablestruct
+        jparams = jparams[2:end]
+    end
+    @show length(jparams) ctx.toplevel ctx.callablestruct
     bparams = BinaryenTypeCreate(jparams, length(jparams))
     rettype = gettype(ctx, ctx.ci.rettype == Nothing ? Union{} : ctx.ci.rettype)
     body = compile_method_body(ctx)
     if BinaryenGetFunction(ctx.mod, funname) == C_NULL
         BinaryenAddFunction(ctx.mod, funname, bparams, rettype, ctx.locals, length(ctx.locals), body)
-    end
-    if exported
-        BinaryenAddFunctionExport(ctx.mod, funname, funname)
+        if exported
+            BinaryenAddFunctionExport(ctx.mod, funname, funname)
+        end
     end
     return nothing
 end
@@ -95,16 +108,13 @@ import Core.Compiler: block_for_inst, compute_basic_blocks
 function compile_method_body(ctx::CompilerContext)
     ci = ctx.ci
     code = ci.code
-    ctx.localidx += nargs(ci)
+    @show nargs(ctx)
+    ctx.localidx += nargs(ctx)
     cfg = Core.Compiler.compute_basic_blocks(code)
     relooper = RelooperCreate(ctx.mod)
     @show ctx.ci.parent.def.name
     @show ctx.ci.parent.def
-    # @show ctx.fun
     # @show ctx.ci
-    if callablestruct(ctx) 
-        ctx.gfun = getglobal(ctx, ctx.fun)
-    end
 
     # Find and collect phis
     phis = Dict{Int, Any}()
