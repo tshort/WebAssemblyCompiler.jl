@@ -227,6 +227,7 @@ Base.take!(b::IOBuff) = JS.join(b.x)
 @inline _string(x::Symbol) = string("", x)  # cheating here, but how do we make this better?
 
 
+
 """
     Node(tag::String, attrs::NamedTuple, children::Tuple)
 
@@ -238,14 +239,14 @@ struct Node{A <: NamedTuple}
     children::Vector{String}
 end
 function Node(tag::AbstractString, attrs::A, children::AbstractVector) where A
-    Node{A}(String(tag), attrs, _collect(children))
+    Node{A}(string(tag), attrs, _collect(children))
 end
 tag(o::Node) = getfield(o, :tag)
 attrs(o::Node) = getfield(o, :attrs)
 children(o::Node) = getfield(o, :children)
 
 @ct_enable function _collect(t::T) where T
-    x = Vector{Any}(undef, length(T.parameters))
+    x = Vector{String}(undef, length(T.parameters))
     @ct_ctrl for i = 1:(length(T.parameters))
         x[@ct i] = string(t[@ct i])
     end
@@ -386,7 +387,8 @@ end
     # k = string(x[1])
     k = x[1]
     v = x[2]
-    v == "true" ? print(io, " ", k) : v != "false" && print(io, " ", k, "=\"", v, "\"")
+    # v == "true" ? print(io, " ", k) : v != "false" && print(io, " ", k, "=\"", v, "\"")
+    print(io, " ", k, "=\"", v, "\"")
 end
 @inline function _printattrs(io, x, others...)
     _printattrs(io, x)
@@ -418,7 +420,7 @@ end
 function _string(n::Node)   # Base.string won't work because we override it
     io = IOBuff()
     print(io, n)
-    take!(io)
+    String(take!(io))
 end
 @inline Base.print(io::JS.IOBuff, a::Node) = show(io, a)
 

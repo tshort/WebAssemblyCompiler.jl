@@ -64,7 +64,7 @@ function compile(funs::Tuple...; filepath = "foo.wasm", jspath = filepath * ".js
     end
     BinaryenModuleAutoDrop(ctx.mod)
     _DEBUG_ && _debug_module(ctx)
-    _DEBUG_ && BinaryenModulePrint(ctx.mod)
+    # _DEBUG_ && BinaryenModulePrint(ctx.mod)
     validate && BinaryenModuleValidate(ctx.mod)
     # BinaryenSetShrinkLevel(0)
     # BinaryenSetOptimizeLevel(1)
@@ -86,16 +86,11 @@ end
 
 function compile_method(ctx::CompilerContext; sig = ctx.ci.parent.specTypes, exported = false)
     funname = ctx.names[sig]
-    @show sig
-    @show [T for T in collect(sig.parameters)]
     sigparams = collect(sig.parameters)
-    @show [sigparams[i] for i in 2:length(sigparams) if argused(ctx.ci, i)]
     jparams = [gettype(ctx, sigparams[1]), (gettype(ctx, sigparams[i]) for i in 2:length(sigparams) if argused(ctx.ci, i))...]
-    @show length(jparams)
     if ctx.toplevel || !ctx.callablestruct
         jparams = jparams[2:end]
     end
-    @show ctx.ci
     bparams = BinaryenTypeCreate(jparams, length(jparams))
     rettype = gettype(ctx, ctx.ci.rettype == Nothing ? Union{} : ctx.ci.rettype)
     body = compile_method_body(ctx)
@@ -113,12 +108,11 @@ import Core.Compiler: block_for_inst, compute_basic_blocks
 function compile_method_body(ctx::CompilerContext)
     ci = ctx.ci
     code = ci.code
-    @show nargs(ctx)
     ctx.localidx += nargs(ctx)
     cfg = Core.Compiler.compute_basic_blocks(code)
     relooper = RelooperCreate(ctx.mod)
-    @show ctx.ci.parent.def.name
-    @show ctx.ci.parent.def
+    # @show ctx.ci.parent.def.name
+    # @show ctx.ci.parent.def
     # @show ctx.ci
 
     # Find and collect phis

@@ -10,7 +10,6 @@ function _compile(ctx::CompilerContext, x::Core.Argument; kw...)
     end
     # If at the top level or if it's not a callable struct, 
     # we don't include the fun as the first argument.
-    @show x.n argmap(ctx, x.n)
     BinaryenLocalGet(ctx.mod, argmap(ctx, x.n) - 1,
                      gettype(ctx, type))
 end
@@ -138,7 +137,6 @@ end
 
 # general version for structs
 function _compile(ctx::CompilerContext, x::T; globals = false, kw...) where T
-    # @show T haskey(ctx.globals, x)
     if haskey(ctx.globals, x)
         return ctx.globals[x]
     end
@@ -155,7 +153,6 @@ function _compile(ctx::CompilerContext, x::T; globals = false, kw...) where T
         return ox
     end
     ctx.objects[x] = nothing
-    @show T
     type = BinaryenTypeGetHeapType(gettype(ctx, T))
     if globals
         args = [fieldtype(T, field) in basictypes ? 

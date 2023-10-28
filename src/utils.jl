@@ -171,7 +171,6 @@ function getglobal(ctx, gval; compiledval = nothing)
     wtype = gettype(ctx, T)
     name = string("g", id)
     if BinaryenGetGlobal(ctx.mod, name) == BinaryenGlobalRef(0)
-        @show name gval T
         cx = _compile(ctx, gval; globals = true)
         if cx isa Nothing
             cx = _compile(ctx, default(gval))

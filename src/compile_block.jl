@@ -12,7 +12,7 @@ function update!(ctx::CompilerContext, x, localtype = nothing)
         push!(ctx.locals, gettype(ctx, localtype))
         ctx.localidx += 1
     end
-    BinaryenExpressionPrint(x)
+    # BinaryenExpressionPrint(x)
     s = _debug_binaryen_get(ctx, x)
     _DEBUG_ && _debug_binaryen(ctx, x)
     return nothing
@@ -728,7 +728,7 @@ function compile_block(ctx::CompilerContext, cfg::Core.Compiler.CFG, phis, idx)
         Notes:
         * The first argument is the function itself.
           Use that for callable structs. We remove it if it's not callable.
-        * If an argument isn't used (including types or other none-data arguments),
+        * If an argument isn't used (including types or other non-data arguments),
           it is not included in the argument list.
           This might be weird for top-level definitions, so it's not done there (but might cause issues).
         =#
@@ -758,21 +758,17 @@ function compile_block(ctx::CompilerContext, cfg::Core.Compiler.CFG, phis, idx)
             newfun = n2 isa QuoteNode ? n2.value : 
                      n2 isa GlobalRef ? Core.eval(n2.mod, n2.name) :
                      n2
-            callablestruct = fieldcount(typeof(newfun)) > 0 && !(newfun isa DataType)
-            @show newfun
+            callablestruct = fieldcount(typeof(newfun)) > 0 && !(typeof(newfun) <: Union{DataType,UnionAll})
             newctx = CompilerContext(ctx, newci; callablestruct)
             argstart = callablestruct ? 2 : 3
             newsig = newci.parent.specTypes
             n = length(node.args)
-            @show node.args argstart n
             if newci.parent.def.isva     # varargs
                 # jargs = node.args[2:length(used)][used[1:end-1]]   # up to the last arg which is a vararg
                 na = length(newci.slottypes) - (callablestruct ? 1 : 2) 
                 jargs = [node.args[i] for i in argstart:argstart+na-1 if argused(newci, i-1)]   # up to the last arg which is a vararg
-                @show node.args newci.slottypes na jargs
                 args = [_compile(ctx, x) for x in jargs]
                 nva = length(newci.slottypes[end].parameters)
-                @show nva
                 push!(args, _compile(ctx, tuple((node.args[i] for i in n-nva+1:n)...)))
                 np = newsig.parameters
                 newsig = Tuple{np[1:end-nva]..., Tuple{np[end-nva+1:end]...}}
@@ -780,19 +776,14 @@ function compile_block(ctx::CompilerContext, cfg::Core.Compiler.CFG, phis, idx)
                 jargs = [node.args[i] for i in argstart:n if argused(newci, i-1)]
                 args = [_compile(ctx, x) for x in jargs]
             end
-            @show jargs
             if haskey(ctx.names, newsig)
                 name = ctx.names[newsig]
             else
-                @show newsig
                 name = validname(string("julia_", node.args[1].def.name, newsig.parameters[2:end]...))[1:min(end,255)]
                 ctx.sigs[name] = newsig
                 ctx.names[newsig] = name
                 newci.parent.specTypes = newsig
-                # _DEBUG_ && @show newci.parent.def newci.parent
                 _DEBUG_ && _debug_ci(newctx, ctx)
-                # if callablestruct(newctx) 
-                # end
                 compile_method(newctx)
             end
             # `set` controls whether a local variable is set to the return value.
