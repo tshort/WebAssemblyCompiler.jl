@@ -12,7 +12,7 @@ function update!(ctx::CompilerContext, x, localtype = nothing)
         push!(ctx.locals, gettype(ctx, localtype))
         ctx.localidx += 1
     end
-    # BinaryenExpressionPrint(x)
+    BinaryenExpressionPrint(x)
     s = _debug_binaryen_get(ctx, x)
     _DEBUG_ && _debug_binaryen(ctx, x)
     return nothing
@@ -70,7 +70,7 @@ function compile_block(ctx::CompilerContext, cfg::Core.Compiler.CFG, phis, idx)
     ctx.body = BinaryenExpressionRef[]
     for idx in idxs
         node = ci.code[idx]
-        # _DEBUG_ && @show idx node ssatype(ctx, idx)
+        _DEBUG_ && @show idx node ssatype(ctx, idx)
         _DEBUG_ && _debug_line(ctx, idx, node)
 
         if node isa Union{Core.GotoNode, Core.GotoIfNot, Core.PhiNode, Nothing}
@@ -140,6 +140,7 @@ function compile_block(ctx::CompilerContext, cfg::Core.Compiler.CFG, phis, idx)
         elseif matchgr(node, :checked_srem_int) do a, b    # LIES - it isn't checked
                 binaryfun(ctx, idx, (BinaryenRemSInt64, BinaryenRemSInt32), a, b)
             end
+
 
         elseif matchgr(node, :urem_int) do a, b
                 binaryfun(ctx, idx, (BinaryenRemUInt64, BinaryenRemUInt32), a, b)
@@ -459,6 +460,21 @@ function compile_block(ctx::CompilerContext, cfg::Core.Compiler.CFG, phis, idx)
 
         ## Builtins / key functions ##
 
+        elseif matchforeigncall(node, :jl_string_to_array) do args
+                # This is just a pass-through because strings are already Vector{UInt8}
+                setlocal!(ctx, idx, _compile(ctx, args[5]))
+            end
+
+        elseif matchforeigncall(node, :jl_array_to_string) do args
+                # This is just a pass-through because strings are already Vector{UInt8}
+                setlocal!(ctx, idx, _compile(ctx, args[5]))
+            end
+
+        elseif matchforeigncall(node, :_jl_symbol_to_array) do args
+                # This is just a pass-through because Symbols are already Vector{UInt8}
+                setlocal!(ctx, idx, _compile(ctx, args[5]))
+            end
+
         elseif matchgr(node, :arrayref) do bool, arraywrapper, i
                 buffer = getbuffer(ctx, arraywrapper)
                 # signed = eT <: Signed && sizeof(eT) < 4
@@ -707,10 +723,14 @@ function compile_block(ctx::CompilerContext, cfg::Core.Compiler.CFG, phis, idx)
         Cases that must be handled include:
         * Variable arguments: We pass these as the last argument as a tuple.
         * Callable struct / closure: We pass these as the first argument if it's not a toplevel function.
-          If it's top level, then it's stored as a global variable.
+          If it's top level, then the struct is stored as a global variable.
+        * Keyword arguments: These come in as the first argument after the function/callable struct argument.
         Notes:
         * The first argument is the function itself.
           Use that for callable structs. We remove it if it's not callable.
+        * If an argument isn't used (including types or other none-data arguments),
+          it is not included in the argument list.
+          This might be weird for top-level definitions, so it's not done there (but might cause issues).
         =#
         elseif node isa Expr && node.head == :invoke
             T = node.args[1].specTypes.parameters[1]
@@ -738,23 +758,26 @@ function compile_block(ctx::CompilerContext, cfg::Core.Compiler.CFG, phis, idx)
             newfun = n2 isa QuoteNode ? n2.value : 
                      n2 isa GlobalRef ? Core.eval(n2.mod, n2.name) :
                      n2
-            callablestruct = fieldcount(typeof(newfun)) > 0
+            callablestruct = fieldcount(typeof(newfun)) > 0 && !(newfun isa DataType)
+            @show newfun
             newctx = CompilerContext(ctx, newci; callablestruct)
             argstart = callablestruct ? 2 : 3
             newsig = newci.parent.specTypes
+            n = length(node.args)
+            @show node.args argstart n
             if newci.parent.def.isva     # varargs
                 # jargs = node.args[2:length(used)][used[1:end-1]]   # up to the last arg which is a vararg
                 na = length(newci.slottypes) - (callablestruct ? 1 : 2) 
-                jargs = node.args[argstart:argstart+na-1]   # up to the last arg which is a vararg
+                jargs = [node.args[i] for i in argstart:argstart+na-1 if argused(newci, i-1)]   # up to the last arg which is a vararg
                 @show node.args newci.slottypes na jargs
                 args = [_compile(ctx, x) for x in jargs]
                 nva = length(newci.slottypes[end].parameters)
                 @show nva
-                push!(args, _compile(ctx, tuple((x for x in node.args[end-nva+1:end])...)))
+                push!(args, _compile(ctx, tuple((node.args[i] for i in n-nva+1:n)...)))
                 np = newsig.parameters
                 newsig = Tuple{np[1:end-nva]..., Tuple{np[end-nva+1:end]...}}
             else
-                jargs = node.args[argstart:end]
+                jargs = [node.args[i] for i in argstart:n if argused(newci, i-1)]
                 args = [_compile(ctx, x) for x in jargs]
             end
             @show jargs

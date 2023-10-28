@@ -23,13 +23,13 @@ Examples:
     compile((acos, Float64), (asin, Float64), filepath = "trigs.wasm", optimize = true)   
 
 """
-function compile(funs::Tuple...; filepath = "foo.wasm", jspath = filepath * ".js", validate = true, optimize = false, experimental = true, names = nothing)
+function compile(funs::Tuple...; filepath = "foo.wasm", jspath = filepath * ".js", validate = true, optimize = false, experimental = false, names = nothing)
     mkpath(dirname(filepath))
     cis = Core.CodeInfo[]
     dummyci = code_typed(() -> nothing, Tuple{})[1].first
     ctx = CompilerContext(dummyci; experimental)
     _DEBUG_ && _debug_ci(ctx)
-    # BinaryenModuleSetFeatures(ctx.mod, BinaryenFeatureReferenceTypes() | BinaryenFeatureGC() | BinaryenFeatureStrings())
+    # BinaryenModuleSetFeatures(ctx.mod, BinaryenFeatureReferenceTypes() | BinaryenFeatureGC() | (experimental ? BinaryenFeatureStrings() : 0))
     BinaryenModuleSetFeatures(ctx.mod, BinaryenFeatureAll())
     BinaryenModuleAutoDrop(ctx.mod)
     # Create CodeInfo's, and fill in names first
@@ -64,7 +64,7 @@ function compile(funs::Tuple...; filepath = "foo.wasm", jspath = filepath * ".js
     end
     BinaryenModuleAutoDrop(ctx.mod)
     _DEBUG_ && _debug_module(ctx)
-    # _DEBUG_ && BinaryenModulePrintStackIR(ctx.mod, false)
+    _DEBUG_ && BinaryenModulePrint(ctx.mod)
     validate && BinaryenModuleValidate(ctx.mod)
     # BinaryenSetShrinkLevel(0)
     # BinaryenSetOptimizeLevel(1)
@@ -86,11 +86,16 @@ end
 
 function compile_method(ctx::CompilerContext; sig = ctx.ci.parent.specTypes, exported = false)
     funname = ctx.names[sig]
-    jparams = [gettype(ctx, T) for T in collect(sig.parameters)]
+    @show sig
+    @show [T for T in collect(sig.parameters)]
+    sigparams = collect(sig.parameters)
+    @show [sigparams[i] for i in 2:length(sigparams) if argused(ctx.ci, i)]
+    jparams = [gettype(ctx, sigparams[1]), (gettype(ctx, sigparams[i]) for i in 2:length(sigparams) if argused(ctx.ci, i))...]
+    @show length(jparams)
     if ctx.toplevel || !ctx.callablestruct
         jparams = jparams[2:end]
     end
-    @show length(jparams) ctx.toplevel ctx.callablestruct
+    @show ctx.ci
     bparams = BinaryenTypeCreate(jparams, length(jparams))
     rettype = gettype(ctx, ctx.ci.rettype == Nothing ? Union{} : ctx.ci.rettype)
     body = compile_method_body(ctx)

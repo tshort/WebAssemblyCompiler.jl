@@ -53,7 +53,6 @@ end
 
 # @overlay MT Base.size(x::Vector) = length(x)
 
-# @overlay MT Base.string(x...) = JS.array_to_string(JS.object(Any[x...]))
 @overlay MT Base.string(x...) = JS._string(x...)
 
 @overlay MT Base.getindex(::Type{Any}, @nospecialize vals...) = unrolledgetindex(vals)
@@ -70,23 +69,45 @@ end
 
 @overlay MT Base.hash(x::String) = @jscall("\$hash-string", UInt64, Tuple{String}, x)
 
-@overlay MT Base.:(==)(s1::String, s2::String) = Bool(@jscall("\$string-eq", Int32, Tuple{String, String}, s1, s2))
-
-@overlay MT Base.:(==)(s1::String, s2::String) = Bool(@jscall("\$string-eq", Int32, Tuple{String, String}, s1, s2))
-
 @overlay MT Base.CoreLogging.current_logger_for_env(x...) = nothing
-
-# @overlay MT JS.array_to_string(x::Array) = JS.array_to_string(object(x))
 
 @overlay MT Base.display(x) = JS.console_log(x)
 
-@overlay WebAssemblyCompiler.MT function fill!(a::Union{Array{UInt8}, Array{Int8}}, x::Integer)
+# Avoid some memcpy's or memcmp's
+@overlay MT function fill!(a::Union{Array{UInt8}, Array{Int8}}, x::Integer)
     val = x isa eltype(a) ? x : convert(eltype(a), x)
     for i in eachindex(a)
         a[i] = val
     end
     return nothing
 end
+
+@overlay MT function Base.:(==)(a::Arr, b::Arr) where {Arr <: Base.BitIntegerArray}
+    length(a) !== length(b) && return false
+    for i in eachindex(a)
+        if a[i] != b[i]
+            return false
+        end
+    end
+    return true
+end
+
+# @overlay MT Base.:(==)(s1::String, s2::String) = Bool(@jscall("\$string-eq", Int32, Tuple{String, String}, s1, s2))
+
+# @overlay MT Base.:(==)(s1::String, s2::String) = unsafe_wrap(Vector{UInt8}, s1) == unsafe_wrap(Vector{UInt8}, s2)
+
+@overlay MT function Base.:(==)(a::String, b::String)
+    wa = unsafe_wrap(Vector{UInt8}, a)
+    wb = unsafe_wrap(Vector{UInt8}, b)
+    length(wa) !== length(wb) && return false
+    for i in eachindex(wa)
+        if wa[i] != wb[i]
+            return false
+        end
+    end
+    return true
+end
+
 
 # Make this match the version for AbstractArrays (removes a pointer access)
 @overlay MT @inline Base.dataids(A::Array) = (UInt(objectid(A)),)

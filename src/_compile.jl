@@ -10,10 +10,8 @@ function _compile(ctx::CompilerContext, x::Core.Argument; kw...)
     end
     # If at the top level or if it's not a callable struct, 
     # we don't include the fun as the first argument.
-    offset = ctx.toplevel || !ctx.callablestruct ? 2 : 1  
-    @show x.n offset
-    # offset = ctx.toplevel ? 2 : 1  
-    BinaryenLocalGet(ctx.mod, x.n - offset,
+    @show x.n argmap(ctx, x.n)
+    BinaryenLocalGet(ctx.mod, argmap(ctx, x.n) - 1,
                      gettype(ctx, type))
 end
 function _compile(ctx::CompilerContext, x::Core.SSAValue; kw...)   # These come after the function arguments.
@@ -39,12 +37,16 @@ _compile(ctx::CompilerContext, x::Bool; kw...) = BinaryenConst(ctx.mod, Binaryen
 _compile(ctx::CompilerContext, x::Ptr{BinaryenExpression}; kw...) = x
 _compile(ctx::CompilerContext, x::GlobalRef; kw...) = getglobal(ctx, x.mod, x.name)
 _compile(ctx::CompilerContext, x::QuoteNode; kw...) = _compile(ctx, x.value)
-_compile(ctx::CompilerContext, x::String; globals = false, kw...) = globals ?
-    BinaryenStringConst(ctx.mod, x) :
-    getglobal(ctx, x, compiledval = BinaryenStringConst(ctx.mod, x))
-_compile(ctx::CompilerContext, x::Symbol; globals = false, kw...) = globals ?
-    BinaryenStringConst(ctx.mod, x) :
-    getglobal(ctx, x, compiledval = BinaryenStringConst(ctx.mod, x))
+# _compile(ctx::CompilerContext, x::String; globals = false, kw...) = globals ?
+#     BinaryenStringConst(ctx.mod, x) :
+#     getglobal(ctx, x, compiledval = BinaryenStringConst(ctx.mod, x))
+# _compile(ctx::CompilerContext, x::Symbol; globals = false, kw...) = globals ?
+#     BinaryenStringConst(ctx.mod, x) :
+#     getglobal(ctx, x, compiledval = BinaryenStringConst(ctx.mod, x))
+_compile(ctx::CompilerContext, x::String; globals = false, kw...) =
+    _compile(ctx, unsafe_wrap(Vector{UInt8}, x))
+_compile(ctx::CompilerContext, x::Symbol; globals = false, kw...) =
+    _compile(ctx, unsafe_wrap(Vector{UInt8}, string(x)))
 
 function _compile(ctx::CompilerContext, x::Tuple{}; kw...)
     arraytype = BinaryenTypeGetHeapType(gettype(ctx, Tuple{}))
@@ -71,7 +73,7 @@ function _compile(ctx::CompilerContext, x::Val; kw...)
     return BinaryenStructNew(ctx.mod, args, nargs, type)
 end
 
-_compile(ctx::CompilerContext, x::Type) = BinaryenConst(ctx.mod, BinaryenLiteralInt32(-99))
+_compile(ctx::CompilerContext, x::Type) = _compile(ctx, Int32(-99))
 
 struct Pass{T}
     val::T
@@ -153,6 +155,7 @@ function _compile(ctx::CompilerContext, x::T; globals = false, kw...) where T
         return ox
     end
     ctx.objects[x] = nothing
+    @show T
     type = BinaryenTypeGetHeapType(gettype(ctx, T))
     if globals
         args = [fieldtype(T, field) in basictypes ? 

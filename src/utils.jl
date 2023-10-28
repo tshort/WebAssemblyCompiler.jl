@@ -11,15 +11,15 @@ function argmap(ctx, n)
 end
 
 # Number of arguments, accounting for skipped args.
-# nargs(ci) = sum(argsused(ci))
-nargs(ctx::CompilerContext) = length(ctx.ci.slotflags) - (ctx.toplevel || !ctx.callablestruct ? 1 : 0)
+nargs(ctx::CompilerContext) = sum(argsused(ctx))
+# nargs(ctx::CompilerContext) = length(ctx.ci.slotflags) - (ctx.toplevel || !ctx.callablestruct ? 1 : 0)
+# nargs(ctx::CompilerContext) = length(ctx.ci.slotflags) - (ctx.toplevel || !ctx.callablestruct ? 1 : 0)
 # TODO: fix / review
 # argmap(ci, n) = n
 
 # A Vector{Bool} showing whether arguments are used.
 argused(ci, i) = (ci.slotflags[i] & 0x08) > 0
-argsused(ci) = [false, (argused(ci, i) for i in 2:length(ci.slotflags))...]
-argsused(ctx::CompilerContext) = argsused(ctx.ci)
+argsused(ctx::CompilerContext) = [ctx.callablestruct, (argused(ctx.ci, i) for i in 2:length(ctx.ci.slotflags))...]
 
 function ssatype(ctx::CompilerContext, idx)
     ctx.ci.ssavaluetypes[idx]
@@ -115,6 +115,12 @@ function gettype(ctx, type)
     if type isa Union || isabstracttype(type)
         return gettype(ctx, Any)
     end
+    if type <: String 
+        return gettype(ctx, Vector{UInt8})
+    end
+    if type <: Symbol
+        return gettype(ctx, Vector{UInt8})
+    end
     if type <: Array && !haskey(ctx.meta, :arraypass)
         wrappertype = gettype(ctx, FakeArrayWrapper{eltype(type)})
         ctx.wtypes[type] = wrappertype
@@ -165,6 +171,7 @@ function getglobal(ctx, gval; compiledval = nothing)
     wtype = gettype(ctx, T)
     name = string("g", id)
     if BinaryenGetGlobal(ctx.mod, name) == BinaryenGlobalRef(0)
+        @show name gval T
         cx = _compile(ctx, gval; globals = true)
         if cx isa Nothing
             cx = _compile(ctx, default(gval))
