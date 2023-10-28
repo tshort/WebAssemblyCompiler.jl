@@ -23,6 +23,7 @@ libnode_jll = "76d26698-d9ba-5ca1-ae24-4ac9393d02a0"
 Binaryen_jll = "0.116"
 CEnum = "0.4"
 Reexport = "1.2"
+Unrolled = "0.1"
 julia = "1.7"
 
 [extras]
