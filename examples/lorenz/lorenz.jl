@@ -78,7 +78,7 @@ nothing #hide
 
 # These utilities update the page inputs.
 
-mdpadnum(x) = @jscall("x => mdpad[x]", Float64, Tuple{String}, x)
+mdpadnum(x) = @jscall("x => mdpad[x]", Float64, Tuple{Externref}, JS.object(x))
 update_params() = (mdpadnum("p1"), mdpadnum("p2"), mdpadnum("p3"))
 nothing #hide
 
@@ -98,8 +98,8 @@ nothing #hide
 end
 plotly(id, data, layout, config) = 
     @jscall("(id, data, layout, config) => Plotly.newPlot(id, data, layout, config)",
-        Nothing, Tuple{String, Externref, Externref, Externref},
-        id, data, layout, config)
+        Nothing, Tuple{Externref, Externref, Externref, Externref},
+        JS.object(id), data, layout, config)
 nothing #hide
 
 # Before compiling, we need to override some error checks that caused failures.

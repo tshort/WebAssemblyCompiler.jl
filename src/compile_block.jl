@@ -70,7 +70,7 @@ function compile_block(ctx::CompilerContext, cfg::Core.Compiler.CFG, phis, idx)
     ctx.body = BinaryenExpressionRef[]
     for idx in idxs
         node = ci.code[idx]
-        _DEBUG_ && @show idx node ssatype(ctx, idx)
+        # _DEBUG_ && @show idx node ssatype(ctx, idx)
         _DEBUG_ && _debug_line(ctx, idx, node)
 
         if node isa Union{Core.GotoNode, Core.GotoIfNot, Core.PhiNode, Nothing}
@@ -203,9 +203,9 @@ function compile_block(ctx::CompilerContext, cfg::Core.Compiler.CFG, phis, idx)
                     binaryfun(ctx, idx, (BinaryenEqInt64, BinaryenEqInt32), a, b)
                 elseif roottype(ctx, a) <: AbstractFloat
                     binaryfun(ctx, idx, (BinaryenEqFloat64, BinaryenEqFloat32), a, b)
-                elseif roottype(ctx, a) <: Union{String, Symbol}
-                    x = BinaryenStringEq(ctx.mod, BinaryenStringEqEqual(), _compile(ctx, a), _compile(ctx, b))
-                    setlocal!(ctx, idx, x)
+                # elseif roottype(ctx, a) <: Union{String, Symbol}
+                #     x = BinaryenStringEq(ctx.mod, BinaryenStringEqEqual(), _compile(ctx, a), _compile(ctx, b))
+                #     setlocal!(ctx, idx, x)
                 else
                     x = BinaryenRefEq(ctx.mod, _compile(ctx, a), _compile(ctx, b))
                     setlocal!(ctx, idx, x)
@@ -758,13 +758,12 @@ function compile_block(ctx::CompilerContext, cfg::Core.Compiler.CFG, phis, idx)
             newfun = n2 isa QuoteNode ? n2.value : 
                      n2 isa GlobalRef ? Core.eval(n2.mod, n2.name) :
                      n2
-            callablestruct = fieldcount(typeof(newfun)) > 0 && !(typeof(newfun) <: Union{DataType,UnionAll})
+            callablestruct = isstructtype(typeof(newfun)) && fieldcount(typeof(newfun)) > 0 && !(typeof(newfun) <: Union{DataType,UnionAll,Core.SSAValue})
             newctx = CompilerContext(ctx, newci; callablestruct)
             argstart = callablestruct ? 2 : 3
             newsig = newci.parent.specTypes
             n = length(node.args)
             if newci.parent.def.isva     # varargs
-                # jargs = node.args[2:length(used)][used[1:end-1]]   # up to the last arg which is a vararg
                 na = length(newci.slottypes) - (callablestruct ? 1 : 2) 
                 jargs = [node.args[i] for i in argstart:argstart+na-1 if argused(newci, i-1)]   # up to the last arg which is a vararg
                 args = [_compile(ctx, x) for x in jargs]

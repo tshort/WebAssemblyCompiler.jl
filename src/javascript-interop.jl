@@ -62,7 +62,7 @@ arraynew(n) = @jscall("n => Array(n)", Externref, Tuple{Int32}, unsafe_trunc(Int
 _set(jsa::Externref, i::Integer, x::T) where T <: Union{Int64, Int32, UInt64, UInt32, Float64, Float32, Char, Bool, UInt8, Int8} = 
     @jscall("(v, i, x) => v[i] = x", Nothing, Tuple{Externref, Int32, T}, jsa, Int32(i - Int32(1)), x)
 _set(jsa::Externref, i::Integer, x) = @jscall("(v, i, x) => v[i] = x", Nothing, Tuple{Externref, Int32, Externref}, jsa, Int32(i - Int32(1)), object(x))
-_set(jsa::Externref, str::String, x::T) where T = @jscall("(v, i, x) => v[i] = x", Nothing, Tuple{Externref, String, T}, jsa, str, x)
+_set(jsa::Externref, str::String, x::T) where T = @jscall("(v, i, x) => v[i] = x", Nothing, Tuple{Externref, Externref, T}, jsa, object(str), object(x))
 _get(jsa::Externref, i::Integer, ::Type{T}) where T = @jscall("(v, i) => v[i]", T, Tuple{Externref, Int32}, jsa, Int32(i - Int32(1)))
 _get(jsa::Externref, str::String, ::Type{T}) where T = @jscall("(v, i) => v[i]", T, Tuple{Externref, String}, jsa, str)
 
@@ -130,7 +130,7 @@ This is useful for transfering arrays, named tuples, and other objects to JavaSc
 The types `Int32`, `Float32`, `Float64`, `Bool`, and `Externref` 
 are passed stright through.
 """
-object(x::Union{Int32, Float32, Float64, Bool, Symbol, Externref}) = x
+object(x::Union{Int32, Float32, Float64, Bool, Externref}) = x
 # object(x::Union{Int32, Float32, Float64, Bool, String, Symbol, Externref}) = x
 
 function object(v::Vector{Any})
@@ -144,7 +144,7 @@ function object(v::Vector{Any})
         elseif x isa Box{Int32}
             _set(jsa, i, x.x)
         elseif x isa Box{String}
-            _set(jsa, i, x.x)
+            _set(jsa, i, object(x.x))
         elseif x isa Box{JSString}
             _set(jsa, i, x.x.x)
         elseif x isa Box{Int64}
@@ -173,6 +173,8 @@ end
 
 object(s::String) = object(JSString(s))
 object(s::JSString) = s.x
+object(s::Symbol) = object(JSSymbol(s))
+object(s::JSSymbol) = s.x
 
 using Unrolled
 

@@ -72,7 +72,10 @@ function _compile(ctx::CompilerContext, x::Val; kw...)
     return BinaryenStructNew(ctx.mod, args, nargs, type)
 end
 
-_compile(ctx::CompilerContext, x::Type) = _compile(ctx, Int32(-99))
+function _compile(ctx::CompilerContext, x::Type)
+    _compile(ctx, Int32(-99))
+    # _compile(ctx, nothing)
+end
 
 struct Pass{T}
     val::T

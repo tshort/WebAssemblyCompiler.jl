@@ -67,7 +67,7 @@ using Unrolled
     return a
 end
 
-@overlay MT Base.hash(x::String) = @jscall("\$hash-string", UInt64, Tuple{String}, x)
+# @overlay MT Base.hash(x::String) = @jscall("\$hash-string", UInt64, Tuple{String}, x)
 
 @overlay MT Base.CoreLogging.current_logger_for_env(x...) = nothing
 
