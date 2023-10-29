@@ -12,9 +12,11 @@ Debugging is often needed when trying to fix code to make it compile.
 
 You can enable debugging output using:
 
-    const WebAssemblyCompiler._DEBUG_ = true
+    WebAssemblyCompiler.debug(x)
 
-Outputs from that are stored in `WebAssemblyCompiler.DEBUG`, including:
+where `x` is `:inline` to display debugging information at the REPL 
+or `:offline` do store information in `WebAssemblyCompiler.DEBUG`.
+Outputs from that are stored in `WebAssemblyCompiler.DEBUG`, include:
 * Julia IR for each method compiled
 * WebAssembly code generated for each statement
 

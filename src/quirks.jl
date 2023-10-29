@@ -53,7 +53,8 @@ end
 
 # @overlay MT Base.size(x::Vector) = length(x)
 
-@overlay MT Base.string(x...) = JS._string(x...)
+# @overlay MT @inline Base.string(x...) = JS._string(x...)
+@overlay MT @inline Base.string(x...) = JS.join(JS.object(Any[x...]))
 
 @overlay MT Base.getindex(::Type{Any}, @nospecialize vals...) = unrolledgetindex(vals)
 

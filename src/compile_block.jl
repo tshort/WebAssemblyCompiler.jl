@@ -14,7 +14,7 @@ function update!(ctx::CompilerContext, x, localtype = nothing)
     end
     # BinaryenExpressionPrint(x)
     s = _debug_binaryen_get(ctx, x)
-    _DEBUG_ && _debug_binaryen(ctx, x)
+    debug(:offline) && _debug_binaryen(ctx, x)
     return nothing
 end
 
@@ -28,7 +28,7 @@ function setlocal!(ctx, idx, x; set = true, drop = false)
         if drop
             x = BinaryenDrop(ctx.mod, x)
         end
-        _DEBUG_ && _debug_binaryen(ctx, x)
+        debug(:offline) && _debug_binaryen(ctx, x)
         push!(ctx.body, x)
     end
 end
@@ -70,8 +70,8 @@ function compile_block(ctx::CompilerContext, cfg::Core.Compiler.CFG, phis, idx)
     ctx.body = BinaryenExpressionRef[]
     for idx in idxs
         node = ci.code[idx]
-        # _DEBUG_ && @show idx node ssatype(ctx, idx)
-        _DEBUG_ && _debug_line(ctx, idx, node)
+        debug(:inline) && @show idx node ssatype(ctx, idx)
+        debug(:offline) && _debug_line(ctx, idx, node)
 
         if node isa Union{Core.GotoNode, Core.GotoIfNot, Core.PhiNode, Nothing}
             # do nothing
@@ -758,13 +758,14 @@ function compile_block(ctx::CompilerContext, cfg::Core.Compiler.CFG, phis, idx)
             newfun = n2 isa QuoteNode ? n2.value : 
                      n2 isa GlobalRef ? Core.eval(n2.mod, n2.name) :
                      n2
-            callablestruct = isstructtype(typeof(newfun)) && fieldcount(typeof(newfun)) > 0 && !(typeof(newfun) <: Union{DataType,UnionAll,Core.SSAValue})
-            newctx = CompilerContext(ctx, newci; callablestruct)
-            argstart = callablestruct ? 2 : 3
+            # @show typeof(newfun) fieldcount(typeof(newfun))
+            callable = callablestruct(newfun, ci)
+            newctx = CompilerContext(ctx, newci; callablestruct = callable)
+            argstart = callable ? 2 : 3
             newsig = newci.parent.specTypes
             n = length(node.args)
             if newci.parent.def.isva     # varargs
-                na = length(newci.slottypes) - (callablestruct ? 1 : 2) 
+                na = length(newci.slottypes) - (callable ? 1 : 2) 
                 jargs = [node.args[i] for i in argstart:argstart+na-1 if argused(newci, i-1)]   # up to the last arg which is a vararg
                 args = [_compile(ctx, x) for x in jargs]
                 nva = length(newci.slottypes[end].parameters)
@@ -782,7 +783,7 @@ function compile_block(ctx::CompilerContext, cfg::Core.Compiler.CFG, phis, idx)
                 ctx.sigs[name] = newsig
                 ctx.names[newsig] = name
                 newci.parent.specTypes = newsig
-                _DEBUG_ && _debug_ci(newctx, ctx)
+                debug(:offline) && _debug_ci(newctx, ctx)
                 compile_method(newctx)
             end
             # `set` controls whether a local variable is set to the return value.

@@ -4,9 +4,6 @@
 function argmap(ctx, n)
     used = argsused(ctx)
     result = sum(used[1:n])
-    # if callablestruct(ctx)  
-    #     result -= 1
-    # end
     return result
 end
 
@@ -311,5 +308,7 @@ end
 validname(s::String) = replace(s, r"\W" => "_")
 
 callablestruct(ctx::CompilerContext) = ctx.callablestruct
-callablestruct(fun) = fieldcount(typeof(fun)) > 0
+callablestruct(fun, ci) = 
+    (isstructtype(typeof(fun)) && fieldcount(typeof(fun)) > 0 && !(typeof(fun) <: Union{DataType,UnionAll})) || 
+    (typeof(fun) <: Core.SSAValue && callablestruct(ci.ssavaluetypes[fun.id]))
 

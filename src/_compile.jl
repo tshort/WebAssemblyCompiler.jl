@@ -10,6 +10,7 @@ function _compile(ctx::CompilerContext, x::Core.Argument; kw...)
     end
     # If at the top level or if it's not a callable struct, 
     # we don't include the fun as the first argument.
+    # @show type gettype(ctx, type) x.n argmap(ctx, x.n) argsused(ctx) ctx.ci.slottypes ctx.ci.slotflags ctx.callablestruct
     BinaryenLocalGet(ctx.mod, argmap(ctx, x.n) - 1,
                      gettype(ctx, type))
 end
@@ -106,7 +107,6 @@ function _compile(ctx::CompilerContext, x::T; globals = false, kw...) where T <:
         return ox
     end
     ctx.objects[x] = nothing
-    # TODO: fix this; problem is, I can't remember what's broken
     elT = eltype(roottype(ctx, T))
     buffertype = BinaryenTypeGetHeapType(gettype(ctx, Buffer{elT}))
     _f(i) = isassigned(x, i) ? x[i] : default(elT)
@@ -147,12 +147,11 @@ function _compile(ctx::CompilerContext, x::T; globals = false, kw...) where T
     # if haskey(ctx.objects, x)
         ox = ctx.objects[x]
         # @show typeof(ox)
-        # if ox === nothing  # indicates a circular reference
-        #     @show ctx.objects
-        #     show(stdout, MIME"text/plain"(), ctx.objects)
-        #     @show x typeof(ox)
-        #     return _compile(ctx, default(x))
-        # end
+        if ox === nothing  # indicates a circular reference
+            # show(stdout, MIME"text/plain"(), ctx.objects)
+            @show x typeof(ox)
+            return _compile(ctx, default(x))
+        end
         return ox
     end
     ctx.objects[x] = nothing

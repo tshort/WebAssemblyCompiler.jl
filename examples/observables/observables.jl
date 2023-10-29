@@ -8,7 +8,8 @@ This app mimics [this JSServe app](https://simondanisch.github.io/JSServe.jl/sta
 using WebAssemblyCompiler     # prep some input #hideall
 using WebAssemblyCompiler.JS: h
 const W = WebAssemblyCompiler
-## const WebAssemblyCompiler._DEBUG_ = true
+W.setdebug(:offline)
+W.setdebug(:inline)
 
 using Observables
 
@@ -73,8 +74,8 @@ function set_svg(nsamples, sample_step, phase, radii)
     for i in 1:nsamples
         push!(geom, circ(cxs[i], cys[i], rr, i))
     end
-    geom = JS.array_to_string(geom)
-    JS.sethtml("plot", string(h.svg(h.g(geom); height, width)))
+    geom = JS.join(geom)
+    JS.sethtml("plot", h.svg(h.g(geom); height, width))
 end
 nothing #hide
 
@@ -85,6 +86,11 @@ To get there, we need the code that'll compile the Observables.
 The `fix!` methods take a set of Observables, walk their connections, and return a set of methods that will update the Observables provided.
 These methods unroll calls to the listeners of each Observable to make it easier to statically compile.
 =#
+#=
+The `fix!` methods take a set of Observables, walk their connections, and return a set of methods that will update the Observables provided.
+These methods unroll calls to the listeners of each Observable to make it easier to statically compile.
+=#
+
 using Observables
 
 fix!(os::AbstractObservable...) = fix!(Set{AbstractObservable}(), os...)
@@ -110,24 +116,38 @@ function makeset(ctx::Set{AbstractObservable}, o::Observable)
     end
 end
 function fix!(ctx::Set{AbstractObservable}, oa::Observables.OnAny)
-    args = tuple(oa.args...)
-    f = oa.f
+    return OnAnyHolder(oa.f, tuple(oa.args...))
     return val -> begin
         f(valargs(args...)...)
         return Consume(false)
     end
 end
+mutable struct OnAnyHolder{F,A}
+    f::F
+    args::A
+end
+function (x::OnAnyHolder)(val)
+    x.f(valargs(x.args...)...)
+    return Consume(false)
+end
+
 function fix!(ctx::Set{AbstractObservable}, mc::Observables.MapCallback)
     set! = makeset(ctx, mc.result)
-    args = tuple(mc.args...)
     result = mc.result
     resultlisteners = tuple((fix!(ctx, l[2]) for l in result.listeners)...)
-    f = mc.f
-    return val -> begin
-        result.val = f(valargs(args...)...)
-        nnotify(result, resultlisteners...)
-        return Consume(false)
-    end
+    return MapCallbackHolder(mc.result, mc.f, tuple(mc.args...), resultlisteners)
+end
+
+mutable struct MapCallbackHolder{O,F,A,L}
+    result::O
+    f::F
+    args::A
+    listeners::L
+end
+function (x::MapCallbackHolder)(val)
+    x.result.val = x.f(valargs(x.args...)...)
+    nnotify(x.result, x.listeners...)
+    return Consume(false)
 end
 
 @inline valargs() = ()

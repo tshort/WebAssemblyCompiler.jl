@@ -28,7 +28,7 @@ function compile(funs::Tuple...; filepath = "foo.wasm", jspath = filepath * ".js
     cis = Core.CodeInfo[]
     dummyci = code_typed(() -> nothing, Tuple{})[1].first
     ctx = CompilerContext(dummyci; experimental)
-    _DEBUG_ && _debug_ci(ctx)
+    debug(:offline) && _debug_ci(ctx)
     # BinaryenModuleSetFeatures(ctx.mod, BinaryenFeatureReferenceTypes() | BinaryenFeatureGC() | (experimental ? BinaryenFeatureStrings() : 0))
     BinaryenModuleSetFeatures(ctx.mod, BinaryenFeatureAll())
     BinaryenModuleAutoDrop(ctx.mod)
@@ -53,18 +53,18 @@ function compile(funs::Tuple...; filepath = "foo.wasm", jspath = filepath * ".js
         # if callablestruct(fun)
         #     fun = (args...) -> fun(fun, args...)
         # end
-        if callablestruct(fun)
-            newctx = CompilerContext(ctx, cis[i], callablestruct = true)
+        if callablestruct(fun, cis[i])
+            newctx = CompilerContext(ctx, cis[i], toplevel = true, callablestruct = true)
             newctx.gfun = _compile(newctx, fun) 
         else
             newctx = CompilerContext(ctx, cis[i], toplevel = true)
         end
-        _DEBUG_ && _debug_ci(newctx, ctx)
+        debug(:offline) && _debug_ci(newctx, ctx)
         compile_method(newctx, exported = true)
     end
     BinaryenModuleAutoDrop(ctx.mod)
-    _DEBUG_ && _debug_module(ctx)
-    # _DEBUG_ && BinaryenModulePrint(ctx.mod)
+    debug(:offline) && _debug_module(ctx)
+    debug(:inline) && BinaryenModulePrint(ctx.mod)
     validate && BinaryenModuleValidate(ctx.mod)
     # BinaryenSetShrinkLevel(0)
     # BinaryenSetOptimizeLevel(1)
@@ -94,6 +94,9 @@ function compile_method(ctx::CompilerContext; sig = ctx.ci.parent.specTypes, exp
     bparams = BinaryenTypeCreate(jparams, length(jparams))
     rettype = gettype(ctx, ctx.ci.rettype == Nothing ? Union{} : ctx.ci.rettype)
     body = compile_method_body(ctx)
+    debug(:inline) && @show ctx.ci.parent.def.name
+    debug(:inline) && @show ctx.ci.parent.def
+    debug(:inline) && BinaryenExpressionPrint(body)
     if BinaryenGetFunction(ctx.mod, funname) == C_NULL
         BinaryenAddFunction(ctx.mod, funname, bparams, rettype, ctx.locals, length(ctx.locals), body)
         if exported
@@ -111,9 +114,10 @@ function compile_method_body(ctx::CompilerContext)
     ctx.localidx += nargs(ctx)
     cfg = Core.Compiler.compute_basic_blocks(code)
     relooper = RelooperCreate(ctx.mod)
-    # @show ctx.ci.parent.def.name
-    # @show ctx.ci.parent.def
-    # @show ctx.ci
+    debug(:inline) && @show "-----------------------"
+    debug(:inline) && @show ctx.ci.parent.def.name
+    debug(:inline) && @show ctx.ci.parent.def
+    debug(:inline) && @show ctx.ci
 
     # Find and collect phis
     phis = Dict{Int, Any}()

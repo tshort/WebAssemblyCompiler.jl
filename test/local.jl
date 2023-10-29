@@ -2,8 +2,8 @@ using Revise
 using WebAssemblyCompiler
 
 const W = WebAssemblyCompiler
-const WebAssemblyCompiler._DEBUG_ = true
-# const WebAssemblyCompiler._DEBUG_ = false
+W.setdebug(:offline)
+W.setdebug(:inline)
 
     const h = JS.h
 

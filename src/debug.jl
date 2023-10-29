@@ -1,6 +1,12 @@
 # This is a kludge. Logging.jl caused a crash.
-_DEBUG_::Bool = false
-
+const _DEBUG_::Set{Symbol} = Set{Symbol}()
+# options are:
+# :inline - show stuff inline in the REPL
+# :offline - store stuff in WebAssemblyCompiler.DEBUG
+debug(x) = x in _DEBUG_
+setdebug(x) = push!(_DEBUG_, x)
+unsetdebug(x) = delete!(_DEBUG_, x)
+ 
 const DEBUG = Ref{Any}()
 mutable struct DB
     def::Core.Method

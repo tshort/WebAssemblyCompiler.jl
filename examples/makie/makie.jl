@@ -8,7 +8,8 @@
 using WebAssemblyCompiler     # prep some input #hideall
 using WebAssemblyCompiler.JS: h
 const W = WebAssemblyCompiler
-const WebAssemblyCompiler._DEBUG_ = true
+W.setdebug(:offline)
+W.setdebug(:inline)
 
 using Observables
 using Makie
