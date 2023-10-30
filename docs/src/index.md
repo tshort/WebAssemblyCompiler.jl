@@ -5,13 +5,9 @@ This package uses [Binaryen](https://github.com/WebAssembly/binaryen/) to compil
 !!! warning "Experimental and in progress"
     This code is experimental. Expect to find errors or failures when compiling Julia code.
 
-    This uses not-yet-final features of WebAssembly. 
+    This uses very recent features of WebAssembly. 
     A bleeding-edge browser is needed. 
-    As of now, only Chrome dev version 119 or higher works.
-    In Chrome's chrome://flags/, the following flags need to be enabled:
-    * Experimental WebAssembly 
-    * WebAssembly Garbage Collection
-    * WebAssembly Stringref
+    At least version 119 of Chrome or version 120 of Firefox is needed.
 
 WebAssemblyCompiler supports many Julia constructs, including:
 
