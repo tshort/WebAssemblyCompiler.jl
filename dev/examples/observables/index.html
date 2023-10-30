@@ -1,8 +1,8 @@
 <!DOCTYPE html>
-<html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/><title>Observables · WebAssemblyCompiler</title><meta name="title" content="Observables · WebAssemblyCompiler"/><meta property="og:title" content="Observables · WebAssemblyCompiler"/><meta property="twitter:title" content="Observables · WebAssemblyCompiler"/><meta name="description" content="Documentation for WebAssemblyCompiler."/><meta property="og:description" content="Documentation for WebAssemblyCompiler."/><meta property="twitter:description" content="Documentation for WebAssemblyCompiler."/><meta property="og:url" content="https://tshort.github.io/WebAssemblyCompiler.jl/examples/observables/"/><meta property="twitter:url" content="https://tshort.github.io/WebAssemblyCompiler.jl/examples/observables/"/><link rel="canonical" href="https://tshort.github.io/WebAssemblyCompiler.jl/examples/observables/"/><script data-outdated-warner src="../../assets/warner.js"></script><link href="https://cdnjs.cloudflare.com/ajax/libs/lato-font/3.0.0/css/lato-font.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/juliamono/0.050/juliamono.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/fontawesome.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/solid.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/brands.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.8/katex.min.css" rel="stylesheet" type="text/css"/><script>documenterBaseURL="../.."</script><script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.6/require.min.js" data-main="../../assets/documenter.js"></script><script src="../../search_index.js"></script><script src="../../siteinfo.js"></script><script src="../../../versions.js"></script><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/documenter-dark.css" data-theme-name="documenter-dark" data-theme-primary-dark/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/documenter-light.css" data-theme-name="documenter-light" data-theme-primary/><script src="../../assets/themeswap.js"></script><link href="../../assets/custom.css" rel="stylesheet" type="text/css"/><link href="../../assets/favicon.ico" rel="icon" type="image/x-icon"/></head><body><div id="documenter"><nav class="docs-sidebar"><div class="docs-package-name"><span class="docs-autofit"><a href="../../">WebAssemblyCompiler</a></span></div><button class="docs-search-query input is-rounded is-small is-clickable my-2 mx-auto py-1 px-2" id="documenter-search-query">Search docs (Ctrl + /)</button><ul class="docs-menu"><li><a class="tocitem" href="../../">Introduction</a></li><li><span class="tocitem">Examples</span><ul><li><a class="tocitem" href="../basics/">JS interop</a></li><li><a class="tocitem" href="../lorenz/">Lorenz model</a></li><li class="is-active"><a class="tocitem" href>Observables</a><ul class="internal"><li><a class="tocitem" href="#Making-the-app"><span>Making the app</span></a></li></ul></li></ul></li><li><a class="tocitem" href="../../api/">API</a></li><li><a class="tocitem" href="../../notes/">Notes</a></li></ul><div class="docs-version-selector field has-addons"><div class="control"><span class="docs-label button is-static is-size-7">Version</span></div><div class="docs-selector control is-expanded"><div class="select is-fullwidth is-size-7"><select id="documenter-version-selector"></select></div></div></div></nav><div class="docs-main"><header class="docs-navbar"><a class="docs-sidebar-button docs-navbar-link fa-solid fa-bars is-hidden-desktop" id="documenter-sidebar-button" href="#"></a><nav class="breadcrumb"><ul class="is-hidden-mobile"><li><a class="is-disabled">Examples</a></li><li class="is-active"><a href>Observables</a></li></ul><ul class="is-hidden-tablet"><li class="is-active"><a href>Observables</a></li></ul></nav><div class="docs-right"><a class="docs-settings-button docs-navbar-link fa-solid fa-gear" id="documenter-settings-button" href="#" title="Settings"></a><a class="docs-article-toggle-button fa-solid fa-chevron-up" id="documenter-article-toggle-button" href="javascript:;" title="Collapse all docstrings"></a></div></header><article class="content" id="documenter-page"><h1 id="Making-an-SVG-using-Observables"><a class="docs-heading-anchor" href="#Making-an-SVG-using-Observables">Making an SVG using Observables</a><a id="Making-an-SVG-using-Observables-1"></a><a class="docs-heading-anchor-permalink" href="#Making-an-SVG-using-Observables" title="Permalink"></a></h1><p>This app mimics <a href="https://simondanisch.github.io/JSServe.jl/stable/animation.html">this JSServe app</a> but with interactivity provided by Julia code compiled to WebAssembly.</p><div><div class=" columns is-vcentered"><div class=" column is-2"><form><div class=" field"><label class=" label">nsamples</label><div class=" control"><input class=" input" type="number" step="5.0" value="100" onchange="document.wasm.nsamples(this.value)"></input></div></div><div class=" field"><label class=" label">steps</label><div class=" control"><input class=" input" type="number" step="0.05" value="0.1" onchange="document.wasm.sample_step(this.value)"></input></div></div><div class=" field"><label class=" label">phase</label><div class=" control"><input class=" input" type="number" step="0.25" value="0.0" onchange="document.wasm.phase(this.value)"></input></div></div><div class=" field"><label class=" label">radii</label><div class=" control"><input class=" input" type="number" step="5.0" value="10.0" onchange="document.wasm.radii(this.value)"></input></div></div></form></div><div class=" column"><div id="plot"></div></div></div></div><h2 id="Making-the-app"><a class="docs-heading-anchor" href="#Making-the-app">Making the app</a><a id="Making-the-app-1"></a><a class="docs-heading-anchor-permalink" href="#Making-the-app" title="Permalink"></a></h2><p><a href="https://github.com/JuliaGizmos/Observables.jl">Observables</a> are used widely by Julia packages to provide interactivity. For static compilation, they are problematic, though. The <code>Observable</code> type is not strongly typed, and it&#39;s challenging to compile statically.</p><p>What we can do is define some Observables and some interactivity and compile the results.</p><p>First, we&#39;ll create the basics for the updating SVG.</p><pre><code class="language-julia hljs">const colors = [&quot;black&quot;, &quot;gray&quot;, &quot;silver&quot;, &quot;maroon&quot;, &quot;red&quot;, &quot;olive&quot;, &quot;yellow&quot;, &quot;green&quot;, &quot;lime&quot;, &quot;teal&quot;, &quot;aqua&quot;, &quot;navy&quot;, &quot;blue&quot;, &quot;purple&quot;, &quot;fuchsia&quot;]
+<html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/><title>Observables · WebAssemblyCompiler</title><meta name="title" content="Observables · WebAssemblyCompiler"/><meta property="og:title" content="Observables · WebAssemblyCompiler"/><meta property="twitter:title" content="Observables · WebAssemblyCompiler"/><meta name="description" content="Documentation for WebAssemblyCompiler."/><meta property="og:description" content="Documentation for WebAssemblyCompiler."/><meta property="twitter:description" content="Documentation for WebAssemblyCompiler."/><meta property="og:url" content="https://tshort.github.io/WebAssemblyCompiler.jl/examples/observables/"/><meta property="twitter:url" content="https://tshort.github.io/WebAssemblyCompiler.jl/examples/observables/"/><link rel="canonical" href="https://tshort.github.io/WebAssemblyCompiler.jl/examples/observables/"/><script data-outdated-warner src="../../assets/warner.js"></script><link href="https://cdnjs.cloudflare.com/ajax/libs/lato-font/3.0.0/css/lato-font.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/juliamono/0.050/juliamono.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/fontawesome.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/solid.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/brands.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.8/katex.min.css" rel="stylesheet" type="text/css"/><script>documenterBaseURL="../.."</script><script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.6/require.min.js" data-main="../../assets/documenter.js"></script><script src="../../search_index.js"></script><script src="../../siteinfo.js"></script><script src="../../../versions.js"></script><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/documenter-dark.css" data-theme-name="documenter-dark" data-theme-primary-dark/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/documenter-light.css" data-theme-name="documenter-light" data-theme-primary/><script src="../../assets/themeswap.js"></script><link href="../../assets/custom.css" rel="stylesheet" type="text/css"/><link href="../../assets/favicon.ico" rel="icon" type="image/x-icon"/></head><body><div id="documenter"><nav class="docs-sidebar"><div class="docs-package-name"><span class="docs-autofit"><a href="../../">WebAssemblyCompiler</a></span></div><button class="docs-search-query input is-rounded is-small is-clickable my-2 mx-auto py-1 px-2" id="documenter-search-query">Search docs (Ctrl + /)</button><ul class="docs-menu"><li><a class="tocitem" href="../../">Introduction</a></li><li><span class="tocitem">Examples</span><ul><li><a class="tocitem" href="../lorenz/">Lorenz model</a></li><li class="is-active"><a class="tocitem" href>Observables</a><ul class="internal"><li><a class="tocitem" href="#Making-the-app"><span>Making the app</span></a></li></ul></li></ul></li><li><a class="tocitem" href="../../api/">API</a></li><li><a class="tocitem" href="../../notes/">Notes</a></li></ul><div class="docs-version-selector field has-addons"><div class="control"><span class="docs-label button is-static is-size-7">Version</span></div><div class="docs-selector control is-expanded"><div class="select is-fullwidth is-size-7"><select id="documenter-version-selector"></select></div></div></div></nav><div class="docs-main"><header class="docs-navbar"><a class="docs-sidebar-button docs-navbar-link fa-solid fa-bars is-hidden-desktop" id="documenter-sidebar-button" href="#"></a><nav class="breadcrumb"><ul class="is-hidden-mobile"><li><a class="is-disabled">Examples</a></li><li class="is-active"><a href>Observables</a></li></ul><ul class="is-hidden-tablet"><li class="is-active"><a href>Observables</a></li></ul></nav><div class="docs-right"><a class="docs-settings-button docs-navbar-link fa-solid fa-gear" id="documenter-settings-button" href="#" title="Settings"></a><a class="docs-article-toggle-button fa-solid fa-chevron-up" id="documenter-article-toggle-button" href="javascript:;" title="Collapse all docstrings"></a></div></header><article class="content" id="documenter-page"><h1 id="Making-an-SVG-using-Observables"><a class="docs-heading-anchor" href="#Making-an-SVG-using-Observables">Making an SVG using Observables</a><a id="Making-an-SVG-using-Observables-1"></a><a class="docs-heading-anchor-permalink" href="#Making-an-SVG-using-Observables" title="Permalink"></a></h1><p>This app mimics <a href="https://simondanisch.github.io/JSServe.jl/stable/animation.html">this JSServe app</a> but with interactivity provided by Julia code compiled to WebAssembly.</p><div><div class=" columns is-vcentered"><div class=" column is-2"><form><div class=" field"><label class=" label">nsamples</label><div class=" control"><input class=" input" type="number" step="5" value="100" onchange="document.wasm.nsamples(this.value)" min="5" max="1000"></input></div></div><div class=" field"><label class=" label">steps</label><div class=" control"><input class=" input" type="number" step="0.02" value="0.1" onchange="document.wasm.sample_step(this.value)" min="0.02" max="1.0"></input></div></div><div class=" field"><label class=" label">phase</label><div class=" control"><input class=" input" type="number" step="0.25" value="0.0" onchange="document.wasm.phase(this.value)" min="0.0" max="3.0"></input></div></div><div class=" field"><label class=" label">radii</label><div class=" control"><input class=" input" type="number" step="5.0" value="10.0" onchange="document.wasm.radii(this.value)" min="1.0" max="40.0"></input></div></div></form></div><div class=" column"><div id="plot"></div></div></div></div><h2 id="Making-the-app"><a class="docs-heading-anchor" href="#Making-the-app">Making the app</a><a id="Making-the-app-1"></a><a class="docs-heading-anchor-permalink" href="#Making-the-app" title="Permalink"></a></h2><p><a href="https://github.com/JuliaGizmos/Observables.jl">Observables</a> are used widely by Julia packages to provide interactivity. For static compilation, they are problematic, though. The <code>Observable</code> type is not strongly typed, and it&#39;s challenging to compile statically.</p><p>What we can do is define some Observables and some interactivity and compile the results.</p><p>First, we&#39;ll create the basics for the updating SVG.</p><pre><code class="language-julia hljs">const colors = [&quot;black&quot;, &quot;gray&quot;, &quot;silver&quot;, &quot;maroon&quot;, &quot;red&quot;, &quot;olive&quot;, &quot;yellow&quot;, &quot;green&quot;, &quot;lime&quot;, &quot;teal&quot;, &quot;aqua&quot;, &quot;navy&quot;, &quot;blue&quot;, &quot;purple&quot;, &quot;fuchsia&quot;]
 
 function circ(cx, cy, r, icol)
-    string(&quot;&lt;circle cx=&#39;&quot;, cx, &quot;&#39; cy=&#39;&quot;, cy, &quot;&#39; r=&#39;&quot;, r, &quot;&#39; fill=&#39;&quot;, colors[icol % length(colors) + 1], &quot;&#39;&gt;&lt;/circle&gt;&quot;)
+    [&quot;&lt;circle cx=&#39;&quot;, cx, &quot;&#39; cy=&#39;&quot;, cy, &quot;&#39; r=&#39;&quot;, r, &quot;&#39; fill=&#39;&quot;, colors[icol % length(colors) + 1], &quot;&#39;&gt;&lt;/circle&gt;&quot;]
 end
 
 function set_svg(nsamples, sample_step, phase, radii)
@@ -11,42 +11,18 @@ function set_svg(nsamples, sample_step, phase, radii)
     cys = [sin(cxs_unscaled[i]) * height/3 + height/2 for i in 1:nsamples]
     cxs = [cxs_unscaled[i] * width/4pi for i in 1:nsamples]
     rr = radii
-    geom = Any[]
+    # make an array of strings and numbers to join in JavaScript
+    geom = Any[&quot;&lt;svg width=&quot;, width, &quot; height=&quot;, height, &quot; &gt;&lt;g&gt;&quot;]
     for i in 1:nsamples
-        push!(geom, circ(cxs[i], cys[i], rr, i))
+        append!(geom, circ(cxs[i], cys[i], rr, i))
     end
-    geom = JS.array_to_string(geom)
-    JS.sethtml(&quot;plot&quot;, string(h.svg(h.g(geom); height, width)))
-end</code></pre><p>The <code>set_svg</code> is what we&#39;ll ultimately want to compile.</p><p>To get there, we need the code that&#39;ll compile the Observables. The <code>fix!</code> methods take a set of Observables, walk their connections, and return a set of methods that will update the Observables provided. These methods unroll calls to the listeners of each Observable to make it easier to statically compile.</p><pre><code class="language-julia hljs">fix!(os::AbstractObservable...) = fix!(Set{AbstractObservable}(), os...)
+    push!(geom, &quot;&lt;/g&gt;&lt;/svg&gt;&quot;)
+    obj = JS.object(geom)
+    geom = JS.join(obj)
+    JS.sethtml(&quot;plot&quot;, geom)
+end</code></pre><p>The method <code>set_svg</code> is what we&#39;ll ultimately want to compile.</p><p>To get there, we need the code that&#39;ll compile the Observables. The <code>fix!</code> methods take a set of Observables, walk their connections, and return a set of methods that will update the Observables provided. These methods unroll calls to the listeners of each Observable to make it easier to statically compile.</p><pre><code class="language-julia hljs">using Observables
 
-function fix!(ctx::Set{AbstractObservable}, mc::Observables.MapCallback, val)
-    set! = makenotify(ctx, mc.result).set![1]
-    newargs = [:(Observables.to_value($a)) for a in mc.args]
-    e = quote
-        _ -&gt; begin
-            $set!($(mc.f)($(newargs...)))
-            return Consume(false)
-        end
-    end
-    return eval(e)
-end
-function fix!(ctx::Set{AbstractObservable}, oa::Observables.OnAny, val)
-    newargs = [:(Observables.to_value($a)) for a in oa.args]
-    e = quote
-        _ -&gt; begin
-            $(oa.f)($(newargs...))
-            return Consume(false)
-        end
-    end
-    return eval(e)
-end
-function fix!(ctx::Set{AbstractObservable}, f::Function, val::T) where T
-    rettype = code_typed(f, Tuple{T})[1][1].rettype
-    if rettype != Consume
-        f = x -&gt; (f(x); Consume(false))
-    end
-    return f
-end
+fix!(os::AbstractObservable...) = fix!(Set{AbstractObservable}(), os...)
 
 function fix!(ctx::Set{AbstractObservable}, x...)
 end
@@ -57,41 +33,77 @@ function fix!(ctx::Set{AbstractObservable}, observables::Observable...)
     for observable in observables
         observable in ctx &amp;&amp; continue
         push!(ctx, observable)
-        mn = makenotify(ctx, observable)
-        push!(setfuns,  mn.set!)
-        push!(notifies, mn.notify)
+        push!(setfuns, (makeset(ctx, observable), typeof(observable.val)))
     end
-    return (; setfuns, notifies)
+    return setfuns
+end
+function makeset(ctx::Set{AbstractObservable}, o::Observable)
+    listeners = tuple((fix!(ctx, l[2]) for l in o.listeners)...)
+    return val -&gt; begin
+        o.val = Observables.to_value(val)
+        nnotify(o, listeners...)
+    end
+end
+function fix!(ctx::Set{AbstractObservable}, oa::Observables.OnAny)
+    return OnAnyHolder(oa.f, tuple(oa.args...))
+    return val -&gt; begin
+        f(valargs(args...)...)
+        return Consume(false)
+    end
+end
+mutable struct OnAnyHolder{F,A}
+    f::F
+    args::A
+end
+function (x::OnAnyHolder)(val)
+    x.f(valargs(x.args...)...)
+    return Consume(false)
 end
 
-function makenotify(ctx::Set{AbstractObservable}, observable::Observable{T}) where T
-    listeners = Observables.listeners(observable)
-    invocations = Any[]
-    for (_, f) in listeners
-        newf = fix!(ctx, f, observable.val)
-        push!(invocations, :(result = $newf(val)))
-        push!(invocations, :(result.x &amp;&amp; return true))
-    end
-    e = quote
-        () -&gt; begin
-            val = $observable[]
-            $(invocations...)
-            return false
-        end
-    end
-    nnotify = eval(e)
-    set! = (val) -&gt; begin
-        if observable.ignore_equal_values
-            isequal(observable.val, val) &amp;&amp; return false
-        end
-        observable.val = val
-        return nnotify()
-    end
-    return (notify = (nnotify,), set! = (set!, T))
-end</code></pre><p>We also need to patch up some internals in WebAssemblyCompiler. WebAssembly doesn&#39;t handle circular references. As a kludge, we assign defaults to circular references. We&#39;re okay with that here because these circular references are never used.</p><pre><code class="language-julia hljs">W.default(o::Observable{T}) where T = Observable(W.default(T))</code></pre><p>The last part is pretty simple. We&#39;ll call <code>onany</code> to connect our set of input Observables <code>os</code> to the <code>set_svg</code> method. <code>fix!</code> returns a named tuple with a <code>setfuns</code> component that can be passed to <code>compile</code>. Each <code>setfuns</code> method is passed a value appropriate for that Observable. This triggers propagation of updates to the listeners.</p><pre><code class="language-julia hljs">onany(set_svg, os...)
-fos = fix!(os...)
-compile(fos.setfuns...; names = names, filepath = &quot;observables/observables.wasm&quot;, validate = true)</code></pre><p>With this interactivity provided by Observables, we&#39;ve eliminated almost all of the JavaScript. <code>JS.h</code> methods are used to define the inputs, including an <code>onupdate</code> trigger that calls the appropriate WebAssembly function. These also define Observables and collect names for the WebAssembly functions. See <a href="https://github.com/tshort/WebAssemblyCompiler.jl/blob/main/examples/observables/observables.jl"><code>examples/observables.jl</code></a> for the complete source for this example.</p><script src="observables.wasm.js"></script>
+function fix!(ctx::Set{AbstractObservable}, mc::Observables.MapCallback)
+    set! = makeset(ctx, mc.result)
+    result = mc.result
+    resultlisteners = tuple((fix!(ctx, l[2]) for l in result.listeners)...)
+    return MapCallbackHolder(mc.result, mc.f, tuple(mc.args...), resultlisteners)
+end
+
+mutable struct MapCallbackHolder{O,F,A,L}
+    result::O
+    f::F
+    args::A
+    listeners::L
+end
+function (x::MapCallbackHolder)(val)
+    x.result.val = x.f(valargs(x.args...)...)
+    nnotify(x.result, x.listeners...)
+    return Consume(false)
+end
+
+@inline valargs() = ()
+@inline valargs(x) = (Observables.to_value(x),)
+@inline valargs(x, xs...) = (Observables.to_value(x), valargs(xs...)...)
+
+@inline nnotify(o::Observable) = nothing
+@inline nnotify(::Nothing) = nothing
+@inline function nnotify(o::Observable, f)
+    result = f(o.val)
+    result.x &amp;&amp; return true
+    return false
+end
+@inline function nnotify(o::Observable, f, fs...)
+    nnotify(o, f)
+    nnotify(o, fs...)
+    return false
+end</code></pre><p>We also need to patch up some internals in WebAssemblyCompiler. WebAssembly doesn&#39;t handle circular references. As a kludge, we assign defaults to circular references. We&#39;re okay with that here because these circular references are never used.</p><pre><code class="language-julia hljs">W.default(o::Observable{T}) where T = Observable(o.val)</code></pre><p>The last part is pretty simple. We&#39;ll call <code>onany</code> to connect our set of input Observables <code>os</code> to the <code>set_svg</code> method. <code>fix!</code> returns a named tuple with a <code>setfuns</code> component that can be passed to <code>compile</code>. Each <code>setfuns</code> method is passed a value appropriate for that Observable. This triggers propagation of updates to the listeners.</p><pre><code class="language-julia hljs">onany(set_svg, os...)
+setfuns! = fix!(os...)
+compile(setfuns!...; names = names, filepath = &quot;observables/observables.wasm&quot;)</code></pre><p>With this interactivity provided by Observables, we&#39;ve eliminated almost all of the JavaScript. <code>JS.h</code> methods are used to define the inputs, including an <code>onupdate</code> trigger that calls the appropriate WebAssembly function. These also define Observables and collect names for the WebAssembly functions. See <a href="https://github.com/tshort/WebAssemblyCompiler.jl/blob/main/examples/observables/observables.jl"><code>examples/observables.jl</code></a> for the complete source for this example.</p><script src="observables.wasm.js"></script>
 <script type="module">
+setTimeout(function() {
+  var x = document.getElementById("plot")
+  if (x.innerHTML === "") {
+      x.innerHTML = "<strong>Unsupported browser.</strong> Chrome v119 or Firefox v120 or better should work."
+  }
+}, 1000)
 export async function load_wasm() {
   const response = await fetch('observables.wasm');
   const bytes = await response.arrayBuffer();
@@ -101,4 +113,4 @@ export async function load_wasm() {
 }
 document.wasm = await load_wasm();
 document.wasm.radii(10.);
-</script></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../lorenz/">« Lorenz model</a><a class="docs-footer-nextpage" href="../../api/">API »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option><option value="auto">Automatic (OS)</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 1.1.1 on <span class="colophon-date" title="Tuesday 17 October 2023 23:40">Tuesday 17 October 2023</span>. Using Julia version 1.9.3.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
+</script></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../lorenz/">« Lorenz model</a><a class="docs-footer-nextpage" href="../../api/">API »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option><option value="auto">Automatic (OS)</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 1.1.2 on <span class="colophon-date" title="Monday 30 October 2023 23:36">Monday 30 October 2023</span>. Using Julia version 1.9.3.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
