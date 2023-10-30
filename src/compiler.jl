@@ -23,13 +23,13 @@ Examples:
     compile((acos, Float64), (asin, Float64), filepath = "trigs.wasm", optimize = true)   
 
 """
-function compile(funs::Tuple...; filepath = "foo.wasm", jspath = filepath * ".js", validate = true, optimize = false, experimental = true, names = nothing)
+function compile(funs::Tuple...; filepath = "foo.wasm", jspath = filepath * ".js", validate = true, optimize = false, experimental = false, names = nothing)
     mkpath(dirname(filepath))
     cis = Core.CodeInfo[]
     dummyci = code_typed(() -> nothing, Tuple{})[1].first
     ctx = CompilerContext(dummyci; experimental)
-    _DEBUG_ && _debug_ci(ctx)
-    # BinaryenModuleSetFeatures(ctx.mod, BinaryenFeatureReferenceTypes() | BinaryenFeatureGC() | BinaryenFeatureStrings())
+    debug(:offline) && _debug_ci(ctx)
+    # BinaryenModuleSetFeatures(ctx.mod, BinaryenFeatureReferenceTypes() | BinaryenFeatureGC() | (experimental ? BinaryenFeatureStrings() : 0))
     BinaryenModuleSetFeatures(ctx.mod, BinaryenFeatureAll())
     BinaryenModuleAutoDrop(ctx.mod)
     # Create CodeInfo's, and fill in names first
@@ -38,7 +38,7 @@ function compile(funs::Tuple...; filepath = "foo.wasm", jspath = filepath * ".js
         # isconcretetype(tt) || error("input type signature $tt for $(funtpl[1]) is not concrete")
         ci = code_typed(funtpl[1], tt, interp = StaticInterpreter())[1].first
         push!(cis, ci)
-        if names == nothing
+        if names === nothing
             name = string(funtpl[1])   # [1:min(end,20)]
         else
             name = string(names[i])
@@ -46,16 +46,26 @@ function compile(funs::Tuple...; filepath = "foo.wasm", jspath = filepath * ".js
         sig = ci.parent.specTypes
         ctx.sigs[name] = sig
         ctx.names[sig] = name
-    end
-    # Compile funs
-    for i in eachindex(cis)
-        newctx = CompilerContext(ctx, cis[i], funs[i][1])
-        _DEBUG_ && _debug_ci(newctx, ctx)
-        compile_method(newctx, exported = true)
+    # end
+    # # Compile funs
+    # for i in eachindex(cis)
+        fun = funs[i][1]
+        # if callablestruct(fun)
+        #     fun = (args...) -> fun(fun, args...)
+        # end
+        if callablestruct(fun, cis[i])
+            newctx = CompilerContext(ctx, cis[i], toplevel = true, callablestruct = true)
+            # newctx.gfun = _compile(newctx, fun) 
+            newctx.gfun = getglobal(newctx, fun) 
+        else
+            newctx = CompilerContext(ctx, cis[i], toplevel = true)
+        end
+        debug(:offline) && _debug_ci(newctx, ctx)
+        compile_method(newctx, name, exported = true)
     end
     BinaryenModuleAutoDrop(ctx.mod)
-    _DEBUG_ && _debug_module(ctx)
-    # _DEBUG_ && BinaryenModulePrintStackIR(ctx.mod, false)
+    debug(:offline) && _debug_module(ctx)
+    debug(:inline) && BinaryenModulePrint(ctx.mod)
     validate && BinaryenModuleValidate(ctx.mod)
     # BinaryenSetShrinkLevel(0)
     # BinaryenSetOptimizeLevel(1)
@@ -75,15 +85,37 @@ function compile(funs::Tuple...; filepath = "foo.wasm", jspath = filepath * ".js
     nothing
 end
 
-function compile_method(ctx::CompilerContext; sig = ctx.ci.parent.specTypes, exported = false)
-    funname = ctx.names[sig]
-    jparams = [gettype(ctx, T) for T in collect(sig.parameters)[argsused(ctx)]]
+function sigargs(ctx, sig)
+    sigparams = collect(sig.parameters)
+    jparams = [gettype(ctx, sigparams[1]), (gettype(ctx, sigparams[i]) for i in 2:length(sigparams) if argused(ctx, i))...]
+    if ctx.toplevel || !ctx.callablestruct
+        jparams = jparams[2:end]
+    end
+    return jparams
+end
+
+function compile_method(ctx::CompilerContext, funname; sig = ctx.ci.parent.specTypes, exported = false)
+    # funname = ctx.names[sig]
+    sigparams = collect(sig.parameters)
+    jparams = [gettype(ctx, sigparams[1]), (gettype(ctx, sigparams[i]) for i in 2:length(sigparams) if argused(ctx, i))...]
+    if ctx.toplevel || !ctx.callablestruct
+        jparams = jparams[2:end]
+    end
+
     bparams = BinaryenTypeCreate(jparams, length(jparams))
     rettype = gettype(ctx, ctx.ci.rettype == Nothing ? Union{} : ctx.ci.rettype)
     body = compile_method_body(ctx)
-    BinaryenAddFunction(ctx.mod, funname, bparams, rettype, ctx.locals, length(ctx.locals), body)
-    if exported
-        BinaryenAddFunctionExport(ctx.mod, funname, funname)
+    debug(:inline) && println("---------------------------------------")
+    debug(:inline) && @show ctx.ci.parent.def.name
+    debug(:inline) && @show ctx.ci.parent.def
+    debug(:inline) && @show ctx.ci
+    debug(:inline) && @show ctx.ci.parent.def.name
+    debug(:inline) && BinaryenExpressionPrint(body)
+    if BinaryenGetFunction(ctx.mod, funname) == C_NULL
+        BinaryenAddFunction(ctx.mod, funname, bparams, rettype, ctx.locals, length(ctx.locals), body)
+        if exported
+            BinaryenAddFunctionExport(ctx.mod, funname, funname)
+        end
     end
     return nothing
 end
@@ -93,18 +125,12 @@ import Core.Compiler: block_for_inst, compute_basic_blocks
 function compile_method_body(ctx::CompilerContext)
     ci = ctx.ci
     code = ci.code
-    ctx.localidx += nargs(ci)
+    ctx.localidx += nargs(ctx)
     cfg = Core.Compiler.compute_basic_blocks(code)
     relooper = RelooperCreate(ctx.mod)
-    # @show ctx.ci.parent.def.name
-    # @show ctx.ci.parent.def
-    # @show ctx.fun
-    if callablestruct(ctx) 
-        ctx.gfun = getglobal(ctx, ctx.fun)
-    end
 
     # Find and collect phis
-    phis = Dict{Int32, Any}()
+    phis = Dict{Int, Any}()
     for (idx, block) in enumerate(cfg.blocks)
         for stmt in block.stmts
             node = code[stmt]

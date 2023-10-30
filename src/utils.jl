@@ -4,26 +4,34 @@
 function argmap(ctx, n)
     used = argsused(ctx)
     result = sum(used[1:n])
-    # if callablestruct(ctx)  
-    #     result -= 1
-    # end
     return result
 end
 
 # Number of arguments, accounting for skipped args.
-nargs(ci) = sum(argsused(ci))
-
+nargs(ctx::CompilerContext) = sum(argsused(ctx))
+# nargs(ctx::CompilerContext) = length(ctx.ci.slotflags) - (ctx.toplevel || !ctx.callablestruct ? 1 : 0)
+# nargs(ctx::CompilerContext) = length(ctx.ci.slotflags) - (ctx.toplevel || !ctx.callablestruct ? 1 : 0)
 # TODO: fix / review
 # argmap(ci, n) = n
 
 # A Vector{Bool} showing whether arguments are used.
-argused(ci, i) = (ci.slotflags[i] & 0x08) > 0
-argsused(ci) = [false, (argused(ci, i) for i in 2:length(ci.slotflags))...]
-argsused(ctx::CompilerContext) = argsused(ctx.ci)
+function argused(ctx, i)
+    if ctx.toplevel
+        return true
+    end
+    sT = ctx.ci.slottypes[i]
+    if sT isa Core.Const
+        sT = sT.val
+    end
+    notused = ctx.ci.slotflags[i] == 0x00 ||
+        sT == () ||
+        (Base.issingletontype(sT) && sT != Tuple{}) ||
+        (sT isa Type && sT <: Type)
+    return !notused
+end
 
-specialtype(x) = nothing
-specialtype(::Type{T}) where T <: Val = BinaryenTypeInt64()
-# specialtype(::Module) = DummyModule
+argsused(ctx::CompilerContext) =
+    [ctx.callablestruct && !ctx.toplevel, (argused(ctx, i) for i in 2:length(ctx.ci.slotflags))...]
 
 function ssatype(ctx::CompilerContext, idx)
     ctx.ci.ssavaluetypes[idx]
@@ -116,11 +124,15 @@ function gettype(ctx, type)
     if haskey(ctx.wtypes, type)
         return ctx.wtypes[type]
     end
-    # if specialtype(type) !== nothing
-    #     @show type
-    #     @show specialtype(type)
-    #     return specialtype(type)
-    # end
+    if type isa Union || isabstracttype(type)
+        return gettype(ctx, Any)
+    end
+    if type <: String 
+        return gettype(ctx, Vector{UInt8})
+    end
+    if type <: Symbol
+        return gettype(ctx, Vector{UInt8})
+    end
     if type <: Array && !haskey(ctx.meta, :arraypass)
         wrappertype = gettype(ctx, FakeArrayWrapper{eltype(type)})
         ctx.wtypes[type] = wrappertype
@@ -132,6 +144,7 @@ function gettype(ctx, type)
     end
     tb = TypeBuilderCreate(1)
     builtheaptypes = Array{BinaryenHeapType}(undef, 1)
+    
     if type <: Buffer || type <: Array || type <: NTuple
         elt = eltype(type)
         if elt == Union{}
@@ -139,7 +152,7 @@ function gettype(ctx, type)
         end
         TypeBuilderSetArrayType(tb, 0, gettype(ctx, elt), isbitstype(elt) && sizeof(elt) == 1 ? BinaryenPackedTypeInt8() : BinaryenPackedTypeNotPacked(), type <: Buffer)
     else  # Structs
-        fieldtypes = [gettype(ctx, T) for T in Base.datatype_fieldtypes(type)]
+        fieldtypes = [gettype(ctx, T) for T in fieldtypeskept(type)]
         n = length(fieldtypes)
         fieldpackedtypes = fill(BinaryenPackedTypeNotPacked(), n)
         fieldmutables = fill(ismutabletype(type), n)
@@ -154,6 +167,12 @@ function gettype(ctx, type)
     ctx.wtypes[type] = newtype
     return newtype
 end
+
+# could override this to ignore some types
+fieldskept(::Type{T}) where T = fieldnames(T)
+fieldtypeskept(::Type{T}) where T = tuple(collect(Base.datatype_fieldtypes(T))[indexin([fieldskept(T)...], [fieldnames(T)...])]...)
+
+
 
 function getglobal(ctx, gval; compiledval = nothing)
     id = objectid(gval)
@@ -177,10 +196,10 @@ function getglobal(ctx, gval; compiledval = nothing)
                               false, 
                               isnothing(compiledval) ? cx : compiledval)
                             #   isnothing(compiledval) ? _compileglobal(ctx, gval) : compiledval)
+            # BinaryenExpressionPrint(isnothing(compiledval) ? cx : compiledval)
         end
     end
     gv = BinaryenGlobalGet(ctx.mod, name, wtype)
-    # BinaryenExpressionPrint(gv)
     ctx.globals[gval] = gv
     return gv
 end
@@ -249,12 +268,31 @@ default(x::Union{Int64, Int32, UInt64, UInt32, Float64, Float32, Bool, UInt8, In
 # default(::Any) = Ref(0)
 default(::String) = ""
 default(::Symbol) = :_
+default(x::Core.SimpleVector) = x
 default(::Vector{T}) where T = T[]
 default(x::Type{T}) where T <: Union{Int64, Int32, UInt64, UInt32, Float64, Float32, Bool, UInt8, Int8} = zero(x)
+default(x::Tuple) = x
+default(::Tuple{}) = ()
 default(::Type{Any}) = Ref(0)
 default(::Type{String}) = ""
 default(::Type{Symbol}) = :_
 default(::Type{Vector{T}}) where T = T[]
+# default(::Type{Tuple{T}}) where T = tuple((default(t) for t in T)...)
+default(::Type{Tuple{}}) = ()
+
+function default(::Type{T}) where T
+    fieldtypes = Base.datatype_fieldtypes(T)
+    args = [default(ft) for ft in fieldtypes]
+    res = T(args...)
+    return res
+end
+
+function default(::Type{T}) where T <: Tuple
+    fieldtypes = Base.datatype_fieldtypes(T)
+    args = [default(ft) for ft in fieldtypes]
+    res = tuple(args...)
+    return res
+end
 
 
 # Note that this will mess up for nonstandard type constructors
@@ -273,6 +311,8 @@ end
 
 validname(s::String) = replace(s, r"\W" => "_")
 
-callablestruct(ctx::CompilerContext) = fieldcount(typeof(ctx.fun)) > 0
-
+callablestruct(ctx::CompilerContext) = ctx.callablestruct
+callablestruct(fun, ci) = 
+    (isstructtype(typeof(fun)) && fieldcount(typeof(fun)) > 0 && !(typeof(fun) <: Union{DataType,UnionAll}) && typeof(fun) != Core.SSAValue) || 
+    (typeof(fun) == Core.SSAValue && callablestruct(ci.ssavaluetypes[fun.id], ci))
 

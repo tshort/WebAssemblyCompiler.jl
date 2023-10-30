@@ -8,7 +8,12 @@
 <!DOCTYPE html>
     <div id="plot"></div>
     <script>
-      mdpad = {radii: 10.0, phase: 0.0, sample_step: 0.1, nsamples: 100}
+      setTimeout(function() {
+          x = document.getElementById("plot")
+          if (x.innerHTML === "") {
+              x.innerHTML = "<strong>Unsupported browser.</strong> Chrome v119 or Firefox v120 or better should work."
+          }
+        }, 500)
     </script>
     <script src="observables/observables.wasm.js"></script> 
     <script type="module">
@@ -20,8 +25,7 @@
           return instance.exports;
       }
       var wasm = await load_wasm();
-      console.log(wasm.sample_step(0.6));
-      setTimeout(() => console.log(wasm.sample_step(0.6)), 1000)
+      wasm.nsamples(100);  // run it to make the plot
       document.wasm = wasm;
     </script>
   </script>

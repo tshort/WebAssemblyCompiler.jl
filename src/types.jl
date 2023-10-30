@@ -26,8 +26,8 @@ wtypes() = Dict{Any, BinaryenType}(
     Bool      => BinaryenTypeInt32(),
     Float64   => BinaryenTypeFloat64(),
     Float32   => BinaryenTypeFloat32(),
-    Symbol    => BinaryenTypeStringref(),
-    String    => BinaryenTypeStringref(),
+    # Symbol    => BinaryenTypeStringref(),
+    # String    => BinaryenTypeStringref(),
     Externref => BinaryenTypeExternref(),
     Any       => BinaryenTypeEqref(),
     Union{}   => BinaryenTypeNone(),
@@ -51,7 +51,8 @@ mutable struct CompilerContext
     locals::Vector{BinaryenType}
     localidx::Int
     varmap::Dict{Int, Int}
-    fun::Any
+    toplevel::Bool
+    callablestruct::Bool
     gfun::Any
     ## special context
     meta::Dict{Symbol, Any}
@@ -79,8 +80,8 @@ const wat = raw"""
 
 CompilerContext(ci::Core.CodeInfo; experimental = false) = 
     CompilerContext(BinaryenModuleParse(experimental ? experimentalwat : wat), Dict{DataType, String}(), Dict{String, DataType}(), Dict{String, Any}(), wtypes(), IdDict{Any, Any}(), IdDict{Any, Any}(),
-                    ci, BinaryenExpressionRef[], BinaryenType[], 0, Dict{Int, Int}(), nothing, nothing, Dict{Symbol, Any}())
-CompilerContext(ctx::CompilerContext, ci::Core.CodeInfo, fun) = 
+                    ci, BinaryenExpressionRef[], BinaryenType[], 0, Dict{Int, Int}(), true, false, nothing, Dict{Symbol, Any}())
+CompilerContext(ctx::CompilerContext, ci::Core.CodeInfo; callablestruct = false, toplevel = false) = 
     CompilerContext(ctx.mod, ctx.names, ctx.sigs, ctx.imports, ctx.wtypes, ctx.globals, ctx.objects,
-                    ci, BinaryenExpressionRef[], BinaryenType[], 0, Dict{Int, Int}(), fun, nothing, Dict{Symbol, Any}())
+                    ci, BinaryenExpressionRef[], BinaryenType[], 0, Dict{Int, Int}(), toplevel, callablestruct, nothing, Dict{Symbol, Any}())
 

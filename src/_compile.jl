@@ -1,6 +1,6 @@
 
 function _compile(ctx::CompilerContext, x::Core.Argument; kw...)
-    if x.n == 1 && callablestruct(ctx)
+    if callablestruct(ctx) && x.n == 1 && ctx.toplevel
         return ctx.gfun
     end
     if ctx.ci.slottypes[x.n] isa Core.Const 
@@ -8,6 +8,8 @@ function _compile(ctx::CompilerContext, x::Core.Argument; kw...)
     else
         type = ctx.ci.slottypes[x.n]
     end
+    # If at the top level or if it's not a callable struct, 
+    # we don't include the fun as the first argument.
     BinaryenLocalGet(ctx.mod, argmap(ctx, x.n) - 1,
                      gettype(ctx, type))
 end
@@ -34,12 +36,16 @@ _compile(ctx::CompilerContext, x::Bool; kw...) = BinaryenConst(ctx.mod, Binaryen
 _compile(ctx::CompilerContext, x::Ptr{BinaryenExpression}; kw...) = x
 _compile(ctx::CompilerContext, x::GlobalRef; kw...) = getglobal(ctx, x.mod, x.name)
 _compile(ctx::CompilerContext, x::QuoteNode; kw...) = _compile(ctx, x.value)
-_compile(ctx::CompilerContext, x::String; globals = false, kw...) = globals ?
-    BinaryenStringConst(ctx.mod, x) :
-    getglobal(ctx, x, compiledval = BinaryenStringConst(ctx.mod, x))
-_compile(ctx::CompilerContext, x::Symbol; globals = false, kw...) = globals ?
-    BinaryenStringConst(ctx.mod, x) :
-    getglobal(ctx, x, compiledval = BinaryenStringConst(ctx.mod, x))
+# _compile(ctx::CompilerContext, x::String; globals = false, kw...) = globals ?
+#     BinaryenStringConst(ctx.mod, x) :
+#     getglobal(ctx, x, compiledval = BinaryenStringConst(ctx.mod, x))
+# _compile(ctx::CompilerContext, x::Symbol; globals = false, kw...) = globals ?
+#     BinaryenStringConst(ctx.mod, x) :
+#     getglobal(ctx, x, compiledval = BinaryenStringConst(ctx.mod, x))
+_compile(ctx::CompilerContext, x::String; globals = false, kw...) =
+    _compile(ctx, unsafe_wrap(Vector{UInt8}, x))
+_compile(ctx::CompilerContext, x::Symbol; globals = false, kw...) =
+    _compile(ctx, unsafe_wrap(Vector{UInt8}, string(x)))
 
 function _compile(ctx::CompilerContext, x::Tuple{}; kw...)
     arraytype = BinaryenTypeGetHeapType(gettype(ctx, Tuple{}))
@@ -66,7 +72,10 @@ function _compile(ctx::CompilerContext, x::Val; kw...)
     return BinaryenStructNew(ctx.mod, args, nargs, type)
 end
 
-_compile(ctx::CompilerContext, x::Type) = BinaryenConst(ctx.mod, BinaryenLiteralInt32(-99))
+function _compile(ctx::CompilerContext, x::Type)
+    _compile(ctx, Int32(-99))
+    # _compile(ctx, nothing)
+end
 
 struct Pass{T}
     val::T
@@ -85,6 +94,7 @@ end
 
 
 function _compile(ctx::CompilerContext, x::T; globals = false, kw...) where T <: Array 
+    
     if haskey(ctx.globals, x)
         return ctx.globals[x]
     end
@@ -96,15 +106,15 @@ function _compile(ctx::CompilerContext, x::T; globals = false, kw...) where T <:
         return ox
     end
     ctx.objects[x] = nothing
-    # TODO: fix this; problem is, I can't remember what's broken
     elT = eltype(roottype(ctx, T))
     buffertype = BinaryenTypeGetHeapType(gettype(ctx, Buffer{elT}))
+    _f(i) = isassigned(x, i) ? x[i] : default(elT)
     if globals
         values = [elT in basictypes ? 
-                  _compile(ctx, v) : 
-                  getglobal(ctx, v) for v in x]
+                  _compile(ctx, _f(i)) : 
+                  getglobal(ctx, _f(i)) for i in eachindex(x)]
     else
-        values = [_compile(ctx, v) for v in x]
+        values = [_compile(ctx, _f(i)) for i in eachindex(x)]
     end
     buffer = BinaryenArrayNewFixed(ctx.mod, buffertype, values, length(x))
     wrappertype = BinaryenTypeGetHeapType(gettype(ctx, FakeArrayWrapper{elT}))
@@ -113,7 +123,8 @@ function _compile(ctx::CompilerContext, x::T; globals = false, kw...) where T <:
     return result
 end
 
-function _compile(ctx::CompilerContext, x::T; globals = false, kw...) where T <: Tuple # general tuples
+# general tuples
+function _compile(ctx::CompilerContext, x::T; globals = false, kw...) where T <: Tuple
     TT = Tuple{(roottype(ctx, v) for v in x)...}
     type = BinaryenTypeGetHeapType(gettype(ctx, TT))
     if globals
@@ -126,14 +137,17 @@ function _compile(ctx::CompilerContext, x::T; globals = false, kw...) where T <:
     return BinaryenStructNew(ctx.mod, args, length(args), type)
 end
 
-function _compile(ctx::CompilerContext, x::T; globals = false, kw...) where T # general version for structs
+# general version for structs
+function _compile(ctx::CompilerContext, x::T; globals = false, kw...) where T
     if haskey(ctx.globals, x)
         return ctx.globals[x]
     end
     if ismutabletype(T) && haskey(ctx.objects, x)
+    # if haskey(ctx.objects, x)
         ox = ctx.objects[x]
-        if ox == Nothing  # indicates a circular reference
-            return default(x)
+        if ox === nothing  # indicates a circular reference
+            # show(stdout, MIME"text/plain"(), ctx.objects)
+            return _compile(ctx, default(x))
         end
         return ox
     end
@@ -142,9 +156,10 @@ function _compile(ctx::CompilerContext, x::T; globals = false, kw...) where T # 
     if globals
         args = [fieldtype(T, field) in basictypes ? 
                 _compile(ctx, getfield(x, field)) : 
-                getglobal(ctx, getfield(x, field)) for field in fieldnames(T)]
+                # maybeboxfield(x, field) : 
+                getglobal(ctx, getfield(x, field)) for field in fieldskept(T)]
     else
-        args = [_compile(ctx, getfield(x, field)) for field in fieldnames(T)]
+        args = [_compile(ctx, getfield(x, field)) for field in fieldskept(T)]
     end
     result = BinaryenStructNew(ctx.mod, args, length(args), type)
     if ismutabletype(T)
@@ -152,7 +167,15 @@ function _compile(ctx::CompilerContext, x::T; globals = false, kw...) where T # 
     end
     return result
 end
-
+function maybeboxfield(x, field)
+    val = getfield(x, field)
+    ftype = fieldtype(typeof(x), field)
+    if typeof(val) == ftype
+        return _compile(ctx, val)
+    else
+        return BinaryenRefCast(ctx.mod, _compile(ctx, Box{ftype}(val)))
+    end
+end
 function _compile(ctx::CompilerContext, x::Expr; kw...)
     if x.head == :boundscheck
         return _compile(ctx, false)

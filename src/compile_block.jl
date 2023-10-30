@@ -12,7 +12,9 @@ function update!(ctx::CompilerContext, x, localtype = nothing)
         push!(ctx.locals, gettype(ctx, localtype))
         ctx.localidx += 1
     end
-    _DEBUG_ && _debug_binaryen(ctx, x)
+    # BinaryenExpressionPrint(x)
+    s = _debug_binaryen_get(ctx, x)
+    debug(:offline) && _debug_binaryen(ctx, x)
     return nothing
 end
 
@@ -26,7 +28,7 @@ function setlocal!(ctx, idx, x; set = true, drop = false)
         if drop
             x = BinaryenDrop(ctx.mod, x)
         end
-        _DEBUG_ && _debug_binaryen(ctx, x)
+        debug(:offline) && _debug_binaryen(ctx, x)
         push!(ctx.body, x)
     end
 end
@@ -56,7 +58,7 @@ function unaryfun(ctx, idx, bfuns, a)
     setlocal!(ctx, idx, x)
 end
 function binaryenfun(ctx, idx, bfun, args...; passall = false)
-    x = bfun(ctx.mod, (passall ? a : _compile(ctx, a) for a in args)...)
+     x = bfun(ctx.mod, (passall ? a : _compile(ctx, a) for a in args)...)
     setlocal!(ctx, idx, x)
 end
 
@@ -68,8 +70,8 @@ function compile_block(ctx::CompilerContext, cfg::Core.Compiler.CFG, phis, idx)
     ctx.body = BinaryenExpressionRef[]
     for idx in idxs
         node = ci.code[idx]
-        # _DEBUG_ && @show idx node ssatype(ctx, idx)
-        _DEBUG_ && _debug_line(ctx, idx, node)
+        debug(:inline) && @show idx node ssatype(ctx, idx)
+        debug(:offline) && _debug_line(ctx, idx, node)
 
         if node isa Union{Core.GotoNode, Core.GotoIfNot, Core.PhiNode, Nothing}
             # do nothing
@@ -139,7 +141,12 @@ function compile_block(ctx::CompilerContext, cfg::Core.Compiler.CFG, phis, idx)
                 binaryfun(ctx, idx, (BinaryenRemSInt64, BinaryenRemSInt32), a, b)
             end
 
+
         elseif matchgr(node, :urem_int) do a, b
+                binaryfun(ctx, idx, (BinaryenRemUInt64, BinaryenRemUInt32), a, b)
+            end
+
+        elseif matchgr(node, :checked_urem_int) do a, b
                 binaryfun(ctx, idx, (BinaryenRemUInt64, BinaryenRemUInt32), a, b)
             end
 
@@ -196,9 +203,9 @@ function compile_block(ctx::CompilerContext, cfg::Core.Compiler.CFG, phis, idx)
                     binaryfun(ctx, idx, (BinaryenEqInt64, BinaryenEqInt32), a, b)
                 elseif roottype(ctx, a) <: AbstractFloat
                     binaryfun(ctx, idx, (BinaryenEqFloat64, BinaryenEqFloat32), a, b)
-                elseif roottype(ctx, a) <: Union{String, Symbol}
-                    x = BinaryenStringEq(ctx.mod, BinaryenStringEqEqual(), _compile(ctx, a), _compile(ctx, b))
-                    setlocal!(ctx, idx, x)
+                # elseif roottype(ctx, a) <: Union{String, Symbol}
+                #     x = BinaryenStringEq(ctx.mod, BinaryenStringEqEqual(), _compile(ctx, a), _compile(ctx, b))
+                #     setlocal!(ctx, idx, x)
                 else
                     x = BinaryenRefEq(ctx.mod, _compile(ctx, a), _compile(ctx, b))
                     setlocal!(ctx, idx, x)
@@ -453,6 +460,21 @@ function compile_block(ctx::CompilerContext, cfg::Core.Compiler.CFG, phis, idx)
 
         ## Builtins / key functions ##
 
+        elseif matchforeigncall(node, :jl_string_to_array) do args
+                # This is just a pass-through because strings are already Vector{UInt8}
+                setlocal!(ctx, idx, _compile(ctx, args[5]))
+            end
+
+        elseif matchforeigncall(node, :jl_array_to_string) do args
+                # This is just a pass-through because strings are already Vector{UInt8}
+                setlocal!(ctx, idx, _compile(ctx, args[5]))
+            end
+
+        elseif matchforeigncall(node, :_jl_symbol_to_array) do args
+                # This is just a pass-through because Symbols are already Vector{UInt8}
+                setlocal!(ctx, idx, _compile(ctx, args[5]))
+            end
+
         elseif matchgr(node, :arrayref) do bool, arraywrapper, i
                 buffer = getbuffer(ctx, arraywrapper)
                 # signed = eT <: Signed && sizeof(eT) < 4
@@ -559,6 +581,10 @@ function compile_block(ctx::CompilerContext, cfg::Core.Compiler.CFG, phis, idx)
                 setlocal!(ctx, idx, _compile(ctx, args[5]))
             end
 
+        elseif matchforeigncall(node, :jl_object_id) do args
+                setlocal!(ctx, idx, _compile(ctx, objectid(_compile(ctx, args[5]))))
+            end
+
         elseif matchgr(node, :getfield) || matchcall(node, getfield)
             x = node.args[2]
             index = node.args[3]
@@ -573,7 +599,7 @@ function compile_block(ctx::CompilerContext, cfg::Core.Compiler.CFG, phis, idx)
                 binaryenfun(ctx, idx, BinaryenArrayGet, _compile(ctx, x), Pass(i), gettype(ctx, eltype(T)), Pass(!unsigned))
             elseif roottype(ctx, index) <: Integer
                 # if length(node.args) == 3   # 2-arg version
-                    eT = Base.datatype_fieldtypes(T)[index]
+                    eT = fieldtypeskept(T)[index]
                     # unsigned = eT <: Unsigned
                     unsigned = true
                     binaryenfun(ctx, idx, BinaryenStructGet, UInt32(index - 1), _compile(ctx, x), gettype(ctx, eT), !unsigned, passall = true)
@@ -582,7 +608,7 @@ function compile_block(ctx::CompilerContext, cfg::Core.Compiler.CFG, phis, idx)
             else
                 field = index
                 nT = T <: Type ? DataType : T     # handle Types
-                index = UInt32(findfirst(x -> x == field.value, fieldnames(nT)) - 1)
+                index = UInt32(findfirst(x -> x == field.value, fieldskept(nT)) - 1)
                 eT = Base.datatype_fieldtypes(nT)[index + 1]
                 # unsigned = eT <: Unsigned
                 unsigned = true
@@ -612,7 +638,7 @@ function compile_block(ctx::CompilerContext, cfg::Core.Compiler.CFG, phis, idx)
         elseif matchgr(node, :setfield!) do x, field, value
                 if field isa QuoteNode && field.value isa Symbol
                     T = roottype(ctx, x)
-                    index = UInt32(findfirst(x -> x == field.value, fieldnames(T)) - 1)
+                    index = UInt32(findfirst(x -> x == field.value, fieldskept(T)) - 1)
                 elseif field isa Integer
                     index = UInt32(field)
                 else
@@ -692,9 +718,24 @@ function compile_block(ctx::CompilerContext, cfg::Core.Compiler.CFG, phis, idx)
                 setlocal!(ctx, idx, x)
             end
 
+        #=
+        `invoke` is one of the toughest parts of compilation.
+        Cases that must be handled include:
+        * Variable arguments: We pass these as the last argument as a tuple.
+        * Callable struct / closure: We pass these as the first argument if it's not a toplevel function.
+          If it's top level, then the struct is stored as a global variable.
+        * Keyword arguments: These come in as the first argument after the function/callable struct argument.
+        Notes:
+        * The first argument is the function itself.
+          Use that for callable structs. We remove it if it's not callable.
+        * If an argument isn't used (including types or other non-data arguments),
+          it is not included in the argument list.
+          This might be weird for top-level definitions, so it's not done there (but might cause issues).
+        =#
         elseif node isa Expr && node.head == :invoke
             T = node.args[1].specTypes.parameters[1]
             if isa(DomainError, T) ||
+               isa(DimensionMismatch, T) ||
                isa(InexactError, T) ||
                isa(ArgumentError, T) ||
                isa(OverflowError, T) ||
@@ -705,7 +746,6 @@ function compile_block(ctx::CompilerContext, cfg::Core.Compiler.CFG, phis, idx)
                 # skip errors
                 continue
             end
-            origsig = node.args[1].specTypes
             argtypes = [basetype(ctx, x) for x in node.args[2:end]]
             # Get the specialized method for this invocation
             TT = Tuple{argtypes...}
@@ -714,21 +754,26 @@ function compile_block(ctx::CompilerContext, cfg::Core.Compiler.CFG, phis, idx)
             mi = Core.Compiler.specialize_method(match)
             sig = mi.specTypes
             newci = Base.code_typed_by_type(mi.specTypes, interp = StaticInterpreter())[1][1]
-            newfun = node.args[2] isa QuoteNode ? node.args[2].value : x->x
-            newctx = CompilerContext(ctx, newci, newfun)
+            n2 = node.args[2]
+            newfun = n2 isa QuoteNode ? n2.value : 
+                     n2 isa GlobalRef ? Core.eval(n2.mod, n2.name) :
+                     n2
+            # @show typeof(newfun) fieldcount(typeof(newfun))
+            callable = callablestruct(newfun, ci)
+            newctx = CompilerContext(ctx, newci; callablestruct = callable)
+            argstart = callable ? 2 : 3
             newsig = newci.parent.specTypes
-            # Filter out unused arguments (slotflag & 0x08)
-            used = argsused(newctx)
-            s = node.args[1].def.sig
+            n = length(node.args)
             if newci.parent.def.isva     # varargs
-                jargs = node.args[2:length(used)][used[1:end-1]]   # up to the last arg which is a vararg
+                na = length(newci.slottypes) - (callable ? 1 : 2) 
+                jargs = [node.args[i] for i in argstart:argstart+na-1 if argused(newctx, i-1)]   # up to the last arg which is a vararg
                 args = [_compile(ctx, x) for x in jargs]
-                n = length(newci.slottypes[end].parameters)
-                push!(args, _compile(ctx, tuple((x for x in node.args[end-n+1:end])...)))
+                nva = length(newci.slottypes[end].parameters)
+                push!(args, _compile(ctx, tuple((node.args[i] for i in n-nva+1:n)...)))
                 np = newsig.parameters
-                newsig = Tuple{np[1:end-n]..., Tuple{np[end-n+1:end]...}}
+                newsig = Tuple{np[1:end-nva]..., Tuple{np[end-nva+1:end]...}}
             else
-                jargs = node.args[2:end][used]
+                jargs = [node.args[i] for i in argstart:n if argused(newctx, i-1)]
                 args = [_compile(ctx, x) for x in jargs]
             end
             if haskey(ctx.names, newsig)
@@ -738,9 +783,8 @@ function compile_block(ctx::CompilerContext, cfg::Core.Compiler.CFG, phis, idx)
                 ctx.sigs[name] = newsig
                 ctx.names[newsig] = name
                 newci.parent.specTypes = newsig
-                _DEBUG_ && @show newci.parent.def newci.parent
-                _DEBUG_ && _debug_ci(newctx, ctx)
-                compile_method(newctx)
+                debug(:offline) && _debug_ci(newctx, ctx)
+                compile_method(newctx, name)
             end
             # `set` controls whether a local variable is set to the return value.
             # ssarettype == Any normally means that the return type isn't used.

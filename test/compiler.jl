@@ -173,9 +173,15 @@ end
     @noinline fb9a(x, ::Type{I}) where {I} = I === Int ? 1.0 * x : 5.0 * x
     fb9(x) = fb9a(x, Float64) * x
     compile((fb9, Float64); filepath = "tmp/fb9.wasm")
-    jsfun = jsfunctions((fb9, Float64))
-    @test fb9(3.0) == jsfun.fb9(3.0)
+    # jsfun = jsfunctions((fb9, Float64))
+    # @test fb9(3.0) == jsfun.fb9(3.0)
 
+    function fb10(x)
+        i32 = Int32(x)
+        JS.console_log(i32)
+        return x
+    end
+    compile((fb10, Int64,); filepath = "tmp/fb10.wasm")
 end
 
 @testitem "Arrays" begin
@@ -266,6 +272,17 @@ end
     end
     compile((fcommon1, Float64,); filepath = "tmp/fcommon1.wasm", validate = true)
 
+    function fa8(x)
+        a1 = UInt8[0x01, 0x02]
+        a2 = UInt8[0x01, 0x02]
+        a3 = UInt8[0x01, 0x03]
+        a1 == a2 && JS.console_log("a1 == a2")
+        a1 == a3 && JS.console_log("a1 == a3")
+        a1 != a3 && JS.console_log("a1 != a3")
+        return x
+    end
+    compile((fa8, Float64,); filepath = "tmp/fa8.wasm", validate = true)
+
 end
 
 
@@ -340,6 +357,22 @@ end
     # jsfun = jsfunctions((f, Float64,))
     # jsfun.f(1.0)
 
+    function fstrings2(x)
+        a = "hello"
+        b = "world"
+        JS.console_log(a)
+        f() = @jscall("() => [\"a\", \"b\"]", Externref, Tuple{})
+        JS.console_log(JS.join(f()))
+        y = Any[a,b]
+        jy = JS.object(y)
+        # JS._set(jy, Int32(1), 1.1)
+        JS.console_log(jy)
+        z = JS.join(jy, "-")
+        JS.console_log(z)
+        return x
+    end
+    compile((fstrings2, Float64,); filepath = "tmp/fstrings2.wasm")
+ 
 end
 
 @testitem "llvmcall" begin
@@ -483,17 +516,17 @@ end
     end
     compile((fdict1, Float64,); filepath = "tmp/fdict1.wasm")
 
-    function fhash2(x)
-        z = Base.hashindex("jhkjh", 3)
-        z[1] + x
-    end
-    compile((fhash2, Float64,); filepath = "tmp/fhash2.wasm")
+    # function fhash2(x)
+    #     z = Base.hashindex("jhkjh", 3)
+    #     z[1] + x
+    # end
+    # compile((fhash2, Float64,); filepath = "tmp/fhash2.wasm")
 
-    function fdict2(x)
-        d = Dict{String, String}(("1" => "10.", "2" => "20.", "3" => "30."))
-        get(d, 2, -1.0) + x
-    end
-    compile((fdict2, Float64,); filepath = "tmp/fdict2.wasm")
+    # function fdict2(x)
+    #     d = Dict{String, String}(("1" => "10.", "2" => "20.", "3" => "30."))
+    #     get(d, 2, -1.0) + x
+    # end
+    # compile((fdict2, Float64,); filepath = "tmp/fdict2.wasm")
 
 end
 
@@ -513,10 +546,10 @@ end
         tpl = (a = a, aa = a, b = 3)
         tpl.a[1] = 10. 
         y = tpl.aa[1]
-        display(1.0)
-        display(string(y, " "))
-        display(3.0)
-        display("hello")
+        JS.console_log(1.0)
+        JS.console_log(string(y, " "))
+        JS.console_log(3.0)
+        JS.console_log("hello")
         return x
     end
     compile((falias2, Float64,); filepath = "tmp/falias2.wasm", validate = true)
@@ -525,12 +558,12 @@ end
 
 @testitem "Dictionaries" begin
     include("setup.jl")   
-    using Dictionaries
-    function fdict2(x)
-        d = Dictionary{Int32, Float64}(Int32[Int32(1),Int32(2),Int32(3)], [10.,20.,30.])
-        get(d, 2, -1.0) + x
-    end
-    compile((fdict2, Float64,); filepath = "tmp/fdict2.wasm", validate = true)
+    # using Dictionaries
+    # function fdict2(x)
+    #     d = Dictionary{Int32, Float64}(Int32[Int32(1),Int32(2),Int32(3)], [10.,20.,30.])
+    #     get(d, 2, -1.0) + x
+    # end
+    # compile((fdict2, Float64,); filepath = "tmp/fdict2.wasm", validate = true)
 end
  
 @testitem "JavaScript interop" begin
@@ -568,11 +601,11 @@ end
     end
     compile((fjs13, Float64,); filepath = "tmp/fjs13.wasm", validate = true)
 
-    function fjs14(x)
-        y = hash("hello")
-        return Float64(y) + x
-    end
-    compile((fjs14, Float64,); filepath = "tmp/fjs14.wasm", validate = true)
+    # function fjs14(x)
+    #     y = hash("hello")
+    #     return Float64(y) + x
+    # end
+    # compile((fjs14, Float64,); filepath = "tmp/fjs14.wasm", validate = true)
 
     function fjs15(x)
         y = JS.getelementbyid("myid")

@@ -43,17 +43,36 @@ module JS
 using ..WebAssemblyCompiler: Externref, Box, @jscall
 using CompTime
 
-arraynew(n) = @jscall("n => Array(n)", Externref, Tuple{Int32}, n)
+struct JSString <: AbstractString
+    x::Externref
+end
+JSString(s::String) = JSString(@jscall("(x) => (new TextDecoder()).decode(x)", Externref, Tuple{Externref}, object(unsafe_wrap(Vector{UInt8}, s))))
+JSString(x) = JSString(@jscall("(x) => String(x)", Externref, Tuple{Externref}, object(x)))
+Base.String(s::JSString) = String(Vector{UInt8}(@jscall("(x) => (new TextEncoder()).encode(x)", Externref, Tuple{Externref}, s)))
+Base.string(s::JSString) = String(s)
+JSStrings = Union{String,JSString}
+
+struct JSSymbol
+    x::Externref
+end
+JSSymbol(s::Symbol) = JSSymbol(@jscall("(x) => (new TextDecoder()).decode(x)", Externref, Tuple{Externref}, object(ccall(:_jl_symbol_to_array, Ref{Vector{UInt8}}, (Any,), s))))
+
+arraynew(n) = @jscall("n => Array(n)", Externref, Tuple{Int32}, unsafe_trunc(Int32, n))
 ## Use setindex! instead?? If so, need an ArrayRef type?
-_set(jsa::Externref, i::Integer, x::T) where T = @jscall("(v, i, x) => v[i] = x", Nothing, Tuple{Externref, Int32, T}, jsa, Int32(i - 1), x)
-_set(jsa::Externref, str::String, x::T) where T = @jscall("(v, i, x) => v[i] = x", Nothing, Tuple{Externref, String, T}, jsa, str, x)
-_get(jsa::Externref, i::Integer, ::Type{T}) where T = @jscall("(v, i) => v[i]", T, Tuple{Externref, Int32}, jsa, Int32(i - 1))
+_set(jsa::Externref, i::Integer, x::T) where T <: Union{Int64, Int32, UInt64, UInt32, Float64, Float32, Char, Bool, UInt8, Int8} = 
+    @jscall("(v, i, x) => v[i] = x", Nothing, Tuple{Externref, Int32, T}, jsa, Int32(i - Int32(1)), x)
+_set(jsa::Externref, i::Integer, x) = @jscall("(v, i, x) => v[i] = x", Nothing, Tuple{Externref, Int32, Externref}, jsa, Int32(i - Int32(1)), object(x))
+_set(jsa::Externref, str::String, x::T) where T = @jscall("(v, i, x) => v[i] = x", Nothing, Tuple{Externref, Externref, T}, jsa, object(str), object(x))
+_get(jsa::Externref, i::Integer, ::Type{T}) where T = @jscall("(v, i) => v[i]", T, Tuple{Externref, Int32}, jsa, Int32(i - Int32(1)))
 _get(jsa::Externref, str::String, ::Type{T}) where T = @jscall("(v, i) => v[i]", T, Tuple{Externref, String}, jsa, str)
 
 struct TypedArray{T} end
 
 TypedArray{Float64}(n) = @jscall("n => new Float64Array(n)", Externref, Tuple{Int32}, n)
 TypedArray{Float32}(n) = @jscall("n => new Float32Array(n)", Externref, Tuple{Int32}, n)
+TypedArray{UInt8}(n) = @jscall("n => new Uint8Array(n)", Externref, Tuple{Int32}, unsafe_trunc(Int32, n))
+
+
 
 objectnew() = @jscall("() => ({})", Externref, Tuple{})
 
@@ -61,28 +80,45 @@ objectnew() = @jscall("() => ({})", Externref, Tuple{})
 Applies JavaScript's `console.log` to show `x` in the browser log. Returns nothing.
 """
 console_log(x::Externref) = @jscall("(x) => console.log(x)", Nothing, Tuple{Externref}, x)
-console_log(x::T) where {T <: Union{Int32, Float32, Float64, String}} = @jscall("x => console.log(x)", Nothing, Tuple{T}, x)
+console_log(x::T) where {T <: Union{Int32, Float32, Float64}} = @jscall("x => console.log(x)", Nothing, Tuple{T}, x)
 console_log(x::Symbol) = @jscall("x => console.log(x)", Nothing, Tuple{String}, x)
 console_log(x) = console_log(object(x))
+console_log(x::JSString) = console_log(x.x)
 
 """
 Returns a DOM object based on `document.getElementById(x)`.
 """
-getelementbyid(x) = @jscall("(x) => document.getElementById(x)", Externref, Tuple{String}, x)
+getelementbyid(x) = @jscall("(x) => document.getElementById(x)", Externref, Tuple{Externref}, object(x))
 """
 Sets the innerHTML of the DOM object `ref` to `str`.
 """
-sethtml(ref::Externref, str::String) = @jscall("(x, str) => x.innerHTML = str", Nothing, Tuple{Externref, String}, ref, str)
-sethtml(id::String, str::String) = sethtml(getelementbyid(id), str)
+sethtml(ref::Externref, str) = @jscall("(x, str) => x.innerHTML = str", Nothing, Tuple{Externref, Externref}, ref, object(str))
+sethtml(id::JSStrings, str) = sethtml(getelementbyid(id), str)
 
 """
 Evaluate the JavaScript string `x`. Returns an [`Externref`](@ref).
 """
-eval(x::String) = @jscall("(x) => eval(x)", Externref, Tuple{String}, x)
+eval(x) = @jscall("(x) => eval(x)", Externref, Tuple{Externref}, object(x))
 
-array_to_string(x::Externref) = @jscall("(x) => x.join(\"\")", String, Tuple{Externref}, x)
-# array_to_string(x::Array) = join(x, "")
-array_to_string(x::Vector) = array_to_string(object(x))
+join(x, sep = "") = JSString(@jscall("(x,sep) => x.join(sep)", Externref, Tuple{Externref, Externref}, object(x), object(sep)))
+
+function Base.Vector{T}(jsa::Externref) where T
+    n = @jscall("x => x.length", Int32, Tuple{Externref}, jsa)
+    v = Vector{T}(undef, n)
+    for i in 1:n
+        v[i] = _get(jsa, unsafe_trunc(Int32, i), T)
+    end
+    return v
+end
+
+
+function object(v::Vector{T}) where T <: Union{Float64, Float32, UInt8}
+    jsa = TypedArray{T}(unsafe_trunc(Int32, length(v)))
+    for (i, x) in enumerate(v)
+        _set(jsa, unsafe_trunc(Int32, i), x)
+    end
+    return jsa
+end
 
 
 """
@@ -91,23 +127,28 @@ array_to_string(x::Vector) = array_to_string(object(x))
 Return an [`Externref`](@ref) (JavaScript object) representing the Julia object `x`.
 This is useful for transfering arrays, named tuples, and other objects to JavaScript.
 
-The types `Int32`, `Float32`, `Float64`, `Bool`, `String`, `Symbol`, and `Externref` 
+The types `Int32`, `Float32`, `Float64`, `Bool`, and `Externref` 
 are passed stright through.
 """
-object(x::Union{Int32, Float32, Float64, Bool, String, Symbol, Externref}) = x
-# object(x::Char) = string(x)
+object(x::Union{Int32, Float32, Float64, Bool, Externref}) = x
+# object(x::Union{Int32, Float32, Float64, Bool, String, Symbol, Externref}) = x
 
 function object(v::Vector{Any})
-    jsa = arraynew(Int32(length(v)))
+    jsa = arraynew(unsafe_trunc(Int32, length(v)))
     for (i, x) in enumerate(v)
+        i = unsafe_trunc(Int32, i)
         if x isa Box{Float64}
+            _set(jsa, i, x.x)
+        elseif x isa Box{Float32}
             _set(jsa, i, x.x)
         elseif x isa Box{Int32}
             _set(jsa, i, x.x)
         elseif x isa Box{String}
-            _set(jsa, i, x.x)
+            _set(jsa, i, object(x.x))
+        elseif x isa Box{JSString}
+            _set(jsa, i, x.x.x)
         elseif x isa Box{Int64}
-            _set(jsa, i, Int32(x.x))
+            _set(jsa, i, unsafe_trunc(Int32, x.x))
         elseif x isa Box{Bool}
             _set(jsa, i, x.x)
         # elseif x isa Box{Symbol}
@@ -122,13 +163,18 @@ function object(v::Vector{Any})
 end
 
 # function object(v::Vector{T}) where T <: Union{Int64, Int32, UInt64, UInt32, Float64, Float32, Char, Bool, UInt8, Int8}
-function object(v::Vector{T}) where T <: Union{Float64, Float32}
-    jsa = TypedArray{T}(Int32(length(v)))
+function object(v::Vector{T}) where T <: Union{Float64, Float32, UInt8}
+    jsa = TypedArray{T}(unsafe_trunc(Int32, length(v)))
     for (i, x) in enumerate(v)
-        _set(jsa, i, x)
+        _set(jsa, unsafe_trunc(Int32, i), x)
     end
     return jsa
 end
+
+object(s::String) = object(JSString(s))
+object(s::JSString) = s.x
+object(s::Symbol) = object(JSSymbol(s))
+object(s::JSSymbol) = s.x
 
 using Unrolled
 
@@ -170,7 +216,7 @@ IOBuff() = IOBuff(Any[])
 Base.isreadable(io::IOBuff) = false
 Base.iswritable(io::IOBuff) = true
 
-Base.take!(b::IOBuff) = array_to_string(b.x)
+Base.take!(b::IOBuff) = JS.join(b.x)
 
 @inline Base.print(io::IOBuff, a::String)  = push!(io.x, a)
 @inline Base.print(io::IOBuff, a)  = push!(io.x, a)
@@ -178,9 +224,10 @@ Base.take!(b::IOBuff) = array_to_string(b.x)
 @inline Base.print(io::IOBuff, a, b, c...)  = (push!(io.x, a); push!(io.x, b); print(io, c...))
 
 
-@inline _string(x...) = array_to_string(JS.object(Any[x...]))
+@inline _string(x...) = JS.join(object(Any[x...]))
 # @inline _string(x) = x
 @inline _string(x::Symbol) = string("", x)  # cheating here, but how do we make this better?
+
 
 
 """
@@ -342,7 +389,8 @@ end
     # k = string(x[1])
     k = x[1]
     v = x[2]
-    v == "true" ? print(io, " ", k) : v != "false" && print(io, " ", k, "=\"", v, "\"")
+    # v == "true" ? print(io, " ", k) : v != "false" && print(io, " ", k, "=\"", v, "\"")
+    print(io, " ", k, "=\"", v, "\"")
 end
 @inline function _printattrs(io, x, others...)
     _printattrs(io, x)
@@ -374,7 +422,7 @@ end
 function _string(n::Node)   # Base.string won't work because we override it
     io = IOBuff()
     print(io, n)
-    take!(io)
+    String(take!(io))
 end
 @inline Base.print(io::JS.IOBuff, a::Node) = show(io, a)
 

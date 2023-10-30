@@ -1,6 +1,12 @@
 # This is a kludge. Logging.jl caused a crash.
-_DEBUG_::Bool = false
-
+const _DEBUG_::Set{Symbol} = Set{Symbol}()
+# options are:
+# :inline - show stuff inline in the REPL
+# :offline - store stuff in WebAssemblyCompiler.DEBUG
+debug(x) = x in _DEBUG_
+setdebug(x) = push!(_DEBUG_, x)
+unsetdebug(x) = delete!(_DEBUG_, x)
+ 
 const DEBUG = Ref{Any}()
 mutable struct DB
     def::Core.Method
@@ -45,4 +51,13 @@ function _debug_line(ctx, idx, node)
     push!(ctx.meta[:debug].steps, :ssavalue => ssatype(ctx, idx))
     push!(ctx.meta[:debug].steps, :node => node)
     nothing
+end
+function _debug_binaryen_get(ctx, x)
+    original_stdout = stdout
+    (rd, wr) = redirect_stdout()
+    BinaryenExpressionPrint(x)
+    Libc.flush_cstdio()
+    close(wr)
+    redirect_stdout(original_stdout)
+    return read(rd, String)
 end

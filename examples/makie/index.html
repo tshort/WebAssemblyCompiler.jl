@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html>
+
+<body>
+
+<!DOCTYPE html>
+    <div id="plot"></div>
+    <script src="makie/makie.wasm.js"></script> 
+    <script type="module">
+      export async function load_wasm() {
+          const response = await fetch('makie/makie.wasm');
+          const bytes = await response.arrayBuffer();
+          const { instance } = await WebAssembly.instantiate(bytes, jsexports);
+          const { basics } = instance.exports;
+          return instance.exports;
+      }
+      var wasm = await load_wasm();
+      console.log(wasm.k3(1.0));
+      document.wasm = wasm;
+    </script>
+</body>
+</html>

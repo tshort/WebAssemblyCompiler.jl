@@ -24,7 +24,7 @@
 
 * Several of the existing intrinsics only support basic types (Int32, Int64, etc.). Better handling of these would be nice.
 
-* String support is still limited. JavaScript is used to concatenate using `string(...)`. JavaScript uses UTF16 for strings, and Julia's String uses UTF8. WebAssembly supports different string encodings and conversions. Right now, Strings are left as JavaScript strings. No character-level operations are supported. In the future, it may be best to match Julia's UTF8 format, but then strings would need to be converted when exchanged with JavaScript. Maybe different string options could be implemented.
+* String support is very limited. JavaScript is used to concatenate using `string(...)`. JavaScript uses UTF16 for strings, and Julia's String uses UTF8. WebAssembly supports different string encodings and conversions. Right now, Strings are stored as GC'd UTF8 vectors. These are converted to JavaScript strings on the JavaScript side. No character-level operations are supported. In the future, the [stringref proposal](https://github.com/WebAssembly/stringref) will improve string interop. String hashing isn't supported, and that's needed for Dicts with Strings.
 
 * Symbols are currently converted straight to strings. That allows basic operations to work, including comparisons. This simple approach may cause issues for some code.
 

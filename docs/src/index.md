@@ -18,7 +18,7 @@ WebAssemblyCompiler supports many Julia constructs, including:
 * Vector{T} where T is a bitstype and Vector{Any}
 * Strings
 * Symbols
-* Dicts
+* Dicts (not including strings)
 * Mutable and immutable structs
 * Tuples and NamedTuples
 * Global variables
