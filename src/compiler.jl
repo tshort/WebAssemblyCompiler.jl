@@ -46,21 +46,22 @@ function compile(funs::Tuple...; filepath = "foo.wasm", jspath = filepath * ".js
         sig = ci.parent.specTypes
         ctx.sigs[name] = sig
         ctx.names[sig] = name
-    end
-    # Compile funs
-    for i in eachindex(cis)
+    # end
+    # # Compile funs
+    # for i in eachindex(cis)
         fun = funs[i][1]
         # if callablestruct(fun)
         #     fun = (args...) -> fun(fun, args...)
         # end
         if callablestruct(fun, cis[i])
             newctx = CompilerContext(ctx, cis[i], toplevel = true, callablestruct = true)
-            newctx.gfun = _compile(newctx, fun) 
+            # newctx.gfun = _compile(newctx, fun) 
+            newctx.gfun = getglobal(newctx, fun) 
         else
             newctx = CompilerContext(ctx, cis[i], toplevel = true)
         end
         debug(:offline) && _debug_ci(newctx, ctx)
-        compile_method(newctx, exported = true)
+        compile_method(newctx, name, exported = true)
     end
     BinaryenModuleAutoDrop(ctx.mod)
     debug(:offline) && _debug_module(ctx)
@@ -84,18 +85,31 @@ function compile(funs::Tuple...; filepath = "foo.wasm", jspath = filepath * ".js
     nothing
 end
 
-function compile_method(ctx::CompilerContext; sig = ctx.ci.parent.specTypes, exported = false)
-    funname = ctx.names[sig]
+function sigargs(ctx, sig)
     sigparams = collect(sig.parameters)
-    jparams = [gettype(ctx, sigparams[1]), (gettype(ctx, sigparams[i]) for i in 2:length(sigparams) if argused(ctx.ci, i))...]
+    jparams = [gettype(ctx, sigparams[1]), (gettype(ctx, sigparams[i]) for i in 2:length(sigparams) if argused(ctx, i))...]
     if ctx.toplevel || !ctx.callablestruct
         jparams = jparams[2:end]
     end
+    return jparams
+end
+
+function compile_method(ctx::CompilerContext, funname; sig = ctx.ci.parent.specTypes, exported = false)
+    # funname = ctx.names[sig]
+    sigparams = collect(sig.parameters)
+    jparams = [gettype(ctx, sigparams[1]), (gettype(ctx, sigparams[i]) for i in 2:length(sigparams) if argused(ctx, i))...]
+    if ctx.toplevel || !ctx.callablestruct
+        jparams = jparams[2:end]
+    end
+
     bparams = BinaryenTypeCreate(jparams, length(jparams))
     rettype = gettype(ctx, ctx.ci.rettype == Nothing ? Union{} : ctx.ci.rettype)
     body = compile_method_body(ctx)
+    debug(:inline) && println("---------------------------------------")
     debug(:inline) && @show ctx.ci.parent.def.name
     debug(:inline) && @show ctx.ci.parent.def
+    debug(:inline) && @show ctx.ci
+    debug(:inline) && @show ctx.ci.parent.def.name
     debug(:inline) && BinaryenExpressionPrint(body)
     if BinaryenGetFunction(ctx.mod, funname) == C_NULL
         BinaryenAddFunction(ctx.mod, funname, bparams, rettype, ctx.locals, length(ctx.locals), body)
@@ -114,10 +128,6 @@ function compile_method_body(ctx::CompilerContext)
     ctx.localidx += nargs(ctx)
     cfg = Core.Compiler.compute_basic_blocks(code)
     relooper = RelooperCreate(ctx.mod)
-    debug(:inline) && @show "-----------------------"
-    debug(:inline) && @show ctx.ci.parent.def.name
-    debug(:inline) && @show ctx.ci.parent.def
-    debug(:inline) && @show ctx.ci
 
     # Find and collect phis
     phis = Dict{Int, Any}()

@@ -15,19 +15,23 @@ nargs(ctx::CompilerContext) = sum(argsused(ctx))
 # argmap(ci, n) = n
 
 # A Vector{Bool} showing whether arguments are used.
-function argused(ci, i)
-    sT = ci.slottypes[i]
+function argused(ctx, i)
+    if ctx.toplevel
+        return true
+    end
+    sT = ctx.ci.slottypes[i]
     if sT isa Core.Const
         sT = sT.val
     end
-    notused = ci.slotflags[i] == 0x00 ||
+    notused = ctx.ci.slotflags[i] == 0x00 ||
         sT == () ||
-        Base.issingletontype(sT) ||
+        (Base.issingletontype(sT) && sT != Tuple{}) ||
         (sT isa Type && sT <: Type)
     return !notused
 end
 
-argsused(ctx::CompilerContext) = [ctx.callablestruct, (argused(ctx.ci, i) for i in 2:length(ctx.ci.slotflags))...]
+argsused(ctx::CompilerContext) =
+    [ctx.callablestruct && !ctx.toplevel, (argused(ctx, i) for i in 2:length(ctx.ci.slotflags))...]
 
 function ssatype(ctx::CompilerContext, idx)
     ctx.ci.ssavaluetypes[idx]
@@ -309,6 +313,6 @@ validname(s::String) = replace(s, r"\W" => "_")
 
 callablestruct(ctx::CompilerContext) = ctx.callablestruct
 callablestruct(fun, ci) = 
-    (isstructtype(typeof(fun)) && fieldcount(typeof(fun)) > 0 && !(typeof(fun) <: Union{DataType,UnionAll})) || 
-    (typeof(fun) <: Core.SSAValue && callablestruct(ci.ssavaluetypes[fun.id]))
+    (isstructtype(typeof(fun)) && fieldcount(typeof(fun)) > 0 && !(typeof(fun) <: Union{DataType,UnionAll}) && typeof(fun) != Core.SSAValue) || 
+    (typeof(fun) == Core.SSAValue && callablestruct(ci.ssavaluetypes[fun.id], ci))
 

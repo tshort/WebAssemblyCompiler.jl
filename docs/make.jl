@@ -43,12 +43,12 @@ function hideall(input)
     return join(lines, "\n")
 end
 
-Literate.markdown(joinpath(@__DIR__, "../examples/basics/basics.jl"), 
-                  joinpath(@__DIR__, "src/examples"), credit = false, postprocess = hideall)
+# Literate.markdown(joinpath(@__DIR__, "../examples/basics/basics.jl"), 
+#                   joinpath(@__DIR__, "src/examples"), credit = false, postprocess = hideall)
 Literate.markdown(joinpath(@__DIR__, "../examples/lorenz/lorenz.jl"), 
                   joinpath(@__DIR__, "src/examples"), credit = false, postprocess = hideall)
-# Literate.markdown(joinpath(@__DIR__, "../examples/observables/observables.jl"), 
-#                   joinpath(@__DIR__, "src/examples"), credit = false, postprocess = hideall)
+Literate.markdown(joinpath(@__DIR__, "../examples/observables/observables.jl"), 
+                  joinpath(@__DIR__, "src/examples"), credit = false, postprocess = hideall)
 
 makedocs(
     sitename = "WebAssemblyCompiler",
@@ -65,9 +65,9 @@ makedocs(
     pages = Any[
         "Introduction" => "index.md",
         "Examples" => Any[
-           "JS interop"    => "examples/basics.md",
+        #    "JS interop"    => "examples/basics.md",
            "Lorenz model" => "examples/lorenz.md",
-        #    "Observables" => "examples/observables.md",
+           "Observables" => "examples/observables.md",
         ],
         "api.md",
         "notes.md"

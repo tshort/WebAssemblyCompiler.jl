@@ -766,14 +766,14 @@ function compile_block(ctx::CompilerContext, cfg::Core.Compiler.CFG, phis, idx)
             n = length(node.args)
             if newci.parent.def.isva     # varargs
                 na = length(newci.slottypes) - (callable ? 1 : 2) 
-                jargs = [node.args[i] for i in argstart:argstart+na-1 if argused(newci, i-1)]   # up to the last arg which is a vararg
+                jargs = [node.args[i] for i in argstart:argstart+na-1 if argused(newctx, i-1)]   # up to the last arg which is a vararg
                 args = [_compile(ctx, x) for x in jargs]
                 nva = length(newci.slottypes[end].parameters)
                 push!(args, _compile(ctx, tuple((node.args[i] for i in n-nva+1:n)...)))
                 np = newsig.parameters
                 newsig = Tuple{np[1:end-nva]..., Tuple{np[end-nva+1:end]...}}
             else
-                jargs = [node.args[i] for i in argstart:n if argused(newci, i-1)]
+                jargs = [node.args[i] for i in argstart:n if argused(newctx, i-1)]
                 args = [_compile(ctx, x) for x in jargs]
             end
             if haskey(ctx.names, newsig)
@@ -784,7 +784,7 @@ function compile_block(ctx::CompilerContext, cfg::Core.Compiler.CFG, phis, idx)
                 ctx.names[newsig] = name
                 newci.parent.specTypes = newsig
                 debug(:offline) && _debug_ci(newctx, ctx)
-                compile_method(newctx)
+                compile_method(newctx, name)
             end
             # `set` controls whether a local variable is set to the return value.
             # ssarettype == Any normally means that the return type isn't used.

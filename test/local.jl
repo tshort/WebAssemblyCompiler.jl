@@ -5,27 +5,14 @@ const W = WebAssemblyCompiler
 W.setdebug(:offline)
 W.setdebug(:inline)
 
-    const h = JS.h
 
-    function fcw1(x)
-        n = h("div", "jkl", h("strong", "!!!!!"), class = "myclass")
-        JS.sethtml("myid", string(n))
-        return x
+    @noinline fargs6a(a, args...) = args
+    function fargs6(x)
+        tup = fargs6a(x, 1.0)
+        return x * tup[1]
     end
-    compile((fcw1, Float64,); filepath = "tmp/fcw1.wasm", validate = true)
-    # function fcw2(x)
-    #     snip = h("div",
-    #              h.h1("Hello there"),
-    #              h.p("This is some ", h.strong("strong text")),
-    #              h.p("more text", class = "myclass"))
-    #     JS.sethtml("myid", string(snip))
-    #     return x
-    # end
-    # compile((fcw2, Float64,); filepath = "tmp/fcw2.wasm", validate = true)
-
-
-
-
+    compile((fargs6, Float64,); filepath = "tmp/fargs6.wasm", validate = true)
+ 
     # function fstringx(x)
     #     s = "hello"
     #     JS.console_log(s)

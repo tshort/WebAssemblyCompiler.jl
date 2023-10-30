@@ -6,7 +6,9 @@
 using WebAssemblyCompiler     # prep some input #hideall
 using WebAssemblyCompiler.JS: h
 const W = WebAssemblyCompiler
-numform(name; mdpad = "name", step = 1, value = 1) =
+W.setdebug(:offline)
+
+numform(name; mdpad = "name", step = 1, value = 1, args...) =
      h.div."field has-addons"(
        h.p."control"(
          h.a."button is-static"(
@@ -14,7 +16,7 @@ numform(name; mdpad = "name", step = 1, value = 1) =
          )
        ),
        h.p."control"(
-         h.input."input"(;type = "number", mdpad, step, value)
+         h.input."input"(;type = "number", mdpad, step, value, args...)
        ),
      )
  h.div(
@@ -140,6 +142,12 @@ also includes some raw HTML to load Plotly and mdpad and to load the WebAssembly
 <script src="../../js/mdpad.js" ></script>
 <script src="lorenz.wasm.js"></script>
 <script>
+setTimeout(function() {
+  var x = document.getElementById("xyplot")
+  if (x.innerHTML === "") {
+      x.innerHTML = "<strong>Unsupported browser.</strong> Chrome v119 or Firefox v120 or better should work."
+  }
+}, 1000)
 async function mdpad_init() {
     const fetchPromise = fetch('lorenz.wasm');
     const { instance } = await WebAssembly.instantiateStreaming(fetchPromise, jsexports);

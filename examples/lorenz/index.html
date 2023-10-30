@@ -10,11 +10,16 @@
 <div id="timeplot"></div>
     <script>
       mdpad = {p1: 10, p2: 28, p3: 2.666}
+      setTimeout(function() {
+          x = document.getElementById("xyplot")
+          if (x.innerHTML === "") {
+              x.innerHTML = "<bold>Unsupported browser.</bold> Chrome v119 or Firefox v120 or better should work."
+          }
+        }, 500)
     </script>
     <script src="lorenz/lorenz.wasm.js"></script> 
     <script type="module">
       export async function run() {
-          // const fetchPromise = fetch('lorenz/lorenz.wasm');
           const fetchPromise = fetch('lorenz/lorenz.wasm');
           const { instance } = await WebAssembly.instantiateStreaming(fetchPromise, jsexports);
           instance.exports.update();

@@ -1,7 +1,7 @@
 
 function _compile(ctx::CompilerContext, x::Core.Argument; kw...)
     if callablestruct(ctx) && x.n == 1 && ctx.toplevel
-        getglobal(ctx, ctx.gfun)
+        return ctx.gfun
     end
     if ctx.ci.slottypes[x.n] isa Core.Const 
         type = typeof(ctx.ci.slottypes[x.n].val)
@@ -10,7 +10,6 @@ function _compile(ctx::CompilerContext, x::Core.Argument; kw...)
     end
     # If at the top level or if it's not a callable struct, 
     # we don't include the fun as the first argument.
-    # @show type gettype(ctx, type) x.n argmap(ctx, x.n) argsused(ctx) ctx.ci.slottypes ctx.ci.slotflags ctx.callablestruct
     BinaryenLocalGet(ctx.mod, argmap(ctx, x.n) - 1,
                      gettype(ctx, type))
 end
@@ -146,10 +145,8 @@ function _compile(ctx::CompilerContext, x::T; globals = false, kw...) where T
     if ismutabletype(T) && haskey(ctx.objects, x)
     # if haskey(ctx.objects, x)
         ox = ctx.objects[x]
-        # @show typeof(ox)
         if ox === nothing  # indicates a circular reference
             # show(stdout, MIME"text/plain"(), ctx.objects)
-            @show x typeof(ox)
             return _compile(ctx, default(x))
         end
         return ox
