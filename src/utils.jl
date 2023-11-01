@@ -9,10 +9,6 @@ end
 
 # Number of arguments, accounting for skipped args.
 nargs(ctx::CompilerContext) = sum(argsused(ctx))
-# nargs(ctx::CompilerContext) = length(ctx.ci.slotflags) - (ctx.toplevel || !ctx.callablestruct ? 1 : 0)
-# nargs(ctx::CompilerContext) = length(ctx.ci.slotflags) - (ctx.toplevel || !ctx.callablestruct ? 1 : 0)
-# TODO: fix / review
-# argmap(ci, n) = n
 
 # A Vector{Bool} showing whether arguments are used.
 function argused(ctx, i)
@@ -31,7 +27,7 @@ function argused(ctx, i)
 end
 
 argsused(ctx::CompilerContext) =
-    [ctx.callablestruct && !ctx.toplevel, (argused(ctx, i) for i in 2:length(ctx.ci.slotflags))...]
+    [callablestruct(ctx) && !ctx.toplevel, (argused(ctx, i) for i in 2:length(ctx.ci.slotflags))...]
 
 function ssatype(ctx::CompilerContext, idx)
     ctx.ci.ssavaluetypes[idx]
@@ -311,8 +307,9 @@ end
 
 validname(s::String) = replace(s, r"\W" => "_")
 
-callablestruct(ctx::CompilerContext) = ctx.callablestruct
-callablestruct(fun, ci) = 
-    (isstructtype(typeof(fun)) && fieldcount(typeof(fun)) > 0 && !(typeof(fun) <: Union{DataType,UnionAll}) && typeof(fun) != Core.SSAValue) || 
-    (typeof(fun) == Core.SSAValue && callablestruct(ci.ssavaluetypes[fun.id], ci))
+function callablestruct(ctx::CompilerContext)
+    sT = ctx.ci.slottypes[1]
+    callable = !(sT isa Core.Const) && isstructtype(sT) && fieldcount(sT) > 0
+    return callable
+end
 

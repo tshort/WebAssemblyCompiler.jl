@@ -5,13 +5,42 @@ const W = WebAssemblyCompiler
 W.setdebug(:offline)
 W.setdebug(:inline)
 
-
-    @noinline fargs6a(a, args...) = args
-    function fargs6(x)
-        tup = fargs6a(x, 1.0)
-        return x * tup[1]
+    struct X
+        a::Float64
     end
-    compile((fargs6, Float64,); filepath = "tmp/fargs6.wasm", validate = true)
+    @noinline (x::X)(w) = w * x.a 
+    function fargs2(x)
+        y = X(2.0)(x)
+        return x * y
+    end
+    compile((fargs2, Float64,); filepath = "tmp/fargs2.wasm", validate = true)
+
+    # function fa2(i)
+    #     a = Array{Float64,1}(undef, Int32(i))
+    #     unsafe_trunc(Int32, length(a))
+    # end
+    # compile((fa2, Int32,); filepath = "tmp/fa2.wasm")
+    # # compile((fa2, Int32,); filepath = "tmp/fa2o.wasm", optimize = true)   # crashes
+
+
+    # function falias2(x)  # works
+    #     a = Float64[1:1.:10;]
+    #     tpl = (a = a, aa = a, b = 3)
+    #     tpl.a[1] = 10. 
+    #     y = tpl.aa[1]
+    #     JS.console_log(1.0)
+    #     JS.console_log(string(y, " "))
+    #     JS.console_log(3.0)
+    #     JS.console_log("hello")
+    #     return x
+    # end
+    # compile((falias2, Float64,); filepath = "tmp/falias2.wasm", validate = true)
+
+    # function fdict1(x)
+    #     d = Dict{Int, Float64}((1 => 10., 2 => 20., 3 => 30.))
+    #     get(d, 2, -1.0) + x
+    # end
+    # compile((fdict1, Float64,); filepath = "tmp/fdict1.wasm")
  
     # function fstringx(x)
     #     s = "hello"

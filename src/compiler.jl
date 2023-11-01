@@ -50,15 +50,9 @@ function compile(funs::Tuple...; filepath = "foo.wasm", jspath = filepath * ".js
     # # Compile funs
     # for i in eachindex(cis)
         fun = funs[i][1]
-        # if callablestruct(fun)
-        #     fun = (args...) -> fun(fun, args...)
-        # end
-        if callablestruct(fun, cis[i])
-            newctx = CompilerContext(ctx, cis[i], toplevel = true, callablestruct = true)
-            # newctx.gfun = _compile(newctx, fun) 
+        newctx = CompilerContext(ctx, cis[i], toplevel = true)
+        if callablestruct(newctx)
             newctx.gfun = getglobal(newctx, fun) 
-        else
-            newctx = CompilerContext(ctx, cis[i], toplevel = true)
         end
         debug(:offline) && _debug_ci(newctx, ctx)
         compile_method(newctx, name, exported = true)
@@ -68,7 +62,7 @@ function compile(funs::Tuple...; filepath = "foo.wasm", jspath = filepath * ".js
     debug(:inline) && BinaryenModulePrint(ctx.mod)
     validate && BinaryenModuleValidate(ctx.mod)
     # BinaryenSetShrinkLevel(0)
-    # BinaryenSetOptimizeLevel(1)
+    # BinaryenSetOptimizeLevel(2)
     optimize && BinaryenModuleOptimize(ctx.mod)
 
     out = BinaryenModuleAllocateAndWrite(ctx.mod, C_NULL)
@@ -88,7 +82,7 @@ end
 function sigargs(ctx, sig)
     sigparams = collect(sig.parameters)
     jparams = [gettype(ctx, sigparams[1]), (gettype(ctx, sigparams[i]) for i in 2:length(sigparams) if argused(ctx, i))...]
-    if ctx.toplevel || !ctx.callablestruct
+    if ctx.toplevel || !callablestruct(ctx)
         jparams = jparams[2:end]
     end
     return jparams
@@ -98,7 +92,7 @@ function compile_method(ctx::CompilerContext, funname; sig = ctx.ci.parent.specT
     # funname = ctx.names[sig]
     sigparams = collect(sig.parameters)
     jparams = [gettype(ctx, sigparams[1]), (gettype(ctx, sigparams[i]) for i in 2:length(sigparams) if argused(ctx, i))...]
-    if ctx.toplevel || !ctx.callablestruct
+    if ctx.toplevel || !callablestruct(ctx)
         jparams = jparams[2:end]
     end
 

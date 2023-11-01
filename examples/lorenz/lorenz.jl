@@ -120,7 +120,7 @@ nothing #hide
 #=
 `update()` runs automatically whenever inputs are changed.
 
-[`examples/lorenz.jl`](https://github.com/tshort/WebAssemblyCompiler.jl/blob/main/examples/lorenz/lorenz.jl)
+[`examples/lorenz/lorenz.jl`](https://github.com/tshort/WebAssemblyCompiler.jl/blob/main/examples/lorenz/lorenz.jl)
 also includes some raw HTML to load Plotly and mdpad and to load the WebAssembly file. 
 
 ```@raw html

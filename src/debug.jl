@@ -61,3 +61,8 @@ function _debug_binaryen_get(ctx, x)
     redirect_stdout(original_stdout)
     return read(rd, String)
 end
+
+macro record(e)
+    push!(_Binaryen_, e)
+    e
+end
