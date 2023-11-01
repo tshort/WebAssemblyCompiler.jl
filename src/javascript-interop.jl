@@ -128,7 +128,7 @@ Return an [`Externref`](@ref) (JavaScript object) representing the Julia object 
 This is useful for transfering arrays, named tuples, and other objects to JavaScript.
 
 The types `Int32`, `Float32`, `Float64`, `Bool`, and `Externref` 
-are passed stright through.
+are passed straight through.
 """
 object(x::Union{Int32, Float32, Float64, Bool, Externref}) = x
 # object(x::Union{Int32, Float32, Float64, Bool, String, Symbol, Externref}) = x

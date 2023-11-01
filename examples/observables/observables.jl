@@ -196,7 +196,7 @@ With this interactivity provided by Observables, we've eliminated almost all of 
 `JS.h` methods are used to define the inputs, including an `onupdate` trigger that calls the appropriate WebAssembly function. 
 These also define Observables and collect names for the WebAssembly functions.
 See 
-[`examples/observables.jl`](https://github.com/tshort/WebAssemblyCompiler.jl/blob/main/examples/observables/observables.jl)
+[`examples/observables/observables.jl`](https://github.com/tshort/WebAssemblyCompiler.jl/blob/main/examples/observables/observables.jl)
 for the complete source for this example.
 =#
 

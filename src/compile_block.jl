@@ -758,9 +758,8 @@ function compile_block(ctx::CompilerContext, cfg::Core.Compiler.CFG, phis, idx)
             newfun = n2 isa QuoteNode ? n2.value : 
                      n2 isa GlobalRef ? Core.eval(n2.mod, n2.name) :
                      n2
-            # @show typeof(newfun) fieldcount(typeof(newfun))
-            callable = callablestruct(newfun, ci)
-            newctx = CompilerContext(ctx, newci; callablestruct = callable)
+            newctx = CompilerContext(ctx, newci)
+            callable = callablestruct(newctx)
             argstart = callable ? 2 : 3
             newsig = newci.parent.specTypes
             n = length(node.args)
