@@ -674,6 +674,44 @@ end
 
 end
 
+@testitem "JavaScript array interop" begin
+    include("setup.jl")   
+
+    function fjsa1(x)
+        a = [1.0, 2.0, 3.0]
+        ta = JS.TypedArray(a)
+        ta[2] = 5.0
+        JS.console_log(ta)
+        return x
+    end
+    compile((fjsa1, Float64,); filepath = "tmp/fjsa1.wasm", validate = true)
+
+    function fjsa2(x)
+        ta = JS.TypedArray{Float32}(5)
+        ta[2] = 5.0
+        JS.console_log(ta)
+        return x
+    end
+    compile((fjsa2, Float64,); filepath = "tmp/fjsa2.wasm", validate = true)
+
+    function fjsa3(x)
+        a = Int32[1,2,3]
+        ta = JS.TypedArray(a)
+        ta[2] = 5
+        JS.console_log(ta)
+        a2 = Vector(ta)
+        JS.console_log(a2)
+        # JS.console_log(a2 == a)   # stack overflow
+        # JS.console_log(a2 == ta)    # unreachable
+        ta2 = JS.TypedArray(a2)
+        # JS.console_log(ta2 == ta)    # unreachable
+        JS.console_log(ta[1])
+        JS.console_log(ta[2])
+        return x
+    end
+    compile((fjsa3, Float64,); filepath = "tmp/fjsa3.wasm", validate = true)
+
+end
 @testitem "IO" begin
     include("setup.jl")   
 

@@ -57,24 +57,97 @@ struct JSSymbol
 end
 JSSymbol(s::Symbol) = JSSymbol(@jscall("(x) => (new TextDecoder()).decode(x)", Externref, Tuple{Externref}, object(ccall(:_jl_symbol_to_array, Ref{Vector{UInt8}}, (Any,), s))))
 
-arraynew(n) = @jscall("n => Array(n)", Externref, Tuple{Int32}, unsafe_trunc(Int32, n))
-## Use setindex! instead?? If so, need an ArrayRef type?
-_set(jsa::Externref, i::Integer, x::T) where T <: Union{Int64, Int32, UInt64, UInt32, Float64, Float32, Char, Bool, UInt8, Int8} = 
+_set(jsa::Externref, x::T, i::Integer) where T <: Union{Int64, Int32, UInt64, UInt32, Float64, Float32, Char, Bool, UInt8, Int8} = 
     @jscall("(v, i, x) => v[i] = x", Nothing, Tuple{Externref, Int32, T}, jsa, Int32(i - Int32(1)), x)
-_set(jsa::Externref, i::Integer, x) = @jscall("(v, i, x) => v[i] = x", Nothing, Tuple{Externref, Int32, Externref}, jsa, Int32(i - Int32(1)), object(x))
-_set(jsa::Externref, str::String, x::T) where T = @jscall("(v, i, x) => v[i] = x", Nothing, Tuple{Externref, Externref, T}, jsa, object(str), object(x))
+_set(jsa::Externref, x, i::Integer) = @jscall("(v, i, x) => v[i] = x", Nothing, Tuple{Externref, Int32, Externref}, jsa, Int32(i - Int32(1)), object(x))
+_set(jsa::Externref, x::T, str::String) where T = @jscall("(v, i, x) => v[i] = x", Nothing, Tuple{Externref, Externref, T}, jsa, object(str), object(x))
 _get(jsa::Externref, i::Integer, ::Type{T}) where T = @jscall("(v, i) => v[i]", T, Tuple{Externref, Int32}, jsa, Int32(i - Int32(1)))
 _get(jsa::Externref, str::String, ::Type{T}) where T = @jscall("(v, i) => v[i]", T, Tuple{Externref, String}, jsa, str)
 
-struct TypedArray{T} end
+"""
+    TypedArray{T} <: AbstractVector{T}
 
-TypedArray{Float64}(n) = @jscall("n => new Float64Array(n)", Externref, Tuple{Int32}, n)
-TypedArray{Float32}(n) = @jscall("n => new Float32Array(n)", Externref, Tuple{Int32}, n)
-TypedArray{UInt8}(n) = @jscall("n => new Uint8Array(n)", Externref, Tuple{Int32}, unsafe_trunc(Int32, n))
+A wrapper array type for JavaScript TypedArray's.
+Supports `getindex`, `setindex!`, and `length`.
 
+Create a new TypedArray with:
+    TypedArray{T}(n)
 
+where `T` is the type, and `n` is the length.
 
-objectnew() = @jscall("() => ({})", Externref, Tuple{})
+Conversion between Julia arrays words as:
+    jlarray = [1.0, 2.0]
+    jsarray = JS.TypedArray(jlarray)
+    jlarray2 = Vector(jsarray)
+"""
+struct TypedArray{T} <: AbstractVector{T}
+    x::Externref
+end
+Base.getindex(v::TypedArray{T}, i) where T = _get(v.x, i, T)
+Base.setindex!(v::TypedArray{T}, val, i) where T = _set(v.x, convert(T, val), i)
+Base.length(v::TypedArray{T}) where T = @jscall("x => x.length", Int32, Tuple{Externref}, v.x)
+
+for sz in (32, 64)
+    sym = Symbol(:Float, sz)
+    str = "n => new Float$(sz)Array(n)"
+    @eval TypedArray{$sym}(n::Integer) = TypedArray{$sym}(@jscall($str, Externref, Tuple{Int32}, n))
+end
+for sz in (8, 16, 32)
+    sym = Symbol(:UInt, sz)
+    str = "n => new Uint$(sz)Array(n)"
+    @eval TypedArray{$sym}(n::Integer) = TypedArray{$sym}(@jscall($str, Externref, Tuple{Int32}, n))
+    sym = Symbol(:Int, sz)
+    str = "n => new Int$(sz)Array(n)"
+    @eval TypedArray{$sym}(n::Integer) = TypedArray{$sym}(@jscall($str, Externref, Tuple{Int32}, n))
+end
+TypedArray{Int64}(n) = TypedArray{Int64}(@jscall("n => new BigInt64Array(n)", Externref, Tuple{Int32}, n))
+TypedArray{UInt64}(n) = TypedArray{UInt64}(@jscall("n => new BigUint64Array(n)", Externref, Tuple{Int32}, n))
+object(v::TypedArray) = v.x
+
+function TypedArray(v::Vector{T}) where T
+    ta = TypedArray{T}(length(v))
+    for (i, x) in enumerate(v)
+        ta[i] = x
+    end
+    return ta
+end
+function Base.Vector(ta::TypedArray{T}) where T
+    n = length(ta)
+    v = Vector{T}(undef, n)
+    for i in 1:n
+        v[i] = ta[i]
+    end
+    return v
+end
+Base.Vector{T}(r::Externref) where T = Vector(TypedArray{T}(r))
+
+function object(v::Vector{T}) where T <: Union{Float64, Float32, Int64, Int32, UInt64, UInt32, UInt16, Int16, UInt8, Int8} 
+    return object(TypedArray(v))
+end
+
+"""
+    JSArray <: AbstractVector{Any}
+
+A wrapper array type for JavaScript Array's.
+Supports `getindex`, `setindex!`, and `length`.
+
+Create a new JSArray with:
+    JSArray(n)
+
+where `n` is the length.
+
+Conversion between Julia arrays words as:
+    jlarray = ["a", 2.0]
+    jsarray = JS.JSArray(jlarray)
+    jlarray2 = Vector(jsarray)
+"""
+struct JSArray <: AbstractVector{Any}
+    x::Externref
+end
+object(v::JSArray) = v.x
+JSArray(n::Integer) = JSArray(@jscall("n => Array(n)", Externref, Tuple{Int32}, unsafe_trunc(Int32, n)))
+
+object() = @jscall("() => ({})", Externref, Tuple{})
 
 """
 Applies JavaScript's `console.log` to show `x` in the browser log. Returns nothing.
@@ -102,23 +175,6 @@ eval(x) = @jscall("(x) => eval(x)", Externref, Tuple{Externref}, object(x))
 
 join(x, sep = "") = JSString(@jscall("(x,sep) => x.join(sep)", Externref, Tuple{Externref, Externref}, object(x), object(sep)))
 
-function Base.Vector{T}(jsa::Externref) where T
-    n = @jscall("x => x.length", Int32, Tuple{Externref}, jsa)
-    v = Vector{T}(undef, n)
-    for i in 1:n
-        v[i] = _get(jsa, unsafe_trunc(Int32, i), T)
-    end
-    return v
-end
-
-
-function object(v::Vector{T}) where T <: Union{Float64, Float32, UInt8}
-    jsa = TypedArray{T}(unsafe_trunc(Int32, length(v)))
-    for (i, x) in enumerate(v)
-        _set(jsa, unsafe_trunc(Int32, i), x)
-    end
-    return jsa
-end
 
 
 """
@@ -138,25 +194,25 @@ function object(v::Vector{Any})
     for (i, x) in enumerate(v)
         i = unsafe_trunc(Int32, i)
         if x isa Box{Float64}
-            _set(jsa, i, x.x)
+            _set(jsa, x.x, i)
         elseif x isa Box{Float32}
-            _set(jsa, i, x.x)
+            _set(jsa, x.x, i)
         elseif x isa Box{Int32}
-            _set(jsa, i, x.x)
+            _set(jsa, x.x, i)
         elseif x isa Box{String}
-            _set(jsa, i, object(x.x))
+            _set(jsa, object(x.x), i)
         elseif x isa Box{JSString}
-            _set(jsa, i, x.x.x)
+            _set(jsa, x.x.x, i)
         elseif x isa Box{Int64}
-            _set(jsa, i, unsafe_trunc(Int32, x.x))
+            _set(jsa, unsafe_trunc(Int32, x.x), i)
         elseif x isa Box{Bool}
-            _set(jsa, i, x.x)
+            _set(jsa, x.x, i)
         # elseif x isa Box{Symbol}
-        #     _set(jsa, i, x.x)
+        #     _set(jsa, x.x, i)
         # elseif x isa Box{Char}
-            # _set(jsa, i, x.x)
+            # _set(jsa, x.x, i)
         elseif x isa Vector{Any}
-            _set(jsa, i, object(x))
+            _set(jsa, object(x), i)
         end
     end
     return jsa
@@ -181,11 +237,11 @@ using Unrolled
 @inline @generated function object(nt::NamedTuple)
     ks = fieldnames(nt)
     res = Expr(:block)
-    push!(res.args, :(jso = objectnew()))
+    push!(res.args, :(jso = object()))
     for k in ks
         sk = String(k)
         qk = QuoteNode(k)
-        push!(res.args, :(_set(jso, $sk, object(getfield(nt, $qk)))))
+        push!(res.args, :(_set(jso, object(getfield(nt, $qk)), $sk)))
     end
     push!(res.args, :(return jso))
     return res

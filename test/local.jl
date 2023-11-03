@@ -5,15 +5,12 @@ const W = WebAssemblyCompiler
 W.setdebug(:offline)
 W.setdebug(:inline)
 
-    struct X
-        a::Float64
+    function fa4(x)
+        a = ones(5)
+        b = copy(a)
+        b[2] * x
     end
-    @noinline (x::X)(w) = w * x.a 
-    function fargs2(x)
-        y = X(2.0)(x)
-        return x * y
-    end
-    compile((fargs2, Float64,); filepath = "tmp/fargs2.wasm", validate = true)
+    compile((fa4, Float64,); filepath = "tmp/fa4.wasm", validate = true)
 
     # function fa2(i)
     #     a = Array{Float64,1}(undef, Int32(i))
