@@ -71,8 +71,8 @@
  (import "js" "(x,sep) => x.join(sep)" (func $_x_sep_____x_join_sep_ExternrefExternrefExternref (type $54) (param externref externref) (result externref)))
  (import "js" "(x) => document.getElementById(x)" (func $_x_____document_getElementById_x_ExternrefExternref (type $41) (param externref) (result externref)))
  (import "js" "(x, str) => x.innerHTML = str" (func $_x__str_____x_innerHTML___strNothingExternrefExternref (type $55) (param externref externref)))
- (global $g18446744072509096237 (ref null $17) (struct.new_default $17))
- (global $g10533582592670171656 (ref null $14) (struct.new $14
+ (global $g18446744072864524690 (ref null $17) (struct.new_default $17))
+ (global $g17599235311538075850 (ref null $14) (struct.new $14
   (struct.new $6
    (array.new_fixed $5 0)
    (i32.const 0)
@@ -85,7 +85,7 @@
   (i64.const 5)
   (i32.const 100)
  ))
- (global $g14909026546195052279 (ref null $10) (struct.new $10
+ (global $g13469542672458079736 (ref null $10) (struct.new $10
   (struct.new $6
    (array.new_fixed $5 0)
    (i32.const 0)
@@ -98,7 +98,7 @@
   (i64.const 6)
   (f64.const 0.1)
  ))
- (global $g5472303542116454283 (ref null $10) (struct.new $10
+ (global $g3223267973937791452 (ref null $10) (struct.new $10
   (struct.new $6
    (array.new_fixed $5 0)
    (i32.const 0)
@@ -111,7 +111,7 @@
   (i64.const 7)
   (f64.const 0)
  ))
- (global $g8934145468188635950 (ref null $10) (struct.new $10
+ (global $g13642017896889698295 (ref null $10) (struct.new $10
   (struct.new $6
    (array.new_fixed $5 0)
    (i32.const 0)
@@ -124,70 +124,70 @@
   (i64.const 8)
   (f64.const 10)
  ))
- (global $g2570132990911199887 (ref null $15) (struct.new $15
-  (global.get $g10533582592670171656)
-  (global.get $g14909026546195052279)
-  (global.get $g5472303542116454283)
-  (global.get $g8934145468188635950)
+ (global $g13468039814126606963 (ref null $15) (struct.new $15
+  (global.get $g17599235311538075850)
+  (global.get $g13469542672458079736)
+  (global.get $g3223267973937791452)
+  (global.get $g13642017896889698295)
  ))
- (global $g13090932643847644931 (ref null $37) (struct.new $37
-  (global.get $g18446744072509096237)
-  (global.get $g2570132990911199887)
+ (global $g10061071710411040169 (ref null $37) (struct.new $37
+  (global.get $g18446744072864524690)
+  (global.get $g13468039814126606963)
  ))
- (global $g8370452966152583504 (ref null $4) (struct.new $4
+ (global $g12815395980770130720 (ref null $4) (struct.new $4
   (i64.const 0)
-  (global.get $g13090932643847644931)
+  (global.get $g10061071710411040169)
  ))
- (global $g18390936659437497064 (ref null $6) (struct.new $6
+ (global $g6840081577674812158 (ref null $6) (struct.new $6
   (array.new_fixed $5 1
-   (global.get $g8370452966152583504)
+   (global.get $g12815395980770130720)
   )
   (i32.const 1)
  ))
- (global $g18109424686033467056 (ref null $9) (struct.new $9
+ (global $g11338291770756748314 (ref null $9) (struct.new $9
   (array.new_fixed $8 0)
   (i32.const 0)
  ))
- (global $g4801697007302186385 (ref null $6) (struct.new $6
+ (global $g904830620340055086 (ref null $6) (struct.new $6
   (array.new_fixed $5 1
-   (global.get $g8370452966152583504)
+   (global.get $g12815395980770130720)
   )
   (i32.const 1)
  ))
- (global $g13979874696998976941 (ref null $9) (struct.new $9
+ (global $g13026992394578438748 (ref null $9) (struct.new $9
   (array.new_fixed $8 0)
   (i32.const 0)
  ))
- (global $g293385266132319345 (ref null $6) (struct.new $6
+ (global $g657571247101572068 (ref null $6) (struct.new $6
   (array.new_fixed $5 1
-   (global.get $g8370452966152583504)
+   (global.get $g12815395980770130720)
   )
   (i32.const 1)
  ))
- (global $g13956595418044549226 (ref null $9) (struct.new $9
+ (global $g15401382717869451966 (ref null $9) (struct.new $9
   (array.new_fixed $8 0)
   (i32.const 0)
  ))
- (global $g4729375646632962071 (ref null $6) (struct.new $6
+ (global $g6285047454817139346 (ref null $6) (struct.new $6
   (array.new_fixed $5 1
-   (global.get $g8370452966152583504)
+   (global.get $g12815395980770130720)
   )
   (i32.const 1)
  ))
- (global $g8809366587908603300 (ref null $9) (struct.new $9
+ (global $g8306982745231558940 (ref null $9) (struct.new $9
   (array.new_fixed $8 0)
   (i32.const 0)
  ))
- (global $g6294893618350984143 (ref null $18) (struct.new $18
-  (global.get $g18446744072509096237)
-  (global.get $g2570132990911199887)
+ (global $g9756129391141165384 (ref null $18) (struct.new $18
+  (global.get $g18446744072864524690)
+  (global.get $g13468039814126606963)
  ))
- (global $g7552866758843659627 (ref null $19) (array.new_fixed $19 1
-  (global.get $g6294893618350984143)
+ (global $g11863923786597644316 (ref null $19) (array.new_fixed $19 1
+  (global.get $g9756129391141165384)
  ))
- (global $g7999071076779681813 (ref null $30) (struct.new $30
-  (global.get $g10533582592670171656)
-  (global.get $g7552866758843659627)
+ (global $g5284476463869129866 (ref null $30) (struct.new $30
+  (global.get $g17599235311538075850)
+  (global.get $g11863923786597644316)
  ))
  (global $g11364165201186046862 (ref null $3) (struct.new $3
   (array.new_fixed $2 5
@@ -337,7 +337,7 @@
   )
   (i32.const 7)
  ))
- (global $g3008325687430022101 (ref null $29) (struct.new $29
+ (global $g6716504564415405511 (ref null $29) (struct.new $29
   (array.new_fixed $28 15
    (global.get $g11364165201186046862)
    (global.get $g7856110131526212985)
@@ -357,38 +357,38 @@
   )
   (i32.const 15)
  ))
- (global $g15277246785672613800 (ref null $18) (struct.new $18
-  (global.get $g18446744072509096237)
-  (global.get $g2570132990911199887)
+ (global $g944050846593814355 (ref null $18) (struct.new $18
+  (global.get $g18446744072864524690)
+  (global.get $g13468039814126606963)
  ))
- (global $g11226807786850678455 (ref null $19) (array.new_fixed $19 1
-  (global.get $g15277246785672613800)
+ (global $g14679483670770247964 (ref null $19) (array.new_fixed $19 1
+  (global.get $g944050846593814355)
  ))
- (global $g11783561037613089130 (ref null $23) (struct.new $23
-  (global.get $g14909026546195052279)
-  (global.get $g11226807786850678455)
+ (global $g2421260343062419193 (ref null $23) (struct.new $23
+  (global.get $g13469542672458079736)
+  (global.get $g14679483670770247964)
  ))
- (global $g10229618247161151442 (ref null $18) (struct.new $18
-  (global.get $g18446744072509096237)
-  (global.get $g2570132990911199887)
+ (global $g11949973112576760119 (ref null $18) (struct.new $18
+  (global.get $g18446744072864524690)
+  (global.get $g13468039814126606963)
  ))
- (global $g3721571208266917914 (ref null $19) (array.new_fixed $19 1
-  (global.get $g10229618247161151442)
+ (global $g6210585916141065086 (ref null $19) (array.new_fixed $19 1
+  (global.get $g11949973112576760119)
  ))
- (global $g10788876397769609489 (ref null $23) (struct.new $23
-  (global.get $g5472303542116454283)
-  (global.get $g3721571208266917914)
+ (global $g7816210575597790628 (ref null $23) (struct.new $23
+  (global.get $g3223267973937791452)
+  (global.get $g6210585916141065086)
  ))
- (global $g6259389266887090629 (ref null $18) (struct.new $18
-  (global.get $g18446744072509096237)
-  (global.get $g2570132990911199887)
+ (global $g9458957745491773977 (ref null $18) (struct.new $18
+  (global.get $g18446744072864524690)
+  (global.get $g13468039814126606963)
  ))
- (global $g7406295392515590516 (ref null $19) (array.new_fixed $19 1
-  (global.get $g6259389266887090629)
+ (global $g15065985326290935632 (ref null $19) (array.new_fixed $19 1
+  (global.get $g9458957745491773977)
  ))
- (global $g1018020227280789904 (ref null $23) (struct.new $23
-  (global.get $g8934145468188635950)
-  (global.get $g7406295392515590516)
+ (global $g18347801754573464288 (ref null $23) (struct.new $23
+  (global.get $g13642017896889698295)
+  (global.get $g15065985326290935632)
  ))
  (export "nsamples" (func $nsamples))
  (export "sample_step" (func $sample_step))
@@ -1905,7 +1905,7 @@
   (local $10 (ref null $1))
   (block
    (local.set $4
-    (global.get $g3008325687430022101)
+    (global.get $g6716504564415405511)
    )
    (local.set $5
     (i64.extend_i32_u
@@ -1927,7 +1927,7 @@
     )
    )
    (local.set $8
-    (global.get $g3008325687430022101)
+    (global.get $g6716504564415405511)
    )
    (local.set $9
     (array.get $28
@@ -4482,7 +4482,7 @@
   (block
    (local.set $1
     (struct.get $30 0
-     (global.get $g7999071076779681813)
+     (global.get $g5284476463869129866)
     )
    )
    (struct.set $14 4
@@ -4491,7 +4491,7 @@
    )
    (local.set $2
     (struct.get $30 1
-     (global.get $g7999071076779681813)
+     (global.get $g5284476463869129866)
     )
    )
    (local.set $3
@@ -4577,7 +4577,7 @@
   (block
    (local.set $1
     (struct.get $23 0
-     (global.get $g11783561037613089130)
+     (global.get $g2421260343062419193)
     )
    )
    (struct.set $10 4
@@ -4586,7 +4586,7 @@
    )
    (local.set $2
     (struct.get $23 1
-     (global.get $g11783561037613089130)
+     (global.get $g2421260343062419193)
     )
    )
    (local.set $3
@@ -4672,7 +4672,7 @@
   (block
    (local.set $1
     (struct.get $23 0
-     (global.get $g10788876397769609489)
+     (global.get $g7816210575597790628)
     )
    )
    (struct.set $10 4
@@ -4681,7 +4681,7 @@
    )
    (local.set $2
     (struct.get $23 1
-     (global.get $g10788876397769609489)
+     (global.get $g7816210575597790628)
     )
    )
    (local.set $3
@@ -4767,7 +4767,7 @@
   (block
    (local.set $1
     (struct.get $23 0
-     (global.get $g1018020227280789904)
+     (global.get $g18347801754573464288)
     )
    )
    (struct.set $10 4
@@ -4776,7 +4776,7 @@
    )
    (local.set $2
     (struct.get $23 1
-     (global.get $g1018020227280789904)
+     (global.get $g18347801754573464288)
     )
    )
    (local.set $3
