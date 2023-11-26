@@ -6,181 +6,188 @@
  (type $4 (struct (field i64) (field eqref)))
  (type $5 (array (mut (ref null $4))))
  (type $6 (struct (field (mut (ref null $5))) (field (mut i32))))
- (type $7 (struct (field (mut (ref null $6))) (field (mut (ref null $1))) (field (mut i32)) (field (mut f64))))
- (type $8 (struct (field i64) (field i64)))
- (type $9 (array (mut f64)))
- (type $10 (struct (field (mut (ref null $9))) (field (mut i32))))
- (type $11 (struct (field (mut (ref null $6))) (field (mut (ref null $1))) (field (mut i32)) (field (mut i32))))
- (type $12 (struct (field (ref null $11)) (field (ref null $7)) (field (ref null $7)) (field (ref null $7))))
- (type $13 (struct (field (ref null $10)) (field f64)))
- (type $14 (struct ))
- (type $15 (struct (field (mut (ref null $14))) (field (mut (ref null $12)))))
- (type $16 (array (ref null $15)))
- (type $17 (struct (field (ref null $13)) (field (ref null $8))))
- (type $18 (struct (field (ref null $3))))
- (type $19 (struct (field externref)))
- (type $20 (struct (field (ref null $7)) (field (ref null $16))))
- (type $21 (struct (field f64) (field f64)))
- (type $22 (struct (field f64)))
- (type $23 (struct (field (ref null $21)) (field (ref null $8))))
- (type $24 (struct (field i32)))
- (type $25 (array (mut (ref null $3))))
- (type $26 (struct (field (mut (ref null $25))) (field (mut i32))))
- (type $27 (struct (field (ref null $11)) (field (ref null $16))))
- (type $28 (struct (field (mut i64))))
- (type $29 (func (param externref i32 i32)))
- (type $30 (struct (field f32)))
- (type $31 (struct (field (ref null $19))))
- (type $32 (struct (field i64)))
- (type $33 (func (param f64) (result i32)))
- (type $34 (struct (field eqref) (field eqref)))
- (type $35 (func (param (ref null $17)) (result (ref null $10))))
- (type $36 (func (param i32) (result externref)))
- (type $37 (func (param (ref null $3)) (result externref)))
- (type $38 (func (param externref) (result externref)))
- (type $39 (func (param i64) (result i32)))
- (type $40 (func (param (ref null $23)) (result (ref null $10))))
- (type $41 (func (param f64) (result f64)))
- (type $42 (func (param (ref null $10) (ref null $17) i64 i64) (result (ref null $10))))
- (type $43 (func (param f64 f64 f64 i64) (result (ref null $1))))
- (type $44 (func (param (ref null $3)) (result (ref null $19))))
- (type $45 (func (param externref)))
- (type $46 (func (param (ref null $1) (ref null $1)) (result (ref null $1))))
- (type $47 (func (param externref i32 f64)))
- (type $48 (func (param externref i32 f32)))
- (type $49 (func (param externref i32 externref)))
- (type $50 (func (param (ref null $1)) (result externref)))
- (type $51 (func (param externref externref) (result externref)))
- (type $52 (func (param externref externref)))
- (type $53 (func (param i32 f64 f64 f64)))
- (type $54 (func (param i32) (result i32)))
- (import "js" "(x) => Math.sin(x)" (func $_x_____Math_sin_x_Float64Float64 (type $41) (param f64) (result f64)))
- (import "js" "n => new Uint8Array(n)" (func $n____new_Uint8Array_n_ExternrefInt32 (type $36) (param i32) (result externref)))
- (import "js" "(v, i, x) => v[i] = x" (func $_v__i__x_____v_i____xNothingExternrefInt32UInt8 (type $29) (param externref i32 i32)))
- (import "js" "(x) => (new TextDecoder()).decode(x)" (func $_x______new_TextDecoder____decode_x_ExternrefExternref (type $38) (param externref) (result externref)))
- (import "js" "(x) => console.log(x)" (func $_x_____console_log_x_NothingExternref (type $45) (param externref)))
- (import "js" "n => Array(n)" (func $n____Array_n_ExternrefInt32 (type $36) (param i32) (result externref)))
- (import "js" "(v, i, x) => v[i] = x" (func $_v__i__x_____v_i____xNothingExternrefInt32Float64 (type $47) (param externref i32 f64)))
- (import "js" "(v, i, x) => v[i] = x" (func $_v__i__x_____v_i____xNothingExternrefInt32Float32 (type $48) (param externref i32 f32)))
- (import "js" "(v, i, x) => v[i] = x" (func $_v__i__x_____v_i____xNothingExternrefInt32Int32 (type $29) (param externref i32 i32)))
- (import "js" "(v, i, x) => v[i] = x" (func $_v__i__x_____v_i____xNothingExternrefInt32Externref (type $49) (param externref i32 externref)))
- (import "js" "(v, i, x) => v[i] = x" (func $_v__i__x_____v_i____xNothingExternrefInt32Bool (type $29) (param externref i32 i32)))
- (import "js" "(x,sep) => x.join(sep)" (func $_x_sep_____x_join_sep_ExternrefExternrefExternref (type $51) (param externref externref) (result externref)))
- (import "js" "(x) => document.getElementById(x)" (func $_x_____document_getElementById_x_ExternrefExternref (type $38) (param externref) (result externref)))
- (import "js" "(x, str) => x.innerHTML = str" (func $_x__str_____x_innerHTML___strNothingExternrefExternref (type $52) (param externref externref)))
- (global $g18446744073526712823 (ref null $14) (struct.new_default $14))
- (global $g5399896319095332007 (ref null $11) (struct.new $11
+ (type $7 (struct (field (mut eqref)) (field (mut eqref)) (field (mut i32))))
+ (type $8 (array (mut (ref null $7))))
+ (type $9 (struct (field (mut (ref null $8))) (field (mut i32))))
+ (type $10 (struct (field (mut (ref null $6))) (field (mut (ref null $9))) (field (mut i32)) (field (mut i64)) (field (mut f64))))
+ (type $11 (struct (field i64) (field i64)))
+ (type $12 (array (mut f64)))
+ (type $13 (struct (field (mut (ref null $12))) (field (mut i32))))
+ (type $14 (struct (field (mut (ref null $6))) (field (mut (ref null $9))) (field (mut i32)) (field (mut i64)) (field (mut i32))))
+ (type $15 (struct (field (ref null $14)) (field (ref null $10)) (field (ref null $10)) (field (ref null $10))))
+ (type $16 (struct (field (ref null $13)) (field f64)))
+ (type $17 (struct ))
+ (type $18 (struct (field (mut (ref null $17))) (field (mut (ref null $15)))))
+ (type $19 (array (ref null $18)))
+ (type $20 (struct (field (ref null $16)) (field (ref null $11))))
+ (type $21 (struct (field (ref null $3))))
+ (type $22 (struct (field externref)))
+ (type $23 (struct (field (ref null $10)) (field (ref null $19))))
+ (type $24 (struct (field f64) (field f64)))
+ (type $25 (struct (field f64)))
+ (type $26 (struct (field (ref null $24)) (field (ref null $11))))
+ (type $27 (struct (field i32)))
+ (type $28 (array (mut (ref null $3))))
+ (type $29 (struct (field (mut (ref null $28))) (field (mut i32))))
+ (type $30 (struct (field (ref null $14)) (field (ref null $19))))
+ (type $31 (struct (field (mut i64))))
+ (type $32 (func (param externref i32 i32)))
+ (type $33 (struct (field f32)))
+ (type $34 (struct (field (ref null $22))))
+ (type $35 (struct (field i64)))
+ (type $36 (func (param f64) (result i32)))
+ (type $37 (struct (field eqref) (field eqref)))
+ (type $38 (func (param (ref null $20)) (result (ref null $13))))
+ (type $39 (func (param i32) (result externref)))
+ (type $40 (func (param (ref null $3)) (result externref)))
+ (type $41 (func (param externref) (result externref)))
+ (type $42 (func (param i64) (result i32)))
+ (type $43 (func (param (ref null $26)) (result (ref null $13))))
+ (type $44 (func (param f64) (result f64)))
+ (type $45 (func (param (ref null $13) (ref null $20) i64 i64) (result (ref null $13))))
+ (type $46 (func (param f64 f64 f64 i64) (result (ref null $1))))
+ (type $47 (func (param (ref null $3)) (result (ref null $22))))
+ (type $48 (func (param externref)))
+ (type $49 (func (param (ref null $1) (ref null $1)) (result (ref null $1))))
+ (type $50 (func (param externref i32 f64)))
+ (type $51 (func (param externref i32 f32)))
+ (type $52 (func (param externref i32 externref)))
+ (type $53 (func (param (ref null $1)) (result externref)))
+ (type $54 (func (param externref externref) (result externref)))
+ (type $55 (func (param externref externref)))
+ (type $56 (func (param i32 f64 f64 f64)))
+ (type $57 (func (param i32) (result i32)))
+ (import "js" "(x) => Math.sin(x)" (func $_x_____Math_sin_x_Float64Float64 (type $44) (param f64) (result f64)))
+ (import "js" "n => new Uint8Array(n)" (func $n____new_Uint8Array_n_ExternrefInt32 (type $39) (param i32) (result externref)))
+ (import "js" "(v, i, x) => v[i] = x" (func $_v__i__x_____v_i____xNothingExternrefInt32UInt8 (type $32) (param externref i32 i32)))
+ (import "js" "(x) => (new TextDecoder()).decode(x)" (func $_x______new_TextDecoder____decode_x_ExternrefExternref (type $41) (param externref) (result externref)))
+ (import "js" "(x) => console.log(x)" (func $_x_____console_log_x_NothingExternref (type $48) (param externref)))
+ (import "js" "n => Array(n)" (func $n____Array_n_ExternrefInt32 (type $39) (param i32) (result externref)))
+ (import "js" "(v, i, x) => v[i] = x" (func $_v__i__x_____v_i____xNothingExternrefInt32Float64 (type $50) (param externref i32 f64)))
+ (import "js" "(v, i, x) => v[i] = x" (func $_v__i__x_____v_i____xNothingExternrefInt32Float32 (type $51) (param externref i32 f32)))
+ (import "js" "(v, i, x) => v[i] = x" (func $_v__i__x_____v_i____xNothingExternrefInt32Int32 (type $32) (param externref i32 i32)))
+ (import "js" "(v, i, x) => v[i] = x" (func $_v__i__x_____v_i____xNothingExternrefInt32Externref (type $52) (param externref i32 externref)))
+ (import "js" "(v, i, x) => v[i] = x" (func $_v__i__x_____v_i____xNothingExternrefInt32Bool (type $32) (param externref i32 i32)))
+ (import "js" "(x,sep) => x.join(sep)" (func $_x_sep_____x_join_sep_ExternrefExternrefExternref (type $54) (param externref externref) (result externref)))
+ (import "js" "(x) => document.getElementById(x)" (func $_x_____document_getElementById_x_ExternrefExternref (type $41) (param externref) (result externref)))
+ (import "js" "(x, str) => x.innerHTML = str" (func $_x__str_____x_innerHTML___strNothingExternrefExternref (type $55) (param externref externref)))
+ (global $g18446744072509096237 (ref null $17) (struct.new_default $17))
+ (global $g10533582592670171656 (ref null $14) (struct.new $14
   (struct.new $6
    (array.new_fixed $5 0)
    (i32.const 0)
   )
-  (struct.new $1
-   (array.new_fixed $0 0)
+  (struct.new $9
+   (array.new_fixed $8 0)
    (i32.const 0)
   )
   (i32.const 0)
+  (i64.const 5)
   (i32.const 100)
  ))
- (global $g15585607967112370967 (ref null $7) (struct.new $7
+ (global $g14909026546195052279 (ref null $10) (struct.new $10
   (struct.new $6
    (array.new_fixed $5 0)
    (i32.const 0)
   )
-  (struct.new $1
-   (array.new_fixed $0 0)
+  (struct.new $9
+   (array.new_fixed $8 0)
    (i32.const 0)
   )
   (i32.const 0)
+  (i64.const 6)
   (f64.const 0.1)
  ))
- (global $g5605142335033206179 (ref null $7) (struct.new $7
+ (global $g5472303542116454283 (ref null $10) (struct.new $10
   (struct.new $6
    (array.new_fixed $5 0)
    (i32.const 0)
   )
-  (struct.new $1
-   (array.new_fixed $0 0)
+  (struct.new $9
+   (array.new_fixed $8 0)
    (i32.const 0)
   )
   (i32.const 0)
+  (i64.const 7)
   (f64.const 0)
  ))
- (global $g14998103584453476800 (ref null $7) (struct.new $7
+ (global $g8934145468188635950 (ref null $10) (struct.new $10
   (struct.new $6
    (array.new_fixed $5 0)
    (i32.const 0)
   )
-  (struct.new $1
-   (array.new_fixed $0 0)
+  (struct.new $9
+   (array.new_fixed $8 0)
    (i32.const 0)
   )
   (i32.const 0)
+  (i64.const 8)
   (f64.const 10)
  ))
- (global $g14915229199423022989 (ref null $12) (struct.new $12
-  (global.get $g5399896319095332007)
-  (global.get $g15585607967112370967)
-  (global.get $g5605142335033206179)
-  (global.get $g14998103584453476800)
+ (global $g2570132990911199887 (ref null $15) (struct.new $15
+  (global.get $g10533582592670171656)
+  (global.get $g14909026546195052279)
+  (global.get $g5472303542116454283)
+  (global.get $g8934145468188635950)
  ))
- (global $g17467224634875355943 (ref null $34) (struct.new $34
-  (global.get $g18446744073526712823)
-  (global.get $g14915229199423022989)
+ (global $g13090932643847644931 (ref null $37) (struct.new $37
+  (global.get $g18446744072509096237)
+  (global.get $g2570132990911199887)
  ))
- (global $g2763677519847999171 (ref null $4) (struct.new $4
+ (global $g8370452966152583504 (ref null $4) (struct.new $4
   (i64.const 0)
-  (global.get $g17467224634875355943)
+  (global.get $g13090932643847644931)
  ))
- (global $g9246014054372823170 (ref null $6) (struct.new $6
+ (global $g18390936659437497064 (ref null $6) (struct.new $6
   (array.new_fixed $5 1
-   (global.get $g2763677519847999171)
+   (global.get $g8370452966152583504)
   )
   (i32.const 1)
  ))
- (global $g9044301639008940671 (ref null $1) (struct.new $1
-  (array.new_fixed $0 0)
+ (global $g18109424686033467056 (ref null $9) (struct.new $9
+  (array.new_fixed $8 0)
   (i32.const 0)
  ))
- (global $g6624589691129193003 (ref null $6) (struct.new $6
+ (global $g4801697007302186385 (ref null $6) (struct.new $6
   (array.new_fixed $5 1
-   (global.get $g2763677519847999171)
+   (global.get $g8370452966152583504)
   )
   (i32.const 1)
  ))
- (global $g7616202309226844987 (ref null $1) (struct.new $1
-  (array.new_fixed $0 0)
+ (global $g13979874696998976941 (ref null $9) (struct.new $9
+  (array.new_fixed $8 0)
   (i32.const 0)
  ))
- (global $g15336772016495424394 (ref null $6) (struct.new $6
+ (global $g293385266132319345 (ref null $6) (struct.new $6
   (array.new_fixed $5 1
-   (global.get $g2763677519847999171)
+   (global.get $g8370452966152583504)
   )
   (i32.const 1)
  ))
- (global $g18031385957623489502 (ref null $1) (struct.new $1
-  (array.new_fixed $0 0)
+ (global $g13956595418044549226 (ref null $9) (struct.new $9
+  (array.new_fixed $8 0)
   (i32.const 0)
  ))
- (global $g4046836901233574117 (ref null $6) (struct.new $6
+ (global $g4729375646632962071 (ref null $6) (struct.new $6
   (array.new_fixed $5 1
-   (global.get $g2763677519847999171)
+   (global.get $g8370452966152583504)
   )
   (i32.const 1)
  ))
- (global $g5441650322513800538 (ref null $1) (struct.new $1
-  (array.new_fixed $0 0)
+ (global $g8809366587908603300 (ref null $9) (struct.new $9
+  (array.new_fixed $8 0)
   (i32.const 0)
  ))
- (global $g7989064041645606189 (ref null $15) (struct.new $15
-  (global.get $g18446744073526712823)
-  (global.get $g14915229199423022989)
+ (global $g6294893618350984143 (ref null $18) (struct.new $18
+  (global.get $g18446744072509096237)
+  (global.get $g2570132990911199887)
  ))
- (global $g12974745916285415716 (ref null $16) (array.new_fixed $16 1
-  (global.get $g7989064041645606189)
+ (global $g7552866758843659627 (ref null $19) (array.new_fixed $19 1
+  (global.get $g6294893618350984143)
  ))
- (global $g14098848925330150112 (ref null $27) (struct.new $27
-  (global.get $g5399896319095332007)
-  (global.get $g12974745916285415716)
+ (global $g7999071076779681813 (ref null $30) (struct.new $30
+  (global.get $g10533582592670171656)
+  (global.get $g7552866758843659627)
  ))
  (global $g11364165201186046862 (ref null $3) (struct.new $3
   (array.new_fixed $2 5
@@ -330,8 +337,8 @@
   )
   (i32.const 7)
  ))
- (global $g6440125937128833805 (ref null $26) (struct.new $26
-  (array.new_fixed $25 15
+ (global $g3008325687430022101 (ref null $29) (struct.new $29
+  (array.new_fixed $28 15
    (global.get $g11364165201186046862)
    (global.get $g7856110131526212985)
    (global.get $g2516736808186709465)
@@ -350,44 +357,44 @@
   )
   (i32.const 15)
  ))
- (global $g9325704757236152929 (ref null $15) (struct.new $15
-  (global.get $g18446744073526712823)
-  (global.get $g14915229199423022989)
+ (global $g15277246785672613800 (ref null $18) (struct.new $18
+  (global.get $g18446744072509096237)
+  (global.get $g2570132990911199887)
  ))
- (global $g7020779839575914862 (ref null $16) (array.new_fixed $16 1
-  (global.get $g9325704757236152929)
+ (global $g11226807786850678455 (ref null $19) (array.new_fixed $19 1
+  (global.get $g15277246785672613800)
  ))
- (global $g9807447079130518469 (ref null $20) (struct.new $20
-  (global.get $g15585607967112370967)
-  (global.get $g7020779839575914862)
+ (global $g11783561037613089130 (ref null $23) (struct.new $23
+  (global.get $g14909026546195052279)
+  (global.get $g11226807786850678455)
  ))
- (global $g1133385284358591003 (ref null $15) (struct.new $15
-  (global.get $g18446744073526712823)
-  (global.get $g14915229199423022989)
+ (global $g10229618247161151442 (ref null $18) (struct.new $18
+  (global.get $g18446744072509096237)
+  (global.get $g2570132990911199887)
  ))
- (global $g5289075968342773864 (ref null $16) (array.new_fixed $16 1
-  (global.get $g1133385284358591003)
+ (global $g3721571208266917914 (ref null $19) (array.new_fixed $19 1
+  (global.get $g10229618247161151442)
  ))
- (global $g2119499939842356795 (ref null $20) (struct.new $20
-  (global.get $g5605142335033206179)
-  (global.get $g5289075968342773864)
+ (global $g10788876397769609489 (ref null $23) (struct.new $23
+  (global.get $g5472303542116454283)
+  (global.get $g3721571208266917914)
  ))
- (global $g18035640580628484027 (ref null $15) (struct.new $15
-  (global.get $g18446744073526712823)
-  (global.get $g14915229199423022989)
+ (global $g6259389266887090629 (ref null $18) (struct.new $18
+  (global.get $g18446744072509096237)
+  (global.get $g2570132990911199887)
  ))
- (global $g2664858948751867149 (ref null $16) (array.new_fixed $16 1
-  (global.get $g18035640580628484027)
+ (global $g7406295392515590516 (ref null $19) (array.new_fixed $19 1
+  (global.get $g6259389266887090629)
  ))
- (global $g18330423823972673094 (ref null $20) (struct.new $20
-  (global.get $g14998103584453476800)
-  (global.get $g2664858948751867149)
+ (global $g1018020227280789904 (ref null $23) (struct.new $23
+  (global.get $g8934145468188635950)
+  (global.get $g7406295392515590516)
  ))
  (export "nsamples" (func $nsamples))
  (export "sample_step" (func $sample_step))
  (export "phase" (func $phase))
  (export "radii" (func $radii))
- (func $julia_collectBase_Generator_UnitRange_Int64___Main___atexample__named__observables_var__2_5__Float64__Float64__ (type $40) (param $0 (ref null $23)) (result (ref null $10))
+ (func $julia_collectBase_Generator_UnitRange_Int64___Main___atexample__named__observables_var__2_5__Float64__Float64__ (type $43) (param $0 (ref null $26)) (result (ref null $13))
   (local $1 i32)
   (local $2 i64)
   (local $3 i64)
@@ -400,32 +407,32 @@
   (local $10 i64)
   (local $11 i32)
   (local $12 f64)
-  (local $13 (ref null $8))
+  (local $13 (ref null $11))
   (local $14 i64)
   (local $15 i64)
   (local $16 i64)
   (local $17 i64)
   (local $18 i32)
   (local $19 i64)
-  (local $20 (ref null $8))
+  (local $20 (ref null $11))
   (local $21 i64)
   (local $22 i64)
   (local $23 i32)
   (local $24 i64)
   (local $25 i64)
-  (local $26 (ref null $21))
+  (local $26 (ref null $24))
   (local $27 f64)
   (local $28 f64)
   (local $29 f64)
   (local $30 f64)
   (local $31 f64)
-  (local $32 (ref null $10))
-  (local $33 (ref null $10))
-  (local $34 (ref null $8))
+  (local $32 (ref null $13))
+  (local $33 (ref null $13))
+  (local $34 (ref null $11))
   (local $35 i64)
   (local $36 i32)
   (local $37 i64)
-  (local $38 (ref null $21))
+  (local $38 (ref null $24))
   (local $39 f64)
   (local $40 f64)
   (local $41 f64)
@@ -443,17 +450,17 @@
    (block $block$6$break
     (block
      (local.set $13
-      (struct.get $23 1
+      (struct.get $26 1
        (local.get $0)
       )
      )
      (local.set $14
-      (struct.get $8 0
+      (struct.get $11 0
        (local.get $13)
       )
      )
      (local.set $15
-      (struct.get $8 1
+      (struct.get $11 1
        (local.get $13)
       )
      )
@@ -483,17 +490,17 @@
       )
      )
      (local.set $20
-      (struct.get $23 1
+      (struct.get $26 1
        (local.get $0)
       )
      )
      (local.set $21
-      (struct.get $8 0
+      (struct.get $11 0
        (local.get $20)
       )
      )
      (local.set $22
-      (struct.get $8 1
+      (struct.get $11 1
        (local.get $20)
       )
      )
@@ -517,12 +524,12 @@
      (block
       (block
        (local.set $24
-        (struct.get $8 0
+        (struct.get $11 0
          (local.get $20)
         )
        )
        (local.set $25
-        (struct.get $8 0
+        (struct.get $11 0
          (local.get $20)
         )
        )
@@ -559,12 +566,12 @@
       (block
        (block
         (local.set $26
-         (struct.get $23 0
+         (struct.get $26 0
           (local.get $0)
          )
         )
         (local.set $27
-         (struct.get $21 0
+         (struct.get $24 0
           (local.get $26)
          )
         )
@@ -580,7 +587,7 @@
          )
         )
         (local.set $30
-         (struct.get $21 1
+         (struct.get $24 1
           (local.get $26)
          )
         )
@@ -612,8 +619,8 @@
        (block
         (block
          (local.set $32
-          (struct.new $10
-           (array.new $9
+          (struct.new $13
+           (array.new $12
             (f64.const 0)
             (i32.wrap_i64
              (local.get $19)
@@ -636,8 +643,8 @@
       (block $block$12$break
        (block
         (local.set $33
-         (struct.new $10
-          (array.new $9
+         (struct.new $13
+          (array.new $12
            (f64.const 0)
            (i32.wrap_i64
             (local.get $19)
@@ -648,8 +655,8 @@
           )
          )
         )
-        (array.set $9
-         (struct.get $10 0
+        (array.set $12
+         (struct.get $13 0
           (local.get $33)
          )
          (i32.add
@@ -687,12 +694,12 @@
           (block $block$16$break
            (block
             (local.set $34
-             (struct.get $23 1
+             (struct.get $26 1
               (local.get $0)
              )
             )
             (local.set $35
-             (struct.get $8 1
+             (struct.get $11 1
               (local.get $34)
              )
             )
@@ -754,12 +761,12 @@
              (block
               (block
                (local.set $38
-                (struct.get $23 0
+                (struct.get $26 0
                  (local.get $0)
                 )
                )
                (local.set $39
-                (struct.get $21 0
+                (struct.get $24 0
                  (local.get $38)
                 )
                )
@@ -775,7 +782,7 @@
                 )
                )
                (local.set $42
-                (struct.get $21 1
+                (struct.get $24 1
                  (local.get $38)
                 )
                )
@@ -810,8 +817,8 @@
             )
             (block
              (block
-              (array.set $9
-               (struct.get $10 0
+              (array.set $12
+               (struct.get $13 0
                 (local.get $33)
                )
                (i32.add
@@ -855,7 +862,7 @@
    )
   )
  )
- (func $julia_collect_to_Vector_Float64_Base_Generator_UnitRange_Int64___Main___atexample__named__observables_var__3_6__Vector_Float64___Float64__Int64Int64 (type $42) (param $0 (ref null $10)) (param $1 (ref null $17)) (param $2 i64) (param $3 i64) (result (ref null $10))
+ (func $julia_collect_to_Vector_Float64_Base_Generator_UnitRange_Int64___Main___atexample__named__observables_var__3_6__Vector_Float64___Float64__Int64Int64 (type $45) (param $0 (ref null $13)) (param $1 (ref null $20)) (param $2 i64) (param $3 i64) (result (ref null $13))
   (local $4 i64)
   (local $5 i64)
   (local $6 i32)
@@ -863,12 +870,12 @@
   (local $8 i64)
   (local $9 i32)
   (local $10 f64)
-  (local $11 (ref null $8))
+  (local $11 (ref null $11))
   (local $12 i64)
   (local $13 i32)
   (local $14 i64)
-  (local $15 (ref null $13))
-  (local $16 (ref null $10))
+  (local $15 (ref null $16))
+  (local $16 (ref null $13))
   (local $17 f64)
   (local $18 f64)
   (local $19 f64)
@@ -907,12 +914,12 @@
       (block $block$6$break
        (block
         (local.set $11
-         (struct.get $17 1
+         (struct.get $20 1
           (local.get $1)
          )
         )
         (local.set $12
-         (struct.get $8 1
+         (struct.get $11 1
           (local.get $11)
          )
         )
@@ -974,18 +981,18 @@
          (block
           (block
            (local.set $15
-            (struct.get $17 0
+            (struct.get $20 0
              (local.get $1)
             )
            )
            (local.set $16
-            (struct.get $13 0
+            (struct.get $16 0
              (local.get $15)
             )
            )
            (local.set $17
-            (array.get $9
-             (struct.get $10 0
+            (array.get $12
+             (struct.get $13 0
               (local.get $16)
              )
              (i32.add
@@ -1002,7 +1009,7 @@
             )
            )
            (local.set $19
-            (struct.get $13 1
+            (struct.get $16 1
              (local.get $15)
             )
            )
@@ -1019,7 +1026,7 @@
             )
            )
            (local.set $22
-            (struct.get $13 1
+            (struct.get $16 1
              (local.get $15)
             )
            )
@@ -1060,8 +1067,8 @@
         )
         (block
          (block
-          (array.set $9
-           (struct.get $10 0
+          (array.set $12
+           (struct.get $13 0
             (local.get $0)
            )
            (i32.add
@@ -1101,27 +1108,27 @@
    )
   )
  )
- (func $julia_collectBase_Generator_UnitRange_Int64___Main___atexample__named__observables_var__3_6__Vector_Float64___Float64__ (type $35) (param $0 (ref null $17)) (result (ref null $10))
+ (func $julia_collectBase_Generator_UnitRange_Int64___Main___atexample__named__observables_var__3_6__Vector_Float64___Float64__ (type $38) (param $0 (ref null $20)) (result (ref null $13))
   (local $1 i32)
   (local $2 i64)
   (local $3 i64)
   (local $4 i32)
   (local $5 f64)
-  (local $6 (ref null $8))
+  (local $6 (ref null $11))
   (local $7 i64)
   (local $8 i64)
   (local $9 i64)
   (local $10 i64)
   (local $11 i32)
   (local $12 i64)
-  (local $13 (ref null $8))
+  (local $13 (ref null $11))
   (local $14 i64)
   (local $15 i64)
   (local $16 i32)
   (local $17 i64)
   (local $18 i64)
-  (local $19 (ref null $13))
-  (local $20 (ref null $10))
+  (local $19 (ref null $16))
+  (local $20 (ref null $13))
   (local $21 f64)
   (local $22 f64)
   (local $23 f64)
@@ -1130,9 +1137,9 @@
   (local $26 f64)
   (local $27 f64)
   (local $28 f64)
-  (local $29 (ref null $10))
-  (local $30 (ref null $10))
-  (local $31 (ref null $10))
+  (local $29 (ref null $13))
+  (local $30 (ref null $13))
+  (local $31 (ref null $13))
   (block $block$3$break
    (block
    )
@@ -1144,17 +1151,17 @@
    (block $block$6$break
     (block
      (local.set $6
-      (struct.get $17 1
+      (struct.get $20 1
        (local.get $0)
       )
      )
      (local.set $7
-      (struct.get $8 0
+      (struct.get $11 0
        (local.get $6)
       )
      )
      (local.set $8
-      (struct.get $8 1
+      (struct.get $11 1
        (local.get $6)
       )
      )
@@ -1184,17 +1191,17 @@
       )
      )
      (local.set $13
-      (struct.get $17 1
+      (struct.get $20 1
        (local.get $0)
       )
      )
      (local.set $14
-      (struct.get $8 0
+      (struct.get $11 0
        (local.get $13)
       )
      )
      (local.set $15
-      (struct.get $8 1
+      (struct.get $11 1
        (local.get $13)
       )
      )
@@ -1218,12 +1225,12 @@
      (block
       (block
        (local.set $17
-        (struct.get $8 0
+        (struct.get $11 0
          (local.get $13)
         )
        )
        (local.set $18
-        (struct.get $8 0
+        (struct.get $11 0
          (local.get $13)
         )
        )
@@ -1260,18 +1267,18 @@
       (block
        (block
         (local.set $19
-         (struct.get $17 0
+         (struct.get $20 0
           (local.get $0)
          )
         )
         (local.set $20
-         (struct.get $13 0
+         (struct.get $16 0
           (local.get $19)
          )
         )
         (local.set $21
-         (array.get $9
-          (struct.get $10 0
+         (array.get $12
+          (struct.get $13 0
            (local.get $20)
           )
           (i32.add
@@ -1288,7 +1295,7 @@
          )
         )
         (local.set $23
-         (struct.get $13 1
+         (struct.get $16 1
           (local.get $19)
          )
         )
@@ -1305,7 +1312,7 @@
          )
         )
         (local.set $26
-         (struct.get $13 1
+         (struct.get $16 1
           (local.get $19)
          )
         )
@@ -1342,8 +1349,8 @@
       (block
        (block
         (local.set $29
-         (struct.new $10
-          (array.new $9
+         (struct.new $13
+          (array.new $12
            (f64.const 0)
            (i32.wrap_i64
             (local.get $12)
@@ -1362,8 +1369,8 @@
       (block
        (block
         (local.set $30
-         (struct.new $10
-          (array.new $9
+         (struct.new $13
+          (array.new $12
            (f64.const 0)
            (i32.wrap_i64
             (local.get $12)
@@ -1374,8 +1381,8 @@
           )
          )
         )
-        (array.set $9
-         (struct.get $10 0
+        (array.set $12
+         (struct.get $13 0
           (local.get $30)
          )
          (i32.add
@@ -1404,7 +1411,7 @@
    )
   )
  )
- (func $julia_collectBase_Generator_UnitRange_Int64___Main___atexample__named__observables_var__4_7__Vector_Float64___Float64__ (type $35) (param $0 (ref null $17)) (result (ref null $10))
+ (func $julia_collectBase_Generator_UnitRange_Int64___Main___atexample__named__observables_var__4_7__Vector_Float64___Float64__ (type $38) (param $0 (ref null $20)) (result (ref null $13))
   (local $1 i32)
   (local $2 i64)
   (local $3 i64)
@@ -1417,33 +1424,33 @@
   (local $10 i64)
   (local $11 i32)
   (local $12 f64)
-  (local $13 (ref null $8))
+  (local $13 (ref null $11))
   (local $14 i64)
   (local $15 i64)
   (local $16 i64)
   (local $17 i64)
   (local $18 i32)
   (local $19 i64)
-  (local $20 (ref null $8))
+  (local $20 (ref null $11))
   (local $21 i64)
   (local $22 i64)
   (local $23 i32)
   (local $24 i64)
   (local $25 i64)
-  (local $26 (ref null $13))
-  (local $27 (ref null $10))
+  (local $26 (ref null $16))
+  (local $27 (ref null $13))
   (local $28 f64)
   (local $29 f64)
   (local $30 f64)
   (local $31 f64)
-  (local $32 (ref null $10))
-  (local $33 (ref null $10))
-  (local $34 (ref null $8))
+  (local $32 (ref null $13))
+  (local $33 (ref null $13))
+  (local $34 (ref null $11))
   (local $35 i64)
   (local $36 i32)
   (local $37 i64)
-  (local $38 (ref null $13))
-  (local $39 (ref null $10))
+  (local $38 (ref null $16))
+  (local $39 (ref null $13))
   (local $40 f64)
   (local $41 f64)
   (local $42 f64)
@@ -1460,17 +1467,17 @@
    (block $block$6$break
     (block
      (local.set $13
-      (struct.get $17 1
+      (struct.get $20 1
        (local.get $0)
       )
      )
      (local.set $14
-      (struct.get $8 0
+      (struct.get $11 0
        (local.get $13)
       )
      )
      (local.set $15
-      (struct.get $8 1
+      (struct.get $11 1
        (local.get $13)
       )
      )
@@ -1500,17 +1507,17 @@
       )
      )
      (local.set $20
-      (struct.get $17 1
+      (struct.get $20 1
        (local.get $0)
       )
      )
      (local.set $21
-      (struct.get $8 0
+      (struct.get $11 0
        (local.get $20)
       )
      )
      (local.set $22
-      (struct.get $8 1
+      (struct.get $11 1
        (local.get $20)
       )
      )
@@ -1534,12 +1541,12 @@
      (block
       (block
        (local.set $24
-        (struct.get $8 0
+        (struct.get $11 0
          (local.get $20)
         )
        )
        (local.set $25
-        (struct.get $8 0
+        (struct.get $11 0
          (local.get $20)
         )
        )
@@ -1576,18 +1583,18 @@
       (block
        (block
         (local.set $26
-         (struct.get $17 0
+         (struct.get $20 0
           (local.get $0)
          )
         )
         (local.set $27
-         (struct.get $13 0
+         (struct.get $16 0
           (local.get $26)
          )
         )
         (local.set $28
-         (array.get $9
-          (struct.get $10 0
+         (array.get $12
+          (struct.get $13 0
            (local.get $27)
           )
           (i32.add
@@ -1599,7 +1606,7 @@
          )
         )
         (local.set $29
-         (struct.get $13 1
+         (struct.get $16 1
           (local.get $26)
          )
         )
@@ -1637,8 +1644,8 @@
        (block
         (block
          (local.set $32
-          (struct.new $10
-           (array.new $9
+          (struct.new $13
+           (array.new $12
             (f64.const 0)
             (i32.wrap_i64
              (local.get $19)
@@ -1661,8 +1668,8 @@
       (block $block$12$break
        (block
         (local.set $33
-         (struct.new $10
-          (array.new $9
+         (struct.new $13
+          (array.new $12
            (f64.const 0)
            (i32.wrap_i64
             (local.get $19)
@@ -1673,8 +1680,8 @@
           )
          )
         )
-        (array.set $9
-         (struct.get $10 0
+        (array.set $12
+         (struct.get $13 0
           (local.get $33)
          )
          (i32.add
@@ -1712,12 +1719,12 @@
           (block $block$16$break
            (block
             (local.set $34
-             (struct.get $17 1
+             (struct.get $20 1
               (local.get $0)
              )
             )
             (local.set $35
-             (struct.get $8 1
+             (struct.get $11 1
               (local.get $34)
              )
             )
@@ -1779,18 +1786,18 @@
              (block
               (block
                (local.set $38
-                (struct.get $17 0
+                (struct.get $20 0
                  (local.get $0)
                 )
                )
                (local.set $39
-                (struct.get $13 0
+                (struct.get $16 0
                  (local.get $38)
                 )
                )
                (local.set $40
-                (array.get $9
-                 (struct.get $10 0
+                (array.get $12
+                 (struct.get $13 0
                   (local.get $39)
                  )
                  (i32.add
@@ -1802,7 +1809,7 @@
                 )
                )
                (local.set $41
-                (struct.get $13 1
+                (struct.get $16 1
                  (local.get $38)
                 )
                )
@@ -1843,8 +1850,8 @@
             )
             (block
              (block
-              (array.set $9
-               (struct.get $10 0
+              (array.set $12
+               (struct.get $13 0
                 (local.get $33)
                )
                (i32.add
@@ -1888,21 +1895,21 @@
    )
   )
  )
- (func $julia_circFloat64Float64Float64Int64 (type $43) (param $0 f64) (param $1 f64) (param $2 f64) (param $3 i64) (result (ref null $1))
-  (local $4 (ref null $26))
+ (func $julia_circFloat64Float64Float64Int64 (type $46) (param $0 f64) (param $1 f64) (param $2 f64) (param $3 i64) (result (ref null $1))
+  (local $4 (ref null $29))
   (local $5 i64)
   (local $6 i64)
   (local $7 i64)
-  (local $8 (ref null $26))
+  (local $8 (ref null $29))
   (local $9 (ref null $3))
   (local $10 (ref null $1))
   (block
    (local.set $4
-    (global.get $g6440125937128833805)
+    (global.get $g3008325687430022101)
    )
    (local.set $5
     (i64.extend_i32_u
-     (struct.get $26 1
+     (struct.get $29 1
       (local.get $4)
      )
     )
@@ -1920,11 +1927,11 @@
     )
    )
    (local.set $8
-    (global.get $g6440125937128833805)
+    (global.get $g3008325687430022101)
    )
    (local.set $9
-    (array.get $25
-     (struct.get $26 0
+    (array.get $28
+     (struct.get $29 0
       (local.get $8)
      )
      (i32.add
@@ -1938,7 +1945,7 @@
    (local.set $10
     (struct.new $1
      (array.new $0
-      (struct.new $28
+      (struct.new $31
        (i64.const 0)
       )
       (i32.wrap_i64
@@ -1960,7 +1967,7 @@
      )
      (i32.const -1)
     )
-    (struct.new $18
+    (struct.new $21
      (struct.new $3
       (array.new_fixed $2 12
        (i32.const 60)
@@ -1990,7 +1997,7 @@
      )
      (i32.const -1)
     )
-    (struct.new $22
+    (struct.new $25
      (local.get $0)
     )
    )
@@ -2004,7 +2011,7 @@
      )
      (i32.const -1)
     )
-    (struct.new $18
+    (struct.new $21
      (struct.new $3
       (array.new_fixed $2 6
        (i32.const 39)
@@ -2028,7 +2035,7 @@
      )
      (i32.const -1)
     )
-    (struct.new $22
+    (struct.new $25
      (local.get $1)
     )
    )
@@ -2042,7 +2049,7 @@
      )
      (i32.const -1)
     )
-    (struct.new $18
+    (struct.new $21
      (struct.new $3
       (array.new_fixed $2 5
        (i32.const 39)
@@ -2065,7 +2072,7 @@
      )
      (i32.const -1)
     )
-    (struct.new $22
+    (struct.new $25
      (local.get $2)
     )
    )
@@ -2079,7 +2086,7 @@
      )
      (i32.const -1)
     )
-    (struct.new $18
+    (struct.new $21
      (struct.new $3
       (array.new_fixed $2 8
        (i32.const 39)
@@ -2105,7 +2112,7 @@
      )
      (i32.const -1)
     )
-    (struct.new $18
+    (struct.new $21
      (local.get $9)
     )
    )
@@ -2119,7 +2126,7 @@
      )
      (i32.const -1)
     )
-    (struct.new $18
+    (struct.new $21
      (struct.new $3
       (array.new_fixed $2 11
        (i32.const 39)
@@ -2143,7 +2150,7 @@
    )
   )
  )
- (func $julia__setExternrefInt32UInt8 (type $29) (param $0 externref) (param $1 i32) (param $2 i32)
+ (func $julia__setExternrefInt32UInt8 (type $32) (param $0 externref) (param $1 i32) (param $2 i32)
   (local $3 i32)
   (block
    (local.set $3
@@ -2160,7 +2167,7 @@
    (return)
   )
  )
- (func $julia_objectVector_UInt8_ (type $37) (param $0 (ref null $3)) (result externref)
+ (func $julia_objectVector_UInt8_ (type $40) (param $0 (ref null $3)) (result externref)
   (local $1 i32)
   (local $2 i32)
   (local $3 i64)
@@ -2579,11 +2586,11 @@
    )
   )
  )
- (func $julia_JSStringString (type $44) (param $0 (ref null $3)) (result (ref null $19))
+ (func $julia_JSStringString (type $47) (param $0 (ref null $3)) (result (ref null $22))
   (local $1 (ref null $3))
   (local $2 externref)
   (local $3 externref)
-  (local $4 (ref null $19))
+  (local $4 (ref null $22))
   (block
    (local.set $1
     (local.get $0)
@@ -2599,7 +2606,7 @@
     )
    )
    (local.set $4
-    (struct.new $19
+    (struct.new $22
      (local.get $3)
     )
    )
@@ -2608,8 +2615,8 @@
    )
   )
  )
- (func $julia_objectString (type $37) (param $0 (ref null $3)) (result externref)
-  (local $1 (ref null $19))
+ (func $julia_objectString (type $40) (param $0 (ref null $3)) (result externref)
+  (local $1 (ref null $22))
   (local $2 externref)
   (block
    (local.set $1
@@ -2618,7 +2625,7 @@
     )
    )
    (local.set $2
-    (struct.get $19 0
+    (struct.get $22 0
      (local.get $1)
     )
    )
@@ -2627,7 +2634,7 @@
    )
   )
  )
- (func $julia_checked_trunc_sintType_Int32_Int64 (type $39) (param $0 i64) (result i32)
+ (func $julia_checked_trunc_sintType_Int32_Int64 (type $42) (param $0 i64) (result i32)
   (local $1 i32)
   (local $2 i64)
   (local $3 i32)
@@ -2660,7 +2667,7 @@
    )
   )
  )
- (func $julia_toInt32Int64 (type $39) (param $0 i64) (result i32)
+ (func $julia_toInt32Int64 (type $42) (param $0 i64) (result i32)
   (local $1 i32)
   (block
    (local.set $1
@@ -2673,7 +2680,7 @@
    )
   )
  )
- (func $julia_append_Vector_Any_Vector_Any_ (type $46) (param $0 (ref null $1)) (param $1 (ref null $1)) (result (ref null $1))
+ (func $julia_append_Vector_Any_Vector_Any_ (type $49) (param $0 (ref null $1)) (param $1 (ref null $1)) (result (ref null $1))
   (local $2 i64)
   (local $3 i32)
   (local $4 i64)
@@ -2801,7 +2808,7 @@
        (block $newbuff
         (local.set $10
          (array.new $0
-          (struct.new $28
+          (struct.new $31
            (i64.const 0)
           )
           (i32.mul
@@ -2910,7 +2917,7 @@
    )
   )
  )
- (func $julia_objectVector_Any_ (type $50) (param $0 (ref null $1)) (result externref)
+ (func $julia_objectVector_Any_ (type $53) (param $0 (ref null $1)) (result externref)
   (local $1 i32)
   (local $2 eqref)
   (local $3 i64)
@@ -2948,35 +2955,35 @@
   (local $35 i32)
   (local $36 i32)
   (local $37 i32)
-  (local $38 (ref null $22))
+  (local $38 (ref null $25))
   (local $39 f64)
   (local $40 i32)
   (local $41 i32)
-  (local $42 (ref null $30))
+  (local $42 (ref null $33))
   (local $43 f32)
   (local $44 i32)
   (local $45 i32)
-  (local $46 (ref null $24))
+  (local $46 (ref null $27))
   (local $47 i32)
   (local $48 i32)
   (local $49 i32)
-  (local $50 (ref null $18))
+  (local $50 (ref null $21))
   (local $51 (ref null $3))
-  (local $52 (ref null $19))
+  (local $52 (ref null $22))
   (local $53 externref)
   (local $54 i32)
   (local $55 i32)
-  (local $56 (ref null $31))
-  (local $57 (ref null $19))
+  (local $56 (ref null $34))
+  (local $57 (ref null $22))
   (local $58 externref)
   (local $59 i32)
   (local $60 i32)
-  (local $61 (ref null $32))
+  (local $61 (ref null $35))
   (local $62 i64)
   (local $63 i32)
   (local $64 i32)
   (local $65 i32)
-  (local $66 (ref null $24))
+  (local $66 (ref null $27))
   (local $67 i32)
   (local $68 i32)
   (local $69 i32)
@@ -3177,7 +3184,7 @@
           )
          )
          (local.set $37
-          (ref.test (ref null $22)
+          (ref.test (ref null $25)
            (local.get $11)
           )
          )
@@ -3187,12 +3194,12 @@
          (block
           (block
            (local.set $38
-            (ref.cast (ref null $22)
+            (ref.cast (ref null $25)
              (local.get $11)
             )
            )
            (local.set $39
-            (struct.get $22 0
+            (struct.get $25 0
              (local.get $38)
             )
            )
@@ -3215,7 +3222,7 @@
          (block
           (block $block$14$break
            (local.set $41
-            (ref.test (ref null $30)
+            (ref.test (ref null $33)
              (local.get $11)
             )
            )
@@ -3224,12 +3231,12 @@
             (block
              (block
               (local.set $42
-               (ref.cast (ref null $30)
+               (ref.cast (ref null $33)
                 (local.get $11)
                )
               )
               (local.set $43
-               (struct.get $30 0
+               (struct.get $33 0
                 (local.get $42)
                )
               )
@@ -3255,7 +3262,7 @@
           (block
            (block $block$16$break
             (local.set $45
-             (ref.test (ref null $24)
+             (ref.test (ref null $27)
               (local.get $11)
              )
             )
@@ -3264,12 +3271,12 @@
              (block
               (block
                (local.set $46
-                (ref.cast (ref null $24)
+                (ref.cast (ref null $27)
                  (local.get $11)
                 )
                )
                (local.set $47
-                (struct.get $24 0
+                (struct.get $27 0
                  (local.get $46)
                 )
                )
@@ -3295,7 +3302,7 @@
            (block
             (block $block$18$break
              (local.set $49
-              (ref.test (ref null $18)
+              (ref.test (ref null $21)
                (local.get $11)
               )
              )
@@ -3304,12 +3311,12 @@
               (block
                (block
                 (local.set $50
-                 (ref.cast (ref null $18)
+                 (ref.cast (ref null $21)
                   (local.get $11)
                  )
                 )
                 (local.set $51
-                 (struct.get $18 0
+                 (struct.get $21 0
                   (local.get $50)
                  )
                 )
@@ -3319,7 +3326,7 @@
                  )
                 )
                 (local.set $53
-                 (struct.get $19 0
+                 (struct.get $22 0
                   (local.get $52)
                  )
                 )
@@ -3345,7 +3352,7 @@
             (block
              (block $block$20$break
               (local.set $55
-               (ref.test (ref null $31)
+               (ref.test (ref null $34)
                 (local.get $11)
                )
               )
@@ -3354,17 +3361,17 @@
                (block
                 (block
                  (local.set $56
-                  (ref.cast (ref null $31)
+                  (ref.cast (ref null $34)
                    (local.get $11)
                   )
                  )
                  (local.set $57
-                  (struct.get $31 0
+                  (struct.get $34 0
                    (local.get $56)
                   )
                  )
                  (local.set $58
-                  (struct.get $19 0
+                  (struct.get $22 0
                    (local.get $57)
                   )
                  )
@@ -3390,7 +3397,7 @@
              (block
               (block $block$22$break
                (local.set $60
-                (ref.test (ref null $32)
+                (ref.test (ref null $35)
                  (local.get $11)
                 )
                )
@@ -3399,12 +3406,12 @@
                 (block
                  (block
                   (local.set $61
-                   (ref.cast (ref null $32)
+                   (ref.cast (ref null $35)
                     (local.get $11)
                    )
                   )
                   (local.set $62
-                   (struct.get $32 0
+                   (struct.get $35 0
                     (local.get $61)
                    )
                   )
@@ -3435,7 +3442,7 @@
               (block
                (block $block$24$break
                 (local.set $65
-                 (ref.test (ref null $24)
+                 (ref.test (ref null $27)
                   (local.get $11)
                  )
                 )
@@ -3444,12 +3451,12 @@
                  (block
                   (block
                    (local.set $66
-                    (ref.cast (ref null $24)
+                    (ref.cast (ref null $27)
                      (local.get $11)
                     )
                    )
                    (local.set $67
-                    (struct.get $24 0
+                    (struct.get $27 0
                      (local.get $66)
                     )
                    )
@@ -3710,7 +3717,7 @@
    )
   )
  )
- (func $julia_set_svgInt32Float64Float64Float64 (type $53) (param $0 i32) (param $1 f64) (param $2 f64) (param $3 f64)
+ (func $julia_set_svgInt32Float64Float64Float64 (type $56) (param $0 i32) (param $1 f64) (param $2 f64) (param $3 f64)
   (local $4 i64)
   (local $5 i64)
   (local $6 i64)
@@ -3723,26 +3730,26 @@
   (local $13 i64)
   (local $14 i64)
   (local $15 i32)
-  (local $16 (ref null $21))
+  (local $16 (ref null $24))
   (local $17 i64)
   (local $18 i32)
-  (local $19 (ref null $8))
-  (local $20 (ref null $23))
-  (local $21 (ref null $10))
+  (local $19 (ref null $11))
+  (local $20 (ref null $26))
+  (local $21 (ref null $13))
   (local $22 f64)
-  (local $23 (ref null $13))
+  (local $23 (ref null $16))
   (local $24 i64)
   (local $25 i32)
-  (local $26 (ref null $8))
-  (local $27 (ref null $17))
-  (local $28 (ref null $10))
+  (local $26 (ref null $11))
+  (local $27 (ref null $20))
+  (local $28 (ref null $13))
   (local $29 f64)
-  (local $30 (ref null $13))
+  (local $30 (ref null $16))
   (local $31 i64)
   (local $32 i32)
-  (local $33 (ref null $8))
-  (local $34 (ref null $17))
-  (local $35 (ref null $10))
+  (local $33 (ref null $11))
+  (local $34 (ref null $20))
+  (local $35 (ref null $13))
   (local $36 (ref null $1))
   (local $37 i64)
   (local $38 i32)
@@ -3757,16 +3764,16 @@
   (local $47 (ref null $0))
   (local $48 i64)
   (local $49 externref)
-  (local $50 (ref null $19))
+  (local $50 (ref null $22))
   (local $51 externref)
   (local $52 externref)
-  (local $53 (ref null $19))
+  (local $53 (ref null $22))
   (local $54 externref)
   (local $55 externref)
   (block $block$4$break
    (block
     (local.set $16
-     (struct.new $21
+     (struct.new $24
       (local.get $1)
       (local.get $2)
      )
@@ -3806,7 +3813,7 @@
   (block
    (block $block$7$break
     (local.set $19
-     (struct.new $8
+     (struct.new $11
       (i64.const 1)
       (local.get $4)
      )
@@ -3819,7 +3826,7 @@
     (block $block$10$break
      (block
       (local.set $20
-       (struct.new $23
+       (struct.new $26
         (local.get $16)
         (local.get $19)
        )
@@ -3833,7 +3840,7 @@
        (f64.const 300)
       )
       (local.set $23
-       (struct.new $13
+       (struct.new $16
         (local.get $21)
         (local.get $22)
        )
@@ -3873,7 +3880,7 @@
     (block
      (block $block$13$break
       (local.set $26
-       (struct.new $8
+       (struct.new $11
         (i64.const 1)
         (local.get $5)
        )
@@ -3886,7 +3893,7 @@
       (block $block$16$break
        (block
         (local.set $27
-         (struct.new $17
+         (struct.new $20
           (local.get $23)
           (local.get $26)
          )
@@ -3900,7 +3907,7 @@
          (f64.const 900)
         )
         (local.set $30
-         (struct.new $13
+         (struct.new $16
           (local.get $21)
           (local.get $29)
          )
@@ -3940,7 +3947,7 @@
       (block
        (block $block$19$break
         (local.set $33
-         (struct.new $8
+         (struct.new $11
           (i64.const 1)
           (local.get $6)
          )
@@ -3953,7 +3960,7 @@
         (block $block$25$break
          (block
           (local.set $34
-           (struct.new $17
+           (struct.new $20
             (local.get $30)
             (local.get $33)
            )
@@ -3966,7 +3973,7 @@
           (local.set $36
            (struct.new $1
             (array.new $0
-             (struct.new $28
+             (struct.new $31
               (i64.const 0)
              )
              (i32.wrap_i64
@@ -3988,7 +3995,7 @@
             )
             (i32.const -1)
            )
-           (struct.new $18
+           (struct.new $21
             (struct.new $3
              (array.new_fixed $2 11
               (i32.const 60)
@@ -4017,7 +4024,7 @@
             )
             (i32.const -1)
            )
-           (struct.new $22
+           (struct.new $25
             (f64.const 900)
            )
           )
@@ -4031,7 +4038,7 @@
             )
             (i32.const -1)
            )
-           (struct.new $18
+           (struct.new $21
             (struct.new $3
              (array.new_fixed $2 8
               (i32.const 32)
@@ -4057,7 +4064,7 @@
             )
             (i32.const -1)
            )
-           (struct.new $22
+           (struct.new $25
             (f64.const 300)
            )
           )
@@ -4071,7 +4078,7 @@
             )
             (i32.const -1)
            )
-           (struct.new $18
+           (struct.new $21
             (struct.new $3
              (array.new_fixed $2 5
               (i32.const 32)
@@ -4177,8 +4184,8 @@
              (block $block$32$break
               (block
                (local.set $41
-                (array.get $9
-                 (struct.get $10 0
+                (array.get $12
+                 (struct.get $13 0
                   (local.get $35)
                  )
                  (i32.add
@@ -4190,8 +4197,8 @@
                 )
                )
                (local.set $42
-                (array.get $9
-                 (struct.get $10 0
+                (array.get $12
+                 (struct.get $13 0
                   (local.get $28)
                  )
                  (i32.add
@@ -4311,7 +4318,7 @@
              (block $newbuff
               (local.set $47
                (array.new $0
-                (struct.new $28
+                (struct.new $31
                  (i64.const 0)
                 )
                 (i32.mul
@@ -4378,7 +4385,7 @@
               )
               (i32.const -1)
              )
-             (struct.new $18
+             (struct.new $21
               (struct.new $3
                (array.new_fixed $2 10
                 (i32.const 60)
@@ -4410,7 +4417,7 @@
              )
             )
             (local.set $51
-             (struct.get $19 0
+             (struct.get $22 0
               (local.get $50)
              )
             )
@@ -4434,7 +4441,7 @@
              )
             )
             (local.set $54
-             (struct.get $19 0
+             (struct.get $22 0
               (local.get $53)
              )
             )
@@ -4459,36 +4466,36 @@
    )
   )
  )
- (func $nsamples (type $54) (param $0 i32) (result i32)
-  (local $1 (ref null $11))
-  (local $2 (ref null $16))
-  (local $3 (ref null $15))
-  (local $4 (ref null $12))
-  (local $5 (ref null $11))
-  (local $6 (ref null $7))
-  (local $7 (ref null $7))
-  (local $8 (ref null $7))
+ (func $nsamples (type $57) (param $0 i32) (result i32)
+  (local $1 (ref null $14))
+  (local $2 (ref null $19))
+  (local $3 (ref null $18))
+  (local $4 (ref null $15))
+  (local $5 (ref null $14))
+  (local $6 (ref null $10))
+  (local $7 (ref null $10))
+  (local $8 (ref null $10))
   (local $9 i32)
   (local $10 f64)
   (local $11 f64)
   (local $12 f64)
   (block
    (local.set $1
-    (struct.get $27 0
-     (global.get $g14098848925330150112)
+    (struct.get $30 0
+     (global.get $g7999071076779681813)
     )
    )
-   (struct.set $11 3
+   (struct.set $14 4
     (local.get $1)
     (local.get $0)
    )
    (local.set $2
-    (struct.get $27 1
-     (global.get $g14098848925330150112)
+    (struct.get $30 1
+     (global.get $g7999071076779681813)
     )
    )
    (local.set $3
-    (array.get $16
+    (array.get $19
      (local.get $2)
      (i32.add
       (i32.wrap_i64
@@ -4499,47 +4506,47 @@
     )
    )
    (local.set $4
-    (struct.get $15 1
+    (struct.get $18 1
      (local.get $3)
     )
    )
    (local.set $5
-    (struct.get $12 0
+    (struct.get $15 0
      (local.get $4)
     )
    )
    (local.set $6
-    (struct.get $12 1
+    (struct.get $15 1
      (local.get $4)
     )
    )
    (local.set $7
-    (struct.get $12 2
+    (struct.get $15 2
      (local.get $4)
     )
    )
    (local.set $8
-    (struct.get $12 3
+    (struct.get $15 3
      (local.get $4)
     )
    )
    (local.set $9
-    (struct.get $11 3
+    (struct.get $14 4
      (local.get $5)
     )
    )
    (local.set $10
-    (struct.get $7 3
+    (struct.get $10 4
      (local.get $6)
     )
    )
    (local.set $11
-    (struct.get $7 3
+    (struct.get $10 4
      (local.get $7)
     )
    )
    (local.set $12
-    (struct.get $7 3
+    (struct.get $10 4
      (local.get $8)
     )
    )
@@ -4554,36 +4561,36 @@
    )
   )
  )
- (func $sample_step (type $33) (param $0 f64) (result i32)
-  (local $1 (ref null $7))
-  (local $2 (ref null $16))
-  (local $3 (ref null $15))
-  (local $4 (ref null $12))
-  (local $5 (ref null $11))
-  (local $6 (ref null $7))
-  (local $7 (ref null $7))
-  (local $8 (ref null $7))
+ (func $sample_step (type $36) (param $0 f64) (result i32)
+  (local $1 (ref null $10))
+  (local $2 (ref null $19))
+  (local $3 (ref null $18))
+  (local $4 (ref null $15))
+  (local $5 (ref null $14))
+  (local $6 (ref null $10))
+  (local $7 (ref null $10))
+  (local $8 (ref null $10))
   (local $9 i32)
   (local $10 f64)
   (local $11 f64)
   (local $12 f64)
   (block
    (local.set $1
-    (struct.get $20 0
-     (global.get $g9807447079130518469)
+    (struct.get $23 0
+     (global.get $g11783561037613089130)
     )
    )
-   (struct.set $7 3
+   (struct.set $10 4
     (local.get $1)
     (local.get $0)
    )
    (local.set $2
-    (struct.get $20 1
-     (global.get $g9807447079130518469)
+    (struct.get $23 1
+     (global.get $g11783561037613089130)
     )
    )
    (local.set $3
-    (array.get $16
+    (array.get $19
      (local.get $2)
      (i32.add
       (i32.wrap_i64
@@ -4594,47 +4601,47 @@
     )
    )
    (local.set $4
-    (struct.get $15 1
+    (struct.get $18 1
      (local.get $3)
     )
    )
    (local.set $5
-    (struct.get $12 0
+    (struct.get $15 0
      (local.get $4)
     )
    )
    (local.set $6
-    (struct.get $12 1
+    (struct.get $15 1
      (local.get $4)
     )
    )
    (local.set $7
-    (struct.get $12 2
+    (struct.get $15 2
      (local.get $4)
     )
    )
    (local.set $8
-    (struct.get $12 3
+    (struct.get $15 3
      (local.get $4)
     )
    )
    (local.set $9
-    (struct.get $11 3
+    (struct.get $14 4
      (local.get $5)
     )
    )
    (local.set $10
-    (struct.get $7 3
+    (struct.get $10 4
      (local.get $6)
     )
    )
    (local.set $11
-    (struct.get $7 3
+    (struct.get $10 4
      (local.get $7)
     )
    )
    (local.set $12
-    (struct.get $7 3
+    (struct.get $10 4
      (local.get $8)
     )
    )
@@ -4649,36 +4656,36 @@
    )
   )
  )
- (func $phase (type $33) (param $0 f64) (result i32)
-  (local $1 (ref null $7))
-  (local $2 (ref null $16))
-  (local $3 (ref null $15))
-  (local $4 (ref null $12))
-  (local $5 (ref null $11))
-  (local $6 (ref null $7))
-  (local $7 (ref null $7))
-  (local $8 (ref null $7))
+ (func $phase (type $36) (param $0 f64) (result i32)
+  (local $1 (ref null $10))
+  (local $2 (ref null $19))
+  (local $3 (ref null $18))
+  (local $4 (ref null $15))
+  (local $5 (ref null $14))
+  (local $6 (ref null $10))
+  (local $7 (ref null $10))
+  (local $8 (ref null $10))
   (local $9 i32)
   (local $10 f64)
   (local $11 f64)
   (local $12 f64)
   (block
    (local.set $1
-    (struct.get $20 0
-     (global.get $g2119499939842356795)
+    (struct.get $23 0
+     (global.get $g10788876397769609489)
     )
    )
-   (struct.set $7 3
+   (struct.set $10 4
     (local.get $1)
     (local.get $0)
    )
    (local.set $2
-    (struct.get $20 1
-     (global.get $g2119499939842356795)
+    (struct.get $23 1
+     (global.get $g10788876397769609489)
     )
    )
    (local.set $3
-    (array.get $16
+    (array.get $19
      (local.get $2)
      (i32.add
       (i32.wrap_i64
@@ -4689,47 +4696,47 @@
     )
    )
    (local.set $4
-    (struct.get $15 1
+    (struct.get $18 1
      (local.get $3)
     )
    )
    (local.set $5
-    (struct.get $12 0
+    (struct.get $15 0
      (local.get $4)
     )
    )
    (local.set $6
-    (struct.get $12 1
+    (struct.get $15 1
      (local.get $4)
     )
    )
    (local.set $7
-    (struct.get $12 2
+    (struct.get $15 2
      (local.get $4)
     )
    )
    (local.set $8
-    (struct.get $12 3
+    (struct.get $15 3
      (local.get $4)
     )
    )
    (local.set $9
-    (struct.get $11 3
+    (struct.get $14 4
      (local.get $5)
     )
    )
    (local.set $10
-    (struct.get $7 3
+    (struct.get $10 4
      (local.get $6)
     )
    )
    (local.set $11
-    (struct.get $7 3
+    (struct.get $10 4
      (local.get $7)
     )
    )
    (local.set $12
-    (struct.get $7 3
+    (struct.get $10 4
      (local.get $8)
     )
    )
@@ -4744,36 +4751,36 @@
    )
   )
  )
- (func $radii (type $33) (param $0 f64) (result i32)
-  (local $1 (ref null $7))
-  (local $2 (ref null $16))
-  (local $3 (ref null $15))
-  (local $4 (ref null $12))
-  (local $5 (ref null $11))
-  (local $6 (ref null $7))
-  (local $7 (ref null $7))
-  (local $8 (ref null $7))
+ (func $radii (type $36) (param $0 f64) (result i32)
+  (local $1 (ref null $10))
+  (local $2 (ref null $19))
+  (local $3 (ref null $18))
+  (local $4 (ref null $15))
+  (local $5 (ref null $14))
+  (local $6 (ref null $10))
+  (local $7 (ref null $10))
+  (local $8 (ref null $10))
   (local $9 i32)
   (local $10 f64)
   (local $11 f64)
   (local $12 f64)
   (block
    (local.set $1
-    (struct.get $20 0
-     (global.get $g18330423823972673094)
+    (struct.get $23 0
+     (global.get $g1018020227280789904)
     )
    )
-   (struct.set $7 3
+   (struct.set $10 4
     (local.get $1)
     (local.get $0)
    )
    (local.set $2
-    (struct.get $20 1
-     (global.get $g18330423823972673094)
+    (struct.get $23 1
+     (global.get $g1018020227280789904)
     )
    )
    (local.set $3
-    (array.get $16
+    (array.get $19
      (local.get $2)
      (i32.add
       (i32.wrap_i64
@@ -4784,47 +4791,47 @@
     )
    )
    (local.set $4
-    (struct.get $15 1
+    (struct.get $18 1
      (local.get $3)
     )
    )
    (local.set $5
-    (struct.get $12 0
+    (struct.get $15 0
      (local.get $4)
     )
    )
    (local.set $6
-    (struct.get $12 1
+    (struct.get $15 1
      (local.get $4)
     )
    )
    (local.set $7
-    (struct.get $12 2
+    (struct.get $15 2
      (local.get $4)
     )
    )
    (local.set $8
-    (struct.get $12 3
+    (struct.get $15 3
      (local.get $4)
     )
    )
    (local.set $9
-    (struct.get $11 3
+    (struct.get $14 4
      (local.get $5)
     )
    )
    (local.set $10
-    (struct.get $7 3
+    (struct.get $10 4
      (local.get $6)
     )
    )
    (local.set $11
-    (struct.get $7 3
+    (struct.get $10 4
      (local.get $7)
     )
    )
    (local.set $12
-    (struct.get $7 3
+    (struct.get $10 4
      (local.get $8)
     )
    )
