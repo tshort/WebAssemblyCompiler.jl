@@ -1,7 +1,7 @@
 name = "WebAssemblyCompiler"
 uuid = "9bc180e8-272c-4d08-a460-9682f1716cbe"
 authors = ["Tom Short <tshort.rlists@gmail.com> and contributors"]
-version = "1.0.0-DEV"
+version = "0.1.15"
 
 [deps]
 Binaryen_jll = "a54ac8ab-712d-5a0e-8e11-9296c0d3c20e"
@@ -23,6 +23,7 @@ libnode_jll = "76d26698-d9ba-5ca1-ae24-4ac9393d02a0"
 Binaryen_jll = "0.116"
 CEnum = "0.4"
 Reexport = "1.2"
+Unrolled = "0.1"
 julia = "1.7"
 
 [extras]
