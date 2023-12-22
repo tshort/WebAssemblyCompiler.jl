@@ -29,7 +29,7 @@ makedocs(
         assets = ["assets/custom.css", "assets/favicon.ico"],
         prettyurls = true, # haskey(ENV, "GITHUB_ACTIONS"),
         canonical = "https://tshort.github.io/WebAssemblyCompiler.jl/",
-        # format = HTML(repolink = "https://github.com/tshort/WebAssemblyCompiler.jl"),
+        repolink = "https://github.com/tshort/WebAssemblyCompiler.jl",
     ),
     pages = Any[
         "Introduction" => "index.md",
