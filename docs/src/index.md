@@ -11,14 +11,14 @@ This package uses [Binaryen](https://github.com/WebAssembly/binaryen/) to compil
 
 WebAssemblyCompiler supports many Julia constructs, including:
 
-* Vector{T} where T is a bitstype and Vector{Any}
-* Strings
-* Symbols
-* Dicts (not including strings)
-* Mutable and immutable structs
-* Tuples and NamedTuples
+* `Vector{T}` where `T` is a bitstype and `Vector{Any}`
+* `String`
+* `Symbol`
+* `Dict` (not including strings)
+* Mutable and immutable `struct`
+* `Tuple` and `NamedTuple`
 * Global variables
-* Varargs and keyword arguments
+* `Vararg` and keyword arguments
 
 Heap allocation is handled by WebAssembly's garbage collector (see [wasm-GC](https://github.com/WebAssembly/gc)).
 
@@ -26,12 +26,12 @@ Interoperability with JavaScript is quite good. Julia code can run JavaScript fu
 
 Code must be type stable (no dynamic dispatches). In addition, several Julia constructs are not supported, including:
 
-* Multi-dimensional arrays (waiting on the [Memory type PR](https://github.com/JuliaLang/julia/pull/51319))
-* Pointers
+* Multi-dimensional arrays (waiting on the [`Memory` type PR](https://github.com/JuliaLang/julia/pull/51319))
+* Pointers (`Ptr`)
 * Union types
 * Exception handling
 * Errors
-* Some integer types (Int16, Int128, ...)
+* Some integer types (`Int16`, `Int128`, ...)
 * BLAS and all other C dependencies
 
 WebAssemblyCompiler supports [overlays](@ref Overlays) and other ways to fix up code when compiling.
