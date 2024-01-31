@@ -291,14 +291,16 @@ function compile_block(ctx::CompilerContext, cfg::Core.Compiler.CFG, phis, idx)
         elseif matchgr(node, :not_int) do a
                 Ta = roottype(ctx, a)
                 if sizeof(Ta) == 8
-                    x = BinaryenBinary(ctx.mod, BinaryenXorInt64(), _compile(ctx, a), _compile(ctx, Int64(-1)))
                     if ssatype(ctx, idx) <: Bool
-                        x = BinaryenBinary(ctx.mod, BinaryenAndInt64(), x, _compile(ctx, UInt64(1)))
+                        x = BinaryenUnary(ctx.mod, BinaryenEqZInt64(), _compile(ctx, a))
+                    else
+                        x = BinaryenBinary(ctx.mod, BinaryenXorInt64(), _compile(ctx, a), _compile(ctx, Int64(-1)))
                     end
                 else
-                    x = BinaryenBinary(ctx.mod, BinaryenXorInt32(), _compile(ctx, a), _compile(ctx, Int32(-1)))
                     if ssatype(ctx, idx) <: Bool
-                        x = BinaryenBinary(ctx.mod, BinaryenAndInt32(), x, _compile(ctx, UInt32(1)))
+                        x = BinaryenUnary(ctx.mod, BinaryenEqZInt32(), _compile(ctx, a))
+                    else
+                        x = BinaryenBinary(ctx.mod, BinaryenXorInt32(), _compile(ctx, a), _compile(ctx, Int32(-1)))
                     end
                 end
                 setlocal!(ctx, idx, x)
